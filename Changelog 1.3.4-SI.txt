@@ -5,10 +5,12 @@ Changes/additions to vanilla BDAc 1.3.4
 	*Now supports magazine-fed weapons that must be occasionally reloaded			
 	*Now supports burst-fire weapons (multiple shots per fire command)		
 	*Now supports crewed weapons that require a kerbal present to fire		
-	*RocketLaucher functionality has been folded into ModuleWeapon, and will need to be reconfigured. A MM patch for legacy rocketlauncher support is included
+	*RocketLaucher functionality has been folded into ModuleWeapon, Rocketlaunchers will need to be reconfigured. A MM patch for legacy rocketlauncher support is included
 	*RocketLaunchers can now be supplied from external ammo boxes. 
 	*Gyrojet guns now supported	
-	*Rocket class weapons can now use FlaK settings (airDetonation, proximityDetonation, maxAirDetonationRange)
+	*Rocket class weapons can now use FlaK settings (airDetonation, proximityDetonation, 
+
+maxAirDetonationRange)
 	*Can set custom fire sounds for Rockets
 
 	==============================
@@ -38,8 +40,8 @@ Changes/additions to vanilla BDAc 1.3.4
 	================
 	*New AI settings - require advanced tweakables enabled
 	================
-	Speed-Adjusted Steer Limiter //secondary, speed-adjusted steer limiter
-	Adjusted Limiter Speed // speed threshold the adjusted limiter takes effect
+	Speed-Adjusted Steer Limiter //secondary, speed-adjusted steer limiter. Should be of use to FAR users
+	Adjusted Limiter Speed // speed threshold the adjusted limiter takes effect. Also should be of use to FAR users.	
 	Extend Distance // distance AI will extend to regain energy
 	Missile Evade Distance // distance AI will break to avoid missiles
 	AI Personality // standard or reckless behavior
@@ -50,8 +52,14 @@ Changes/additions to vanilla BDAc 1.3.4
 	*GUI windows - RWR, Radar, VesselSwitch,etc. can now be moved off screen
 	*Bullet damage calc extended
 		-Bullets down to 5mm caliber will properly deal damage now
-		-The APBulletMod value in BulletDef.cfg is now implemented, and works as a multiplier. APBM = 1 is standard penetration, 0.5 would halve bullet penetration depth, 1.5 would increase bullet penetration by 150%, etc.
-	*Updates HP calc - will now give wings and B9 proc parts reasonable Hp values for their size/mass
+		-The APBulletMod value in BulletDef.cfg is now implemented, and works as a 
+
+multiplier. APBM = 1 is standard penetration, 0.5 would halve bullet penetration depth, 1.5 would 
+
+increase bullet penetration by 150%, etc.
+	*Updates HP calc - will now give wings and B9 proc parts reasonable Hp values for their 
+
+size/mass. Mainly for HP clacs vis-a-vis FAR dynamic mass adjustment for smooth scaling
 	*HP vaules now increase/decrease by 25 instead of 100
 	*Adds PaintBall Mode - Exactly what it says on the tin; nonlethal mode for testing or fun
 	*Adds FuelTank penetration - LF & LF/O tanks that get shot will start to leak fuel
@@ -63,7 +71,7 @@ Changes/additions to vanilla BDAc 1.3.4
 	*Changes to BDA settings Window
 	*Instakill setting now works properly
 	*Adds PaintBall setting - toggles PaintBall Mode
-	*Strict Window Boundaries setting - toggles if GUI windows snap to screen edges
+	*Strict Window Boundaries setting - allows GUI windows to be moved off-screen. Reenabling will snap any offscreen windows to nearest screen edge.
 	*Battle damage setting - toggles part battle damage consequences
 	
 -Expanded BDArmory settings for BDArmorySettings.cfg
