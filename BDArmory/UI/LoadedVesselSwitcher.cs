@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using BDArmory.Misc;
 using BDArmory.Modules;
+using BDArmory.Core;
 using UnityEngine;
 using KSP.Localization;
 
@@ -250,7 +251,10 @@ namespace BDArmory.UI
 
             height += _margin;
             _windowHeight = height;
-            BDGUIUtils.RepositionWindow(ref BDArmorySetup.WindowRectVesselSwitcher);
+			if (BDArmorySettings.STRICT_WINDOW_BOUNDARIES)
+			{
+				BDGUIUtils.RepositionWindow(ref BDArmorySetup.WindowRectVesselSwitcher);
+			}
         }
 
         private string UpdateVesselStatus(MissileFire wm, GUIStyle vButtonStyle)

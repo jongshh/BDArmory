@@ -2,6 +2,7 @@
 using BDArmory.Misc;
 using BDArmory.Modules;
 using UnityEngine;
+using BDArmory.Core;
 using KSP.Localization;
 
 namespace BDArmory.UI
@@ -103,7 +104,10 @@ namespace BDArmory.UI
             }
 
             height += margin;
-            BDGUIUtils.RepositionWindow(ref window);
+			if (BDArmorySettings.STRICT_WINDOW_BOUNDARIES)
+			{
+				BDGUIUtils.RepositionWindow(ref window);
+			}
             BDGUIUtils.UseMouseEventInRect(window);
         }
 

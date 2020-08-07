@@ -833,8 +833,11 @@ namespace BDArmory.Modules
                     ResizeTargetWindow();
                 }
             }
-            //ResetZoomKeys();
-            BDGUIUtils.RepositionWindow(ref BDArmorySetup.WindowRectTargetingCam);
+			//ResetZoomKeys();
+			if (BDArmorySettings.STRICT_WINDOW_BOUNDARIES)
+			{
+				BDGUIUtils.RepositionWindow(ref BDArmorySetup.WindowRectTargetingCam);
+			}
         }
 
         internal static void UpdateTargetScale(float diff)

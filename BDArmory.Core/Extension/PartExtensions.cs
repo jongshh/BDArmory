@@ -132,8 +132,10 @@ namespace BDArmory.Core.Extension
                 Debug.Log("[BDArmory]: mass: " + mass + " caliber: " + caliber + " multiplier: " + multiplier + " velocity: " + impactVelocity + " penetrationfactor: " + penetrationfactor);
                 Debug.Log("[BDArmory]: Ballistic Hitpoints Applied : " + Math.Round(damage_, 2));
             }
-
-            //CheckDamageFX(p);
+			if (BDArmorySettings.BATTLEDAMAGE)
+			{
+				CheckDamageFX(p, caliber);
+			}
         }
 
         /// <summary>
@@ -149,7 +151,10 @@ namespace BDArmory.Core.Extension
             if (BDArmorySettings.DRAW_DEBUG_LABELS)
                 Debug.Log("[BDArmory]: Explosive Hitpoints Applied to " + p.name + ": " + Math.Round(damage, 2));
 
-            //CheckDamageFX(p);
+			if (BDArmorySettings.BATTLEDAMAGE)
+			{
+				CheckDamageFX(p, 50);
+			}
         }
 
         /// <summary>
@@ -294,11 +299,6 @@ namespace BDArmory.Core.Extension
         {
             var size = part.GetComponentInChildren<MeshFilter>().mesh.bounds.size;
 
-            if (part.name.Contains("B9.Aero.Wing.Procedural"))
-            {
-                size = size * 0.1f;
-            }
-
             float scaleMultiplier = 1f;
             if (part.Modules.Contains("TweakScale"))
             {
@@ -310,13 +310,22 @@ namespace BDArmory.Core.Extension
             return size * scaleMultiplier;
         }
 
-        public static bool IsAero(this Part part)
-        {
-            return part.Modules.Contains("ModuleControlSurface") ||
-                   part.Modules.Contains("ModuleLiftingSurface");
-        }
+		public static bool IsAero(this Part part)
+		{
+			return part.Modules.Contains("ModuleLiftingSurface") ||
+				   part.Modules.Contains("FARWingAerodynamicModel");
+		}
+		public static bool IsCtrlSrf(this Part part)
+		{
+			return part.Modules.Contains("ModuleControlSurface") ||
+				   part.Modules.Contains("FARControllableSurface");
+		}
+		public static bool IsProcpart(this Part part)
+		{
+			return part.Modules.Contains("ProceduralPart");
+		}
 
-        public static string GetExplodeMode(this Part part)
+		public static string GetExplodeMode(this Part part)
         {
             return Dependencies.Get<DamageService>().GetExplodeMode_svc(part);
         }
@@ -409,21 +418,114 @@ namespace BDArmory.Core.Extension
             return damage;
         }
 
-        public static void CheckDamageFX(Part part)
-        {
-            if (part.GetComponent<ModuleEngines>() != null && part.GetDamagePercentatge() <= 0.35f)
-            {
-                part.gameObject.AddOrGetComponent<DamageFX>();
-                DamageFX.engineDamaged = true;
-            }
+		public static void CheckDamageFX(Part part, float caliber)
+		{
+			//what can get damaged? engines, wings, SAS, cockpits (past a certain dmg%, kill kerbals?), weapons(would be far easier to just have these have low hp), radars
 
-            if (part.GetComponent<ModuleLiftingSurface>() != null && part.GetDamagePercentatge() <= 0.35f)
+            if (part.GetComponent<ModuleEngines>() != null && part.GetDamagePercentatge() < 0.95f)
+			{
+				ModuleEngines engine;
+				engine = part.GetComponent<ModuleEngines>();
+				if (part.GetDamagePercentatge() >= 0.50f)
+				{
+					if (engine.thrustPercentage > 0)
+					{
+						//engine.maxThrust -= ((engine.maxThrust * 0.125f) / 100); // doesn't seem to adjust thrust; investigate
+						engine.thrustPercentage -= ((engine.maxThrust * 0.125f) / 100);
+						Mathf.Clamp(engine.thrustPercentage, 0, 1);
+					}
+				}
+				if (part.GetDamagePercentatge() < 0.50f)
+				{
+					if (engine.EngineIgnited)
+					{
+						engine.PlayFlameoutFX(true);
+						engine.Shutdown();
+						engine.allowRestart = false;
+					}
+				}
+			}
+			if (part.GetComponent<ModuleEnginesFX>() != null && part.GetDamagePercentatge() < 0.95f)
+			{
+				ModuleEnginesFX engine;
+				engine = part.GetComponent<ModuleEnginesFX>();
+				if (part.GetDamagePercentatge() >= 0.50f)
+				{
+					if (engine.thrustPercentage > 0)
+					{
+						//engine.maxThrust -= ((engine.maxThrust * 0.125f) / 100); // doesn't seem to adjust thrust; investigate
+						engine.thrustPercentage -= ((engine.maxThrust * 0.125f) / 100);
+						Mathf.Clamp(engine.thrustPercentage, 0, 1);
+					}
+				}
+				if (part.GetDamagePercentatge() < 0.50f)
+				{
+					if (engine.EngineIgnited)
+					{
+						engine.PlayFlameoutFX(true);
+						engine.Shutdown();
+						engine.allowRestart = false;
+					}
+				}
+			}
+			if (part.GetComponent<ModuleLiftingSurface>() != null && part.GetDamagePercentatge() > 0.125f)
+			{
+				ModuleLiftingSurface wing;
+				wing = part.GetComponent<ModuleLiftingSurface>();
+				if (wing.deflectionLiftCoeff > (caliber * caliber / 40000))
+				{
+					wing.deflectionLiftCoeff -= (caliber * caliber / 40000);
+				}
+			}
+			if (part.GetComponent<ModuleControlSurface>() != null && part.GetDamagePercentatge() > 0.125f)
+			{
+				ModuleControlSurface aileron;
+				aileron = part.GetComponent<ModuleControlSurface>();
+				aileron.deflectionLiftCoeff -= (caliber * caliber / 40000);
+				if (part.GetDamagePercentatge() < 0.75f)
+				{
+					if (aileron.ctrlSurfaceRange >= 0.5)
+					{
+						aileron.ctrlSurfaceRange -= 0.5f;
+					}
+				}
+			}
+			if (part.GetComponent<ModuleReactionWheel>() != null && part.GetDamagePercentatge() < 0.75f)
             {
-                //part.gameObject.AddOrGetComponent<DamageFX>();
-            }
-        }
-
-        public static Vector3 GetBoundsSize(Part part)
+				ModuleReactionWheel SAS;
+				SAS = part.GetComponent<ModuleReactionWheel>();
+				if (SAS.PitchTorque > 1)
+				{
+					SAS.PitchTorque -= (1 - part.GetDamagePercentatge());
+				}
+				if (SAS.YawTorque > 1)
+				{
+					SAS.YawTorque -= (1 - part.GetDamagePercentatge());
+				}
+				if (SAS.RollTorque > 1)
+				{
+					SAS.RollTorque -= (1 - part.GetDamagePercentatge());
+				}
+			}
+			if (part.protoModuleCrew.Count > 0 && part.GetDamagePercentatge() < 0.50f)
+			{
+				ProtoCrewMember crewMember = part.protoModuleCrew.FirstOrDefault(x => x != null);
+				if (crewMember != null)
+				{
+					crewMember.UnregisterExperienceTraits(part);
+					crewMember.Die();
+					part.RemoveCrewmember(crewMember);
+					//Vessel.CrewWasModified(part.vessel);
+					Debug.Log(crewMember.name + " was killed by damage to cabin!");
+					if (HighLogic.CurrentGame.Parameters.Difficulty.MissingCrewsRespawn)
+					{
+						crewMember.StartRespawnPeriod();
+					}
+					//ScreenMessages.PostScreenMessage(crewMember.name + " killed by damage to " + part.vessel.name + part.partName + ".", 5.0f, ScreenMessageStyle.UPPER_LEFT);
+				}
+			}
+		}
+		public static Vector3 GetBoundsSize(Part part)
         {
             return PartGeometryUtil.MergeBounds(part.GetRendererBounds(), part.transform).size;
         }

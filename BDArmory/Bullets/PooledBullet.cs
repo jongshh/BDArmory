@@ -337,8 +337,8 @@ namespace BDArmory.Bullets
 
                             float penetrationFactor = CalculateArmorPenetration(hitPart, anglemultiplier, hit);
 
-                            if (penetrationFactor >= 2)
-                            {
+							if (penetrationFactor >= 2 || BDArmorySettings.PAINTBALL)
+							{
                                 //its not going to bounce if it goes right through
                                 hasRichocheted = false;
                             }
@@ -348,8 +348,8 @@ namespace BDArmory.Bullets
                                     hasRichocheted = true;
                             }
 
-                            if (penetrationFactor > 1 && !hasRichocheted) //fully penetrated continue ballistic damage
-                            {
+							if (penetrationFactor > 1 && !hasRichocheted && !BDArmorySettings.PAINTBALL) //fully penetrated continue ballistic damage
+							{
                                 hasPenetrated = true;
                                 ApplyDamage(hitPart, hit, 1, penetrationFactor);
                                 penTicker += 1;
@@ -369,8 +369,8 @@ namespace BDArmory.Bullets
                                     KillBullet();
                                 }
                             }
-                            else if (!hasRichocheted) // explosive bullets that get stopped by armor will explode
-                            {
+							else if (!hasRichocheted && !BDArmorySettings.PAINTBALL) // explosive bullets that get stopped by armor will explode
+							{
                                 //New method
 
                                 if (hitPart.rb != null)
@@ -393,15 +393,21 @@ namespace BDArmory.Bullets
                                 hasDetonated = true;
                                 KillBullet();
                             }
+							else if (BDArmorySettings.PAINTBALL)
+							{
+								hasPenetrated = false;
+								ApplyDamage(hitPart, hit, 1, penetrationFactor);
+								hasDetonated = true;
+								KillBullet();
+							}
+							/////////////////////////////////////////////////////////////////////////////////
+							// penetrated after a few ticks
+							/////////////////////////////////////////////////////////////////////////////////
 
-                            /////////////////////////////////////////////////////////////////////////////////
-                            // penetrated after a few ticks
-                            /////////////////////////////////////////////////////////////////////////////////
+							//penetrating explosive
+							//richochets
 
-                            //penetrating explosive
-                            //richochets
-
-                            if ((penTicker >= 2 && explosive) || (hasRichocheted && explosive))
+							if ((penTicker >= 2 && explosive) || (hasRichocheted && explosive))
                             {
                                 //detonate
                                 ExplosiveDetonation(hitPart, hit, ray, airDetonation);
@@ -505,14 +511,21 @@ namespace BDArmory.Bullets
                 BulletHitFX.CreateBulletHit(hitPart, hit.point, hit, hit.normal, hasRichocheted, caliber,
                     penetrationfactor);
             }
-
-            if (explosive)
-            {
+			if (BDArmorySettings.INSTAKILL)
+			{
+				hitPart.AddBallisticDamage(100000f, 500f, multiplier, 0.1f, 1000000, impactVelocity);
+			}
+			if (BDArmorySettings.PAINTBALL)
+			{
+				hitPart.AddBallisticDamage(0.001f, 5f, multiplier, 0.1f, 0.1f, impactVelocity);
+			}
+			if (explosive && !BDArmorySettings.PAINTBALL)
+			{
                 hitPart.AddBallisticDamage(bulletMass - tntMass, caliber, multiplier, penetrationfactor,
                     bulletDmgMult, impactVelocity);
             }
-            else
-            {
+			else if (!BDArmorySettings.PAINTBALL)
+			{
                 hitPart.AddBallisticDamage(bulletMass, caliber, multiplier, penetrationfactor,
                     bulletDmgMult, impactVelocity);
             }
@@ -598,12 +611,19 @@ namespace BDArmory.Bullets
         private float CalculatePenetration()
         {
             float penetration = 0;
-            if (caliber > 10) //use the "krupp" penetration formula for anything larger than HMGs
-            {
-                penetration = (float)(16f * impactVelocity * Math.Sqrt(bulletMass / 1000) / Math.Sqrt(caliber));
-            }
-
-            return penetration;
+			if (apBulletMod <= 0) // sanity check to avoid divide by zero, since stock Bulletdef has apBulletMod = 0 by default
+			{
+				apBulletMod = 1;
+			}
+			if (caliber > 5 && !BDArmorySettings.PAINTBALL) //use the "krupp" penetration formula for anything larger than HMGs. Dropping min caliber to 5 so .30 cal rounds can do damage.
+			{
+				penetration = (float)((16f * impactVelocity * Math.Sqrt(bulletMass / 1000) / Math.Sqrt(caliber)) * apBulletMod);
+			}
+			else
+			{
+				penetration = 0.1f;
+			}
+			return penetration;
         }
 
         private static float CalculateThickness(Part hitPart, float anglemultiplier)
@@ -671,8 +691,8 @@ namespace BDArmory.Bullets
             }
             catch (Exception) { }
 
-            if (building != null && building.IsIntact)
-            {
+			if (building != null && building.IsIntact && !BDArmorySettings.PAINTBALL)
+			{
                 float damageToBuilding = ((0.5f * (bulletMass * Mathf.Pow(currentVelocity.magnitude, 2)))
                             * (BDArmorySettings.DMG_MULTIPLIER / 100) * bulletDmgMult
                             * 1e-4f);
@@ -862,11 +882,10 @@ namespace BDArmory.Bullets
             }
 
             resources.Dispose();
-
-            explodeScale /= 100;
+			ExplosionFx.CreateExplosion(part.transform.position, explodeScale, explModelPath, explSoundPath, false, 20);
+			explodeScale /= 100;
             part.explosionPotential = explodeScale;
-
-            PartExploderSystem.AddPartToExplode(part);
+			PartExploderSystem.AddPartToExplode(part);
         }
 
         private float GetExplosivePower()

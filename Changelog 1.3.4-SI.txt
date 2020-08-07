@@ -1,0 +1,100 @@
+Changes/additions to vanilla BDAc 1.3.4
+=======================================
+-Complete overhaul of ModuleWeapon
+
+	*Now supports magazine-fed weapons that must be occasionally reloaded			
+	*Now supports burst-fire weapons (multiple shots per fire command)		
+	*Now supports crewed weapons that require a kerbal present to fire		
+	*RocketLaucher functionality has been folded into ModuleWeapon, and will need to be reconfigured. A MM patch for legacy rocketlauncher support is included
+	*RocketLaunchers can now be supplied from external ammo boxes. 
+	*Gyrojet guns now supported	
+	*Rocket class weapons can now use FlaK settings (airDetonation, proximityDetonation, maxAirDetonationRange)
+	*Can set custom fire sounds for Rockets
+
+	==============================
+	*New ModuleWeapon .cfg settings
+	==============================
+	BeltFed = False // enables mag-fed weapons
+	RoundsPerMag = n // shots per magazine or shots per burst if BurstFire = true
+	ReloadTime = n // time(sec) needed to reload
+	BurstFire = true // enables burst fire; use with RoundsPerMag
+	crewserved = true // weapon part must have CrewCapacity > 0 and Kerbal occupant
+	externalAmmo = true // rocket class weapons use external ammo boxes
+	rocketPod = true // default true, used if rocketpod w/ rocket submodels (e.g. Hydra70)
+		setting rocketPod = true will default RoundsPerMag to the # of rocket submodels
+		setting rocketpod = false will automatically set externalAmmo = true
+		RocketPod = true and externalAmmo = true will set BeltFed = false
+
+-Rework of AI weapon management
+
+	*AI will now use rocket pods
+	*Slight improvement to bomb selection logic
+
+-Rework of Pilot AI
+
+	*Steer Limiter now properly labeled steer limiter, not stages number
+	*AI will now make greater use of Yaw control authority for fine yaw adjustment 
+
+	================
+	*New AI settings - require advanced tweakables enabled
+	================
+	Speed-Adjusted Steer Limiter //secondary, speed-adjusted steer limiter
+	Adjusted Limiter Speed // speed threshold the adjusted limiter takes effect
+	Extend Distance // distance AI will extend to regain energy
+	Missile Evade Distance // distance AI will break to avoid missiles
+	AI Personality // standard or reckless behavior
+
+-Gameplay / UI changes
+	*Weapon Manager GUI reads BDAc 1.3.4. SI, to differentiate this fork of BDA from vanilla
+	*Fixes weapon ammo count in the Weaponmanager GUI
+	*GUI windows - RWR, Radar, VesselSwitch,etc. can now be moved off screen
+	*Bullet damage calc extended
+		-Bullets down to 5mm caliber will properly deal damage now
+		-The APBulletMod value in BulletDef.cfg is now implemented, and works as a multiplier. APBM = 1 is standard penetration, 0.5 would halve bullet penetration depth, 1.5 would increase bullet penetration by 150%, etc.
+	*Updates HP calc - will now give wings and B9 proc parts reasonable Hp values for their size/mass
+	*HP vaules now increase/decrease by 25 instead of 100
+	*Adds PaintBall Mode - Exactly what it says on the tin; nonlethal mode for testing or fun
+	*Adds FuelTank penetration - LF & LF/O tanks that get shot will start to leak fuel
+	*Adds Battle damage to parts
+		-Engine damage will reduce thrust and eventually shutdown the engine
+		-Wing and ctrl surface damage will reduce lift
+		-SAS damage will reduce available torque
+		-Sufficient cockpit/cabin damage will kill kerbals inside them
+	*Changes to BDA settings Window
+	*Instakill setting now works properly
+	*Adds PaintBall setting - toggles PaintBall Mode
+	*Strict Window Boundaries setting - toggles if GUI windows snap to screen edges
+	*Battle damage setting - toggles part battle damage consequences
+	
+-Expanded BDArmory settings for BDArmorySettings.cfg
+	*PAINTBALL = False
+	*BATTLEDAMAGE = False
+	*STRICT_WINDOW_BOUNDARIES = FALSE
+	*SELFSEALING_TANKS = TRUE
+
+-Updates BDArmory/Localization/UI/en-us.cfg with the new Pilot AI settings
+	*#LOC_BDArmory_SASteerLimiter = Speed-Adjusted Steer Limiter
+	*#LOC_BDArmory_LimiterSpeed = Adjusted Limiter Speed
+	*#LOC_BDArmory_ExtendDist = Extend Distance
+	*#LOC_BDArmory_EvadeDist = Missile Evade Distance
+	*#LOC_BDArmory_AIPersonality = AI Personality
+	*#LOC_BDArmory_Reckless = Reckless
+	*#LOC_BDArmory_Standard = Standard
+
+-Adds new FX
+	-BDArmory/FX/FuelLeakFX/model.mu
+	-BDArmory/FX/FuelLeakFX/DustParticle.png
+
+-Adds three new bullethit decals for Paintball mode
+	-BDArmory/Models/bulletDecal/BulletDecal3.mu
+	-BDArmory/Models/bulletDecal/PH1.png
+	-BDArmory/Models/bulletDecal/BulletDecal4.mu
+	-BDArmory/Models/bulletDecal/PH2.png
+	-BDArmory/Models/bulletDecal/BulletDecal5.mu
+	-BDArmory/Models/bulletDecal/PH3.png
+	
+
+includes 3 Example weapons showcasing new functionality
+	-Browning Gyrojet(BDArmory/Parts/browninganm2/browninganm2 - Copy)
+	-FlaK Burst Cannon (BDArmory/Parts/m1Abrams/m1Abrams - Copy)
+	-Reloadable RocketPod (BDArmory/Parts/h70Launcher/h70Launcher - Copy)

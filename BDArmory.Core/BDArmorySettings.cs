@@ -5,7 +5,9 @@
         public static string settingsConfigURL = "GameData/BDArmory/settings.cfg";
 
         [BDAPersistantSettingsField] public static bool INSTAKILL = false;
-        [BDAPersistantSettingsField] public static bool BULLET_HITS = true;
+		[BDAPersistantSettingsField] public static bool PAINTBALL = false;
+		[BDAPersistantSettingsField] public static bool BATTLEDAMAGE = true;
+		[BDAPersistantSettingsField] public static bool BULLET_HITS = true;
         [BDAPersistantSettingsField] public static bool BULLET_DECALS = true;
         [BDAPersistantSettingsField] public static int MAX_NUM_BULLET_DECALS = 200;
         [BDAPersistantSettingsField] public static bool SHOW_AMMO_GAUGES = false;
@@ -32,7 +34,8 @@
         [BDAPersistantSettingsField] public static float TARGET_WINDOW_SCALE_MIN = 0.50f;
         [BDAPersistantSettingsField] public static float TARGET_WINDOW_SCALE = 1f;
         [BDAPersistantSettingsField] public static float TARGET_WINDOW_SCALE_MAX = 2f;
-        [BDAPersistantSettingsField] public static float BDARMORY_UI_VOLUME = 0.35f;
+		[BDAPersistantSettingsField] public static bool STRICT_WINDOW_BOUNDARIES = false;
+		[BDAPersistantSettingsField] public static float BDARMORY_UI_VOLUME = 0.35f;
         [BDAPersistantSettingsField] public static float BDARMORY_WEAPONS_VOLUME = 0.32f;
         [BDAPersistantSettingsField] public static float MAX_GUARD_VISUAL_RANGE = 40000f;
         [BDAPersistantSettingsField] public static float MAX_ACTIVE_RADAR_RANGE = 40000f;        //NOTE: used ONLY for display range of radar windows! Actual radar range provided by part configs!
@@ -52,8 +55,9 @@
         [BDAPersistantSettingsField] public static float EXP_DMG_MOD_BALLISTIC;
         [BDAPersistantSettingsField] public static float EXP_DMG_MOD_MISSILE;
         [BDAPersistantSettingsField] public static float EXP_IMP_MOD;
-        [BDAPersistantSettingsField] public static bool FIRE_FX_IN_FLIGHT = false;
-        [BDAPersistantSettingsField] public static int MAX_FIRES_PER_VESSEL = 10;                   //controls fx for penetration only for landed or splashed
+		[BDAPersistantSettingsField] public static bool FIRE_FX_IN_FLIGHT = false;
+		[BDAPersistantSettingsField] public static bool SELFSEALING_TANKS = false;
+		[BDAPersistantSettingsField] public static int MAX_FIRES_PER_VESSEL = 10;                   //controls fx for penetration only for landed or splashed
         [BDAPersistantSettingsField] public static float FIRELIFETIME_IN_SECONDS = 90f;             //controls fx for penetration only for landed or splashed
         [BDAPersistantSettingsField] public static bool PERFORMANCE_LOGGING = false;
         [BDAPersistantSettingsField] public static bool AUTOCATEGORIZE_PARTS = true;

@@ -14,247 +14,279 @@ using UnityEngine;
 
 namespace BDArmory.Modules
 {
-    public class BDModulePilotAI : BDGenericAIBase, IBDAIControl
-    {
-        public enum SteerModes { NormalFlight, Aiming }
+	public class BDModulePilotAI : BDGenericAIBase, IBDAIControl
+	{
+		public enum SteerModes { NormalFlight, Aiming }
 
-        SteerModes steerMode = SteerModes.NormalFlight;
+		SteerModes steerMode = SteerModes.NormalFlight;
 
-        bool belowMinAltitude;
-        bool extending;
+		bool belowMinAltitude;
+		bool extending;
 
-        bool requestedExtend;
-        Vector3 requestedExtendTpos;
+		bool requestedExtend;
+		Vector3 requestedExtendTpos;
 
-        public bool IsExtending
-        {
-            get { return extending || requestedExtend; }
-        }
+		public bool IsExtending
+		{
+			get { return extending || requestedExtend; }
+		}
 
-        public void RequestExtend(Vector3 tPosition)
-        {
-            requestedExtend = true;
-            requestedExtendTpos = tPosition;
-        }
+		public void RequestExtend(Vector3 tPosition)
+		{
+			requestedExtend = true;
+			requestedExtendTpos = tPosition;
+		}
 
-        public override bool CanEngage()
-        {
-            return !vessel.LandedOrSplashed;
-        }
+		public override bool CanEngage()
+		{
+			return !vessel.LandedOrSplashed;
+		}
 
-        GameObject vobj;
+		GameObject vobj;
 
-        Transform velocityTransform
-        {
-            get
-            {
-                if (!vobj)
-                {
-                    vobj = new GameObject("velObject");
-                    vobj.transform.position = vessel.ReferenceTransform.position;
-                    vobj.transform.parent = vessel.ReferenceTransform;
-                }
+		Transform velocityTransform
+		{
+			get
+			{
+				if (!vobj)
+				{
+					vobj = new GameObject("velObject");
+					vobj.transform.position = vessel.ReferenceTransform.position;
+					vobj.transform.parent = vessel.ReferenceTransform;
+				}
 
-                return vobj.transform;
-            }
-        }
+				return vobj.transform;
+			}
+		}
 
-        Vector3 upDirection = Vector3.up;
+		Vector3 upDirection = Vector3.up;
 
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_DefaultAltitude"),//Default Alt.
-            UI_FloatRange(minValue = 500f, maxValue = 15000f, stepIncrement = 25f, scene = UI_Scene.All)]
-        public float defaultAltitude = 1500;
+		[KSPField(isPersistant = true)]
+		public bool advancedSettings = false;
 
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_MinAltitude"),//Min Altitude
-            UI_FloatRange(minValue = 150f, maxValue = 6000, stepIncrement = 50f, scene = UI_Scene.All)]
-        public float minAltitude = 500f;
+		[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_DefaultAltitude"),//Default Alt.
+			UI_FloatRange(minValue = 500f, maxValue = 15000f, stepIncrement = 25f, scene = UI_Scene.All)]
+		public float defaultAltitude = 1500;
 
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_SteerFactor"),//Steer Factor
-            UI_FloatRange(minValue = 0.1f, maxValue = 20f, stepIncrement = .1f, scene = UI_Scene.All)]
-        public float steerMult = 6;
-        //make a combat steer mult and idle steer mult
+		[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_MinAltitude"),//Min Altitude
+			UI_FloatRange(minValue = 150f, maxValue = 6000, stepIncrement = 50f, scene = UI_Scene.All)]
+		public float minAltitude = 500f;
 
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_SteerKi"),//Steer Ki
-            UI_FloatRange(minValue = 0.01f, maxValue = 1f, stepIncrement = 0.01f, scene = UI_Scene.All)]
-        public float steerKiAdjust = 0.05f;
+		[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_SteerFactor"),//Steer Factor
+			UI_FloatRange(minValue = 0.1f, maxValue = 20f, stepIncrement = .1f, scene = UI_Scene.All)]
+		public float steerMult = 6;
+		//make a combat steer mult and idle steer mult
 
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_StagesNumber"),//Steer Limiter
-            UI_FloatRange(minValue = .1f, maxValue = 1f, stepIncrement = .05f, scene = UI_Scene.All)]
-        public float maxSteer = 1;
+		[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_SteerKi"),//Steer Ki
+			UI_FloatRange(minValue = 0.01f, maxValue = 1f, stepIncrement = 0.01f, scene = UI_Scene.All)]
+		public float steerKiAdjust = 0.05f;
 
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_SteerDamping"),//Steer Damping
-            UI_FloatRange(minValue = 1f, maxValue = 8f, stepIncrement = 0.5f, scene = UI_Scene.All)]
-        public float steerDamping = 3;
+		[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_SteerLimiter"),//Steer Limiter
+			UI_FloatRange(minValue = .1f, maxValue = 1f, stepIncrement = .05f, scene = UI_Scene.All)]
+		public float maxSteer = 1;
 
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_MaxSpeed"),//Max Speed
-            UI_FloatRange(minValue = 20f, maxValue = 800f, stepIncrement = 1.0f, scene = UI_Scene.All)]
-        public float maxSpeed = 325;
+		[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_SASteerLimiter", advancedTweakable = true), //Speed Adjusted Steer Limiter
+UI_FloatRange(minValue = .1f, maxValue = 2f, stepIncrement = .05f, scene = UI_Scene.All)]
+		public float maxSteerAtMaxSpeed = 1;
 
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_TakeOffSpeed"),//TakeOff Speed
-            UI_FloatRange(minValue = 10f, maxValue = 200f, stepIncrement = 1.0f, scene = UI_Scene.All)]
-        public float takeOffSpeed = 70;
+		[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_LimiterSpeed", advancedTweakable = true), //Adjusted Limiter Speed
+			UI_FloatRange(minValue = 10f, maxValue = 500f, stepIncrement = 1.0f, scene = UI_Scene.All)]
+		public float cornerSpeed = 200f;
 
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_MinSpeed"),//MinCombatSpeed
-            UI_FloatRange(minValue = 20f, maxValue = 200, stepIncrement = 1.0f, scene = UI_Scene.All)]
-        public float minSpeed = 60f;
+		[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_SteerDamping"),//Steer Damping
+			UI_FloatRange(minValue = 1f, maxValue = 8f, stepIncrement = 0.5f, scene = UI_Scene.All)]
+		public float steerDamping = 3;
 
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_IdleSpeed"),//Idle Speed
-            UI_FloatRange(minValue = 10f, maxValue = 200f, stepIncrement = 1.0f, scene = UI_Scene.All)]
-        public float idleSpeed = 120f;
+		[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_MaxSpeed"),//Max Speed
+			UI_FloatRange(minValue = 20f, maxValue = 800f, stepIncrement = 1.0f, scene = UI_Scene.All)]
+		public float maxSpeed = 325;
 
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_maxAllowedGForce"),//Max G
-            UI_FloatRange(minValue = 2f, maxValue = 45f, stepIncrement = 0.25f, scene = UI_Scene.All)]
-        public float maxAllowedGForce = 10;
+		[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_TakeOffSpeed"),//TakeOff Speed
+			UI_FloatRange(minValue = 10f, maxValue = 200f, stepIncrement = 1.0f, scene = UI_Scene.All)]
+		public float takeOffSpeed = 70;
 
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_maxAllowedAoA"),//Max AoA
-            UI_FloatRange(minValue = 0f, maxValue = 85f, stepIncrement = 2.5f, scene = UI_Scene.All)]
-        public float maxAllowedAoA = 35;
-        float maxAllowedCosAoA;
-        float lastAllowedAoA;
+		[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_MinSpeed"),//MinCombatSpeed
+			UI_FloatRange(minValue = 20f, maxValue = 200, stepIncrement = 1.0f, scene = UI_Scene.All)]
+		public float minSpeed = 60f;
 
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_Orbit", advancedTweakable = true),//Orbit 
-            UI_Toggle(enabledText = "#LOC_BDArmory_Orbit_enabledText", disabledText = "#LOC_BDArmory_Orbit_disabledText", scene = UI_Scene.All),]//Starboard (CW)--Port (CCW)
-        public bool ClockwiseOrbit = true;
+		[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_IdleSpeed"),//Idle Speed
+			UI_FloatRange(minValue = 10f, maxValue = 200f, stepIncrement = 1.0f, scene = UI_Scene.All)]
+		public float idleSpeed = 120f;
 
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_UnclampTuning", advancedTweakable = true),//Unclamp tuning 
-            UI_Toggle(enabledText = "#LOC_BDArmory_UnclampTuning_enabledText", disabledText = "#LOC_BDArmory_UnclampTuning_disabledText", scene = UI_Scene.All),]//Unclamped--Clamped
-        public bool UpToEleven = false;
-        bool toEleven = false;
+		[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = false, guiName = "#LOC_BDArmory_ExtendDist", advancedTweakable = true), //Extend Distance
+UI_FloatRange(minValue = 100f, maxValue = 4000f, stepIncrement = 100.0f, scene = UI_Scene.All)]
+		public float ExtendDist = 2000;
 
-        Dictionary<string, float> altMaxValues = new Dictionary<string, float>
-        {
-            { nameof(defaultAltitude), 100000f },
-            { nameof(minAltitude), 30000f },
-            { nameof(steerMult), 200f },
-            { nameof(steerKiAdjust), 20f },
-            { nameof(steerDamping), 100f },
-            { nameof(maxSpeed), 3000f },
-            { nameof(takeOffSpeed), 2000f },
-            { nameof(minSpeed), 2000f },
-            { nameof(idleSpeed), 3000f },
-            { nameof(maxAllowedGForce), 1000f },
-            { nameof(maxAllowedAoA), 180f },
-        };
+		[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_EvadeDist", advancedTweakable = true), //Missile Evade Dist
+			UI_FloatRange(minValue = 200f, maxValue = 8000, stepIncrement = 200.0f, scene = UI_Scene.All)]
+		public float maxBreakDist = 2000;
 
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_StandbyMode"),//Standby Mode
-            UI_Toggle(enabledText = "#LOC_BDArmory_On", disabledText = "#LOC_BDArmory_Off")]//On--Off
-        public bool standbyMode = false;
+		[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_maxAllowedGForce"),//Max G
+			UI_FloatRange(minValue = 2f, maxValue = 45f, stepIncrement = 0.25f, scene = UI_Scene.All)]
+		public float maxAllowedGForce = 10;
 
-        //manueuverability and g loading data
-        float maxDynPresGRecorded;
+		[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_maxAllowedAoA"),//Max AoA
+			UI_FloatRange(minValue = 0f, maxValue = 85f, stepIncrement = 2.5f, scene = UI_Scene.All)]
+		public float maxAllowedAoA = 35;
+		float maxAllowedCosAoA;
+		float lastAllowedAoA;
 
-        float maxPosG;
-        float cosAoAAtMaxPosG;
+		[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_AIPersonality", advancedTweakable = true), //AI Personality
+UI_Toggle(enabledText = "#LOC_BDArmory_Reckless", disabledText = "#LOC_BDArmory_Standard", scene = UI_Scene.All),] //Reckless -- Standard
+		public bool Reckless = false;
 
-        float maxNegG;
-        float cosAoAAtMaxNegG;
+		[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_Orbit", advancedTweakable = true),//Orbit 
+			UI_Toggle(enabledText = "#LOC_BDArmory_Orbit_enabledText", disabledText = "#LOC_BDArmory_Orbit_disabledText", scene = UI_Scene.All),]//Starboard (CW)--Port (CCW)
+		public bool ClockwiseOrbit = true;
 
-        float[] gLoadMovingAvgArray = new float[32];
-        float[] cosAoAMovingAvgArray = new float[32];
-        int movingAvgIndex;
+		[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_UnclampTuning", advancedTweakable = true),//Unclamp tuning 
+			UI_Toggle(enabledText = "#LOC_BDArmory_UnclampTuning_enabledText", disabledText = "#LOC_BDArmory_UnclampTuning_disabledText", scene = UI_Scene.All),]//Unclamped--Clamped
+		public bool UpToEleven = false;
+		bool toEleven = false;
 
-        float gLoadMovingAvg;
-        float cosAoAMovingAvg;
+		Dictionary<string, float> altMaxValues = new Dictionary<string, float>
+		{
+			{ nameof(defaultAltitude), 100000f },
+			{ nameof(minAltitude), 30000f },
+			{ nameof(steerMult), 200f },
+			{ nameof(steerKiAdjust), 20f },
+			{ nameof(steerDamping), 100f },
+			{ nameof(maxSpeed), 3000f },
+			{ nameof(takeOffSpeed), 2000f },
+			{ nameof(minSpeed), 2000f },
+			{ nameof(idleSpeed), 3000f },
+			{ nameof(maxAllowedGForce), 1000f },
+			{ nameof(maxAllowedAoA), 180f },
+		};
 
-        float gaoASlopePerDynPres;        //used to limit control input at very high dynamic pressures to avoid structural failure
-        float gOffsetPerDynPres;
+		[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_StandbyMode"),//Standby Mode
+			UI_Toggle(enabledText = "#LOC_BDArmory_On", disabledText = "#LOC_BDArmory_Off")]//On--Off
+		public bool standbyMode = false;
 
-        float posPitchDynPresLimitIntegrator = 1;
-        float negPitchDynPresLimitIntegrator = -1;
+		//manueuverability and g loading data
+		float maxDynPresGRecorded;
 
-        float lastCosAoA;
-        float lastPitchInput;
+		float maxPosG;
+		float cosAoAAtMaxPosG;
 
-        //Controller Integral
-        float pitchIntegral;
-        float yawIntegral;
+		float maxNegG;
+		float cosAoAAtMaxNegG;
 
-        //instantaneous turn radius and possible acceleration from lift
-        //properties can be used so that other AI modules can read this for future maneuverability comparisons between craft
-        float turnRadius;
+		float[] gLoadMovingAvgArray = new float[32];
+		float[] cosAoAMovingAvgArray = new float[32];
+		int movingAvgIndex;
 
-        public float TurnRadius
-        {
-            get { return turnRadius; }
-            private set { turnRadius = value; }
-        }
+		float gLoadMovingAvg;
+		float cosAoAMovingAvg;
 
-        float maxLiftAcceleration;
+		float gaoASlopePerDynPres;        //used to limit control input at very high dynamic pressures to avoid structural failure
+		float gOffsetPerDynPres;
 
-        public float MaxLiftAcceleration
-        {
-            get { return maxLiftAcceleration; }
-            private set { maxLiftAcceleration = value; }
-        }
+		float posPitchDynPresLimitIntegrator = 1;
+		float negPitchDynPresLimitIntegrator = -1;
 
-        float turningTimer;
-        float evasiveTimer;
-        Vector3 lastTargetPosition;
+		float lastCosAoA;
+		float lastPitchInput;
 
-        LineRenderer lr;
-        Vector3 flyingToPosition;
-        Vector3 rollTarget;
-        Vector3 angVelRollTarget;
+		//Controller Integral
+		float pitchIntegral;
+		float yawIntegral;
 
-        //speed controller
-        bool useAB = true;
-        bool useBrakes = true;
-        bool regainEnergy = false;
+		//instantaneous turn radius and possible acceleration from lift
+		//properties can be used so that other AI modules can read this for future maneuverability comparisons between craft
+		float turnRadius;
 
-        //collision detection
-        int collisionDetectionTicker;
-        float collisionDetectionTimer;
-        Vector3 collisionAvoidDirection;
+		public float TurnRadius
+		{
+			get { return turnRadius; }
+			private set { turnRadius = value; }
+		}
 
-        //wing command
-        bool useRollHint;
-        private Vector3d debugFollowPosition;
+		float maxLiftAcceleration;
 
-        double commandSpeed;
-        Vector3d commandHeading;
+		public float MaxLiftAcceleration
+		{
+			get { return maxLiftAcceleration; }
+			private set { maxLiftAcceleration = value; }
+		}
 
-        float finalMaxSteer = 1;
+		float turningTimer;
+		float evasiveTimer;
+		Vector3 lastTargetPosition;
 
-        #region RMB info in editor
+		LineRenderer lr;
+		Vector3 flyingToPosition;
+		Vector3 rollTarget;
+		Vector3 angVelRollTarget;
 
-        // <color={XKCDColors.HexFormat.Lime}>Yes</color>
-        public override string GetInfo()
-        {
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine("<b>Available settings</b>:");
-            sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Default Alt.</color> - altitude to fly at when cruising/idle");
-            sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Min Altitude</color> - below this altitude AI will prioritize gaining altitude over combat");
-            sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Steer Factor</color> - higher will make the AI apply more control input for the same desired rotation");
-            sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Steer Ki</color> - higher will make the AI apply control trim faster");
-            sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Steer Limiter</color> - limit AI from applying full control input");
-            sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Steer Damping</color> - higher will make the AI apply more control input when it wants to stop rotation");
-            sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Max Speed</color> - AI will not fly faster than this");
-            sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- TakeOff Speed</color> - speed at which to start pitching up when taking off");
-            sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- MinCombat Speed</color> - AI will prioritize regaining speed over combat below this");
-            sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Idle Speed</color> - Cruising speed when not in combat");
-            sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Max G</color> - AI will try not to perform maneuvers at higher G than this");
-            sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Max AoA</color> - AI will try not to exceed this angle of attack");
-            if (GameSettings.ADVANCED_TWEAKABLES)
-            {
-                sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Orbit</color> - Which direction to orbit when idling over a location");
-                sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Unclamp tuning</color> - Increases variable limits, no direct effect on behaviour");
-            }
-            sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Standby Mode</color> - AI will not take off until an enemy is detected");
+		//speed controller
+		bool useAB = true;
+		bool useBrakes = true;
+		bool regainEnergy = false;
 
-            return sb.ToString();
-        }
+		//collision detection
+		int collisionDetectionTicker;
+		float collisionDetectionTimer;
+		Vector3 collisionAvoidDirection;
 
-        #endregion RMB info in editor
+		//wing command
+		bool useRollHint;
+		private Vector3d debugFollowPosition;
 
-        protected override void Start()
-        {
-            base.Start();
+		double commandSpeed;
+		Vector3d commandHeading;
 
-            if (HighLogic.LoadedSceneIsFlight)
-            {
-                maxAllowedCosAoA = (float)Math.Cos(maxAllowedAoA * Math.PI / 180.0);
-                lastAllowedAoA = maxAllowedAoA;
-            }
+		float finalMaxSteer = 1;
+
+		#region RMB info in editor
+
+		// <color={XKCDColors.HexFormat.Lime}>Yes</color>
+		public override string GetInfo()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.AppendLine("<b>Available settings</b>:");
+			sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Default Alt.</color> - altitude to fly at when cruising/idle");
+			sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Min Altitude</color> - below this altitude AI will prioritize gaining altitude over combat");
+			sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Steer Factor</color> - higher will make the AI apply more control input for the same desired rotation");
+			sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Steer Ki</color> - higher will make the AI apply control trim faster");
+			sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Steer Limiter</color> - limit AI from applying full control input");
+			sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Steer Damping</color> - higher will make the AI apply more control input when it wants to stop rotation");
+			sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Max Speed</color> - AI will not fly faster than this");
+			sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- TakeOff Speed</color> - speed at which to start pitching up when taking off");
+			sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- MinCombat Speed</color> - AI will prioritize regaining speed over combat below this");
+			sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Idle Speed</color> - Cruising speed when not in combat");
+			sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Max G</color> - AI will try not to perform maneuvers at higher G than this");
+			sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Max AoA</color> - AI will try not to exceed this angle of attack");
+			if (GameSettings.ADVANCED_TWEAKABLES)
+			{
+				sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Speed-Adjusted Steer Limiter</color> - limit AI from applying full control input past this speed");
+				sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Adjusted Limiter Speed</color> - Speed AI will begin limiting control input");
+				sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Missile Evade Distance</color> - Distance Ai will begin evading incoming missiles");
+				sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Extend Distance</color> - Distance Ai will extend to regain energy");
+				sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Orbit</color> - Which direction to orbit when idling over a location");
+				sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Unclamp tuning</color> - Increases variable limits, no direct effect on behaviour");
+				sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- AI Personality</color> - Standard or reckless AI behavior");
+			}
+			sb.AppendLine($"<color={XKCDColors.HexFormat.Cyan}>- Standby Mode</color> - AI will not take off until an enemy is detected");
+
+			return sb.ToString();
+		}
+
+		#endregion RMB info in editor
+
+		protected override void Start()
+		{
+			base.Start();
+
+			if (HighLogic.LoadedSceneIsFlight)
+			{
+				maxAllowedCosAoA = (float)Math.Cos(maxAllowedAoA * Math.PI / 180.0);
+				lastAllowedAoA = maxAllowedAoA;
+				if (GameSettings.ADVANCED_TWEAKABLES)
+				{
+					advancedSettings = true;
+				}
+			}
         }
 
         public override void ActivatePilot()
@@ -455,8 +487,15 @@ namespace BDArmory.Modules
                 Evasive(s);
                 evasiveTimer += Time.fixedDeltaTime;
                 turningTimer = 0;
-
-                if (evasiveTimer > 3)
+				if (Reckless)
+				{
+					if (evasiveTimer > 1.55)
+					{
+						evasiveTimer = 0;
+						collisionDetectionTicker = 21; //check for collision again after exiting evasion routine
+					}
+				}
+				if (evasiveTimer > 3)
                 {
                     evasiveTimer = 0;
                     collisionDetectionTicker = 21; //check for collision again after exiting evasion routine
@@ -872,8 +911,10 @@ namespace BDArmory.Modules
 
             flyingToPosition = targetPosition;
 
-            //test poststall
-            float AoA = Vector3.Angle(vessel.ReferenceTransform.up, vessel.Velocity());
+			float angleToTarget = Vector3.Angle(vesselTransform.up, targetPosition - vesselTransform.position);
+
+			//test poststall
+			float AoA = Vector3.Angle(vessel.ReferenceTransform.up, vessel.Velocity());
             if (AoA > 30f)
             {
                 steerMode = SteerModes.Aiming;
@@ -918,8 +959,17 @@ namespace BDArmory.Modules
             pitchError = VectorUtils.SignedAngle(Vector3.up, Vector3.ProjectOnPlane(targetDirection, Vector3.right), Vector3.back);
             yawError = VectorUtils.SignedAngle(Vector3.up, Vector3.ProjectOnPlane(targetDirectionYaw, Vector3.forward), Vector3.right);
 
-            //test
-            debugString.Append($"finalMaxSteer: {finalMaxSteer}");
+			if (vessel.srfSpeed > cornerSpeed & maxSteerAtMaxSpeed < 1)
+			{
+				finalMaxSteer *= 1 - (((float)vessel.srfSpeed - cornerSpeed) / (maxSpeed - cornerSpeed) * (1f - maxSteerAtMaxSpeed)); // linear approximation to set max control input when above corner speed
+				if (finalMaxSteer < 0.1f)
+				{
+					finalMaxSteer = 0.1f; // added just in case to ensure some input is retained no matter what happens
+				}
+			}
+
+			//test
+			debugString.Append($"finalMaxSteer: {finalMaxSteer}");
             debugString.Append(Environment.NewLine);
 
             //roll
@@ -931,14 +981,14 @@ namespace BDArmory.Modules
             }
             rollTarget = (targetPosition + (rollUp * upDirection)) - vesselTransform.position;
 
-            //test
-            if (steerMode == SteerModes.Aiming && !belowMinAltitude)
-            {
-                angVelRollTarget = -140 * vesselTransform.TransformVector(Quaternion.AngleAxis(90f, Vector3.up) * localTargetAngVel);
-                rollTarget += angVelRollTarget;
-            }
+			//test
+			if (steerMode == SteerModes.Aiming && !belowMinAltitude && angleToTarget > 20) //if target more or less infront, use yaw to correct lateral aim error, else roll+pitch 
+			{
+				angVelRollTarget = -140 * vesselTransform.TransformVector(Quaternion.AngleAxis(90f, Vector3.up) * localTargetAngVel);
+				rollTarget += angVelRollTarget;
+			}
 
-            if (command == PilotCommands.Follow && useRollHint)
+			if (command == PilotCommands.Follow && useRollHint)
             {
                 rollTarget = -commandLeader.vessel.ReferenceTransform.forward;
             }
@@ -976,7 +1026,12 @@ namespace BDArmory.Modules
             float steerPitch = (0.015f * steerMult * pitchError) - (steerDamping * -localAngVel.x * (1 + steerKiAdjust));
             float steerYaw = (0.005f * steerMult * yawError) - (steerDamping * 0.2f * -localAngVel.z * (1 + steerKiAdjust));
 
-            pitchIntegral += pitchError;
+			if (steerMode == SteerModes.Aiming)
+			{
+				steerYaw = (0.015f * steerMult * yawError) - (steerDamping * -localAngVel.z * (1 + steerKiAdjust)); // so Ai can use yaw for fine aiming
+			}
+
+			pitchIntegral += pitchError;
             yawIntegral += yawError;
 
             steerPitch *= dynamicAdjustment;
@@ -1005,19 +1060,25 @@ namespace BDArmory.Modules
                     extending = false;
                 }
 
-                float extendDistance = Mathf.Clamp(weaponManager.guardRange - 1800, 2500, 4000);
+				float extendDistance;
+				if (advancedSettings)
+				{
+					extendDistance = ExtendDist;
+				}
+				else
+				{
+					extendDistance = Mathf.Clamp(weaponManager.guardRange - 1800, 2500, 4000);
+				}
+				if ((targetVessel != null && !targetVessel.LandedOrSplashed) && !advancedSettings)  //this is just asking for trouble at 800m
+				{
+					extendDistance = 1600;
+				}
+				if (weaponManager.CurrentMissile && weaponManager.CurrentMissile.GetWeaponClass() == WeaponClasses.Bomb)
+				{
+					extendDistance = 4500;
+				}
 
-                if (weaponManager.CurrentMissile && weaponManager.CurrentMissile.GetWeaponClass() == WeaponClasses.Bomb)
-                {
-                    extendDistance = 4500;
-                }
-
-                if (targetVessel != null && !targetVessel.LandedOrSplashed)      //this is just asking for trouble at 800m
-                {
-                    extendDistance = 1600;
-                }
-
-                Vector3 srfVector = Vector3.ProjectOnPlane(vessel.transform.position - tPosition, upDirection);
+				Vector3 srfVector = Vector3.ProjectOnPlane(vessel.transform.position - tPosition, upDirection);
                 float srfDist = srfVector.magnitude;
                 if (srfDist < extendDistance)
                 {
@@ -1125,8 +1186,8 @@ namespace BDArmory.Modules
                     AdjustThrottle(targetSpeed, false, useAB);
                 }
 
-                if ((weaponManager.isChaffing || weaponManager.isFlaring) && (weaponManager.incomingMissileDistance > 2000))
-                {
+				if (((weaponManager.isChaffing || weaponManager.isFlaring) && (weaponManager.incomingMissileDistance > 2000)) || ((weaponManager.isChaffing || weaponManager.isFlaring) && advancedSettings && weaponManager.incomingMissileDistance > maxBreakDist))
+				{
                     debugString.Append($"Breaking from missile threat!");
                     debugString.Append(Environment.NewLine);
 
@@ -1146,55 +1207,99 @@ namespace BDArmory.Modules
 
                     if (threatDirectionFactor > 0.9f)     //within 28 degrees in front
                     {
-                        breakTarget += Vector3.Cross(threatRelativePosition.normalized, Mathf.Sign(Mathf.Sin((float)vessel.missionTime / 2)) * vessel.upAxis);
-                        debugString.Append($" from directly ahead!");
-                    }
-                    else if (threatDirectionFactor < -0.9) //within ~28 degrees behind
-                    {
-                        float threatDistance = threatRelativePosition.magnitude;
-                        if (threatDistance > 400)
-                        {
-                            breakTarget = vesselTransform.position + vesselTransform.up * 1500 - 500 * vessel.upAxis;
-                            breakTarget += Mathf.Sin((float)vessel.missionTime / 2) * vesselTransform.right * 1000 - Mathf.Cos((float)vessel.missionTime / 2) * vesselTransform.forward * 1000;
-                            if (threatDistance > 800)
-                                debugString.Append($" from behind afar; engaging barrel roll");
-                            else
-                            {
-                                debugString.Append($" from behind moderate distance; engaging aggressvie barrel roll and braking");
-                                steerMode = SteerModes.Aiming;
-                                AdjustThrottle(minSpeed, true, false);
-                            }
-                        }
-                        else
-                        {
-                            breakTarget = threatRelativePosition;
-                            if (evasiveTimer < 1.5f)
-                                breakTarget += Mathf.Sin((float)vessel.missionTime * 2) * vesselTransform.right * 500;
-                            else
-                                breakTarget += -Math.Sign(Mathf.Sin((float)vessel.missionTime * 2)) * vesselTransform.right * 150;
+						if (threatDirectionFactor > 0.9f)     //within 28 degrees in front
+						{
+							if (!Reckless)
+							{
+								breakTarget += Vector3.Cross(threatRelativePosition.normalized, Mathf.Sign(Mathf.Sin((float)vessel.missionTime / 2)) * vessel.upAxis);
+								debugString.Append($" from directly ahead!");
+							}
+							else
+								debugString.Append($" by recklessly ignoring it!");
+						}
+					}
+					else if (threatDirectionFactor < -0.9) //within ~28 degrees behind
+					{
+						float threatDistance = threatRelativePosition.magnitude;
+						if (threatDistance > 400)
+						{
+							if (!Reckless)
+							{
+								breakTarget = vesselTransform.position + vesselTransform.up * 1500 - 500 * vessel.upAxis;
+								breakTarget += Mathf.Sin((float)vessel.missionTime / 2) * vesselTransform.right * 1000 - Mathf.Cos((float)vessel.missionTime / 2) * vesselTransform.forward * 1000;
+								if (threatDistance > 800)
+									debugString.Append($" from behind afar; engaging barrel roll");
+								else
+								{
+									debugString.Append($" from behind moderate distance; engaging aggressvie barrel roll and braking");
+									steerMode = SteerModes.Aiming;
+									AdjustThrottle(minSpeed, true, false);
+								}
+							}
+							if (Reckless)
+							{
+								if (threatDistance < 800)
+									debugString.Append($" from behind; recklessly believes barrel roll enough");
+								breakTarget = vesselTransform.position + vesselTransform.up * 1500 - 500 * vessel.upAxis;
+								breakTarget += Mathf.Sin((float)vessel.missionTime / 2) * vesselTransform.right * 1000 - Mathf.Cos((float)vessel.missionTime / 2) * vesselTransform.forward * 1000;
+							}
+						}
+						else
+						{
+							if (!Reckless)
+							{
+								breakTarget = threatRelativePosition;
+								if (evasiveTimer < 1.5f)
+									breakTarget += Mathf.Sin((float)vessel.missionTime * 2) * vesselTransform.right * 500;
+								else
+									breakTarget += -Math.Sign(Mathf.Sin((float)vessel.missionTime * 2)) * vesselTransform.right * 150;
 
-                            debugString.Append($" from directly behind and close; breaking hard");
-                            steerMode = SteerModes.Aiming;
-                        }
-                    }
-                    else
-                    {
-                        float threatDistance = threatRelativePosition.magnitude;
-                        if (threatDistance < 400)
-                        {
-                            breakTarget += Mathf.Sin((float)vessel.missionTime * 2) * vesselTransform.right * 100;
+								debugString.Append($" from directly behind and close; breaking hard");
+								steerMode = SteerModes.Aiming;
+							}
+							if (Reckless)
+							{
+								AdjustThrottle(minSpeed - (minSpeed / 4), true, false);
+								useBrakes = true;
+								steerMode = SteerModes.Aiming;
+								debugString.Append($" from 6 O'clock close, breaking hard");
+							}
+						}
+					}
+					else
+					{
+						float threatDistance = threatRelativePosition.magnitude;
+						if (threatDistance < 400)
+						{
+							if (!Reckless)
+							{
+								breakTarget += Mathf.Sin((float)vessel.missionTime * 2) * vesselTransform.right * 100;
+								steerMode = SteerModes.Aiming;
+								debugString.Append($" from close flanker, breaking away");
+							}
+							else
+							{
+								breakTarget = vesselTransform.position + vesselTransform.up * 1500;
+								breakTarget += Mathf.Sin((float)vessel.missionTime / 2) * vesselTransform.right * 1000 - Mathf.Cos((float)vessel.missionTime / 2) * vesselTransform.forward * 1000;
+								debugString.Append($" from side; engaging barrel roll");
+							}
+						}
+						else
+						{
+							if (!Reckless)
+							{
+								breakTarget = vesselTransform.position + vesselTransform.up * 1500;
+								breakTarget += Mathf.Sin((float)vessel.missionTime / 2) * vesselTransform.right * 1000 - Mathf.Cos((float)vessel.missionTime / 2) * vesselTransform.forward * 1000;
+								debugString.Append($" from far side; engaging barrel roll");
+							}
+							else
+							{
+								debugString.Append($" from far side by recklessly ignoring it");
+							}
+						}
+					}
 
-                            steerMode = SteerModes.Aiming;
-                        }
-                        else
-                        {
-                            breakTarget = vesselTransform.position + vesselTransform.up * 1500;
-                            breakTarget += Mathf.Sin((float)vessel.missionTime / 2) * vesselTransform.right * 1000 - Mathf.Cos((float)vessel.missionTime / 2) * vesselTransform.forward * 1000;
-                            debugString.Append($" from far side; engaging barrel roll");
-                        }
-                    }
-
-                    float threatAltitudeDiff = Vector3.Dot(threatRelativePosition, vessel.upAxis);
+					float threatAltitudeDiff = Vector3.Dot(threatRelativePosition, vessel.upAxis);
                     if (threatAltitudeDiff > 500)
                         breakTarget += threatAltitudeDiff * vessel.upAxis;      //if it's trying to spike us from below, don't go crazy trying to dive below it
                     else

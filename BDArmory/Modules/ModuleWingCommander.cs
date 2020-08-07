@@ -5,6 +5,7 @@ using BDArmory.Control;
 using BDArmory.Misc;
 using BDArmory.Parts;
 using BDArmory.UI;
+using BDArmory.Core;
 using UniLinq;
 using UnityEngine;
 using KSP.Localization;
@@ -378,7 +379,10 @@ namespace BDArmory.Modules
             height += ((commandButtonLine - 1) * (buttonHeight + buttonGap));
             BDArmorySetup.WindowRectWingCommander.height = height;
             GUI.DragWindow(BDArmorySetup.WindowRectWingCommander);
-            BDGUIUtils.RepositionWindow(ref BDArmorySetup.WindowRectWingCommander);
+			if (BDArmorySettings.STRICT_WINDOW_BOUNDARIES)
+			{
+				BDGUIUtils.RepositionWindow(ref BDArmorySetup.WindowRectWingCommander);
+			}
         }
 
         void WingmanButton(int index, out float buttonEndY)

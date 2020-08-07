@@ -1042,7 +1042,7 @@ namespace BDArmory.Modules
             {
                 ContactPoint contact = col.contacts[0];
                 Vector3 pos = contact.point;
-                BulletHitFX.AttachFlames(pos, col.collider.gameObject.GetComponentInParent<Part>());
+                //BulletHitFX.AttachFlames(pos, col.collider.gameObject.GetComponentInParent<Part>());
             }
 
             if (HasExploded || !HasFired) return;

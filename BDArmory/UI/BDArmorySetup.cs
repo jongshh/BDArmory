@@ -431,17 +431,20 @@ namespace BDArmory.UI
             BulletInfo.Load();
         }
 
-        private void CheckIfWindowsSettingsAreWithinScreen()
-        {
-            BDGUIUtils.RepositionWindow(ref WindowRectToolbar);
-            BDGUIUtils.RepositionWindow(ref WindowRectSettings);
-            BDGUIUtils.RepositionWindow(ref WindowRectRwr);
-            BDGUIUtils.RepositionWindow(ref WindowRectVesselSwitcher);
-            BDGUIUtils.RepositionWindow(ref WindowRectWingCommander);
-            BDGUIUtils.RepositionWindow(ref WindowRectTargetingCam);
-        }
+		private void CheckIfWindowsSettingsAreWithinScreen()
+		{
+			if (BDArmorySettings.STRICT_WINDOW_BOUNDARIES)
+			{
+				BDGUIUtils.RepositionWindow(ref WindowRectToolbar);
+				BDGUIUtils.RepositionWindow(ref WindowRectSettings);
+				BDGUIUtils.RepositionWindow(ref WindowRectRwr);
+				BDGUIUtils.RepositionWindow(ref WindowRectVesselSwitcher);
+				BDGUIUtils.RepositionWindow(ref WindowRectWingCommander);
+				BDGUIUtils.RepositionWindow(ref WindowRectTargetingCam);
+			}
+		}
 
-        void Update()
+		void Update()
         {
             if (HighLogic.LoadedSceneIsFlight)
             {
@@ -516,42 +519,31 @@ namespace BDArmory.UI
             }
 
             drawCursor = false;
-            if (!MapView.MapIsEnabled && !Misc.Misc.CheckMouseIsOnGui() && !PauseMenu.isOpen)
-            {
-                if (ActiveWeaponManager.selectedWeapon != null && ActiveWeaponManager.weaponIndex > 0 &&
-                    !ActiveWeaponManager.guardMode)
-                {
-                    if (ActiveWeaponManager.selectedWeapon.GetWeaponClass() == WeaponClasses.Gun ||
-                        ActiveWeaponManager.selectedWeapon.GetWeaponClass() == WeaponClasses.DefenseLaser)
-                    {
-                        ModuleWeapon mw =
-                            ActiveWeaponManager.selectedWeapon.GetPart().FindModuleImplementing<ModuleWeapon>();
-                        if (mw.weaponState == ModuleWeapon.WeaponStates.Enabled && mw.maxPitch > 1 && !mw.slaved &&
-                            !mw.aiControlled)
-                        {
-                            //Screen.showCursor = false;
-                            Cursor.visible = false;
-                            drawCursor = true;
-                            return;
-                        }
-                    }
-                    else if (ActiveWeaponManager.selectedWeapon.GetWeaponClass() == WeaponClasses.Rocket)
-                    {
-                        RocketLauncher rl =
-                            ActiveWeaponManager.selectedWeapon.GetPart().FindModuleImplementing<RocketLauncher>();
-                        if (rl.readyToFire && rl.turret)
-                        {
-                            //Screen.showCursor = false;
-                            Cursor.visible = false;
-                            drawCursor = true;
-                            return;
-                        }
-                    }
-                }
-            }
+			if (!MapView.MapIsEnabled && !Misc.Misc.CheckMouseIsOnGui() && !PauseMenu.isOpen)
 
-            //Screen.showCursor = true;
-            Cursor.visible = true;
+			{
+				if (ActiveWeaponManager.selectedWeapon != null && ActiveWeaponManager.weaponIndex > 0 &&
+					!ActiveWeaponManager.guardMode)
+				{
+					if (ActiveWeaponManager.selectedWeapon.GetWeaponClass() == WeaponClasses.Gun ||
+						ActiveWeaponManager.selectedWeapon.GetWeaponClass() == WeaponClasses.DefenseLaser ||
+						ActiveWeaponManager.selectedWeapon.GetWeaponClass() == WeaponClasses.Rocket)
+					{
+						ModuleWeapon mw =
+							ActiveWeaponManager.selectedWeapon.GetPart().FindModuleImplementing<ModuleWeapon>();
+						if (mw.weaponState == ModuleWeapon.WeaponStates.Enabled && mw.maxPitch > 1 && !mw.slaved &&
+							!mw.aiControlled)
+						{
+							//Screen.showCursor = false;
+							Cursor.visible = false;
+							drawCursor = true;
+							return;
+						}
+					}
+				}
+			}
+			//Screen.showCursor = true;
+			Cursor.visible = true;
         }
 
         void VesselChange(Vessel v)
@@ -684,7 +676,7 @@ namespace BDArmory.UI
             line += 0.25f;
 
             // Version.
-            GUI.Label(new Rect(toolWindowWidth - 30 - 28 - 70, 23, 70, 10), Version, waterMarkStyle);
+            GUI.Label(new Rect(toolWindowWidth - 30 - 28 - 70, 23, 70, 10), Version + " SI", waterMarkStyle);
 
             //SETTINGS BUTTON
             if (!BDKeyBinder.current &&
@@ -1177,9 +1169,12 @@ namespace BDArmory.UI
 
             toolWindowHeight = Mathf.Lerp(toolWindowHeight, contentTop + (line * entryHeight) + 5, 1);
             WindowRectToolbar.height = toolWindowHeight;
-            // = new Rect(toolbarWindowRect.position.x, toolbarWindowRect.position.y, toolWindowWidth, toolWindowHeight);
-            BDGUIUtils.RepositionWindow(ref WindowRectToolbar);
-        }
+			// = new Rect(toolbarWindowRect.position.x, toolbarWindowRect.position.y, toolWindowWidth, toolWindowHeight);
+			if (BDArmorySettings.STRICT_WINDOW_BOUNDARIES)
+			{
+				BDGUIUtils.RepositionWindow(ref WindowRectToolbar);
+			}
+		}
 
         bool validGPSName = true;
 
@@ -1410,9 +1405,11 @@ namespace BDArmory.UI
             GUI.Label(SLeftRect(line), $"{Localizer.Format("#LOC_BDArmory_Settings_MaxBulletHoles")}:  ({BDArmorySettings.MAX_NUM_BULLET_DECALS})", leftLabel);//Max Bullet Holes
             BDArmorySettings.MAX_NUM_BULLET_DECALS = (int)GUI.HorizontalSlider(SRightRect(line), BDArmorySettings.MAX_NUM_BULLET_DECALS, 1f, 999);
             line++;
-            line++;
+			BDArmorySettings.PAINTBALL = GUI.Toggle(SLeftRect(line), BDArmorySettings.PAINTBALL, "Paintball Mode");
+			BDArmorySettings.BATTLEDAMAGE = GUI.Toggle(SRightRect(line), BDArmorySettings.BATTLEDAMAGE, "Battle Damage");
+			line++;
 
-            bool origPm = BDArmorySettings.PEACE_MODE;
+			bool origPm = BDArmorySettings.PEACE_MODE;
             BDArmorySettings.PEACE_MODE = GUI.Toggle(SLeftRect(line), BDArmorySettings.PEACE_MODE, Localizer.Format("#LOC_BDArmory_Settings_PeaceMode"));//"Peace Mode"
             if (BDArmorySettings.PEACE_MODE && !origPm)
             {
@@ -1423,7 +1420,8 @@ namespace BDArmory.UI
                 }
             }
             line++;
-            line++;
+			BDArmorySettings.STRICT_WINDOW_BOUNDARIES = GUI.Toggle(SRightRect(line), BDArmorySettings.STRICT_WINDOW_BOUNDARIES, "Strict Window Boundaries");
+			line++;
 
             GUI.Label(SLeftRect(line), Localizer.Format("#LOC_BDArmory_Settings_RWRWindowScale") + ": " + (BDArmorySettings.RWR_WINDOW_SCALE * 100).ToString("0") + "%", leftLabel);//RWR Window Scale
             float rwrScale = BDArmorySettings.RWR_WINDOW_SCALE;
@@ -1531,8 +1529,11 @@ namespace BDArmory.UI
             line += 1.5f;
             settingsHeight = (line * settingsLineHeight);
             WindowRectSettings.height = settingsHeight;
-            BDGUIUtils.RepositionWindow(ref WindowRectSettings);
-            BDGUIUtils.UseMouseEventInRect(WindowRectSettings);
+			if (BDArmorySettings.STRICT_WINDOW_BOUNDARIES)
+			{
+				BDGUIUtils.RepositionWindow(ref WindowRectSettings);
+			}
+			BDGUIUtils.UseMouseEventInRect(WindowRectSettings);
         }
 
         internal static void ResizeRwrWindow(float rwrScale)
