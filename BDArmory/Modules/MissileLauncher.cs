@@ -722,7 +722,7 @@ namespace BDArmory.Modules
                 SetupExplosive(this.part);
                 HasFired = true;
 
-                if(BDArmorySettings.DRAW_DEBUG_LABELS) Debug.Log("[BDArmory.MissileLauncher]: Missile Fired! " + vessel.vesselName);
+                if (BDArmorySettings.DRAW_DEBUG_LABELS) Debug.Log("[BDArmory.MissileLauncher]: Missile Fired! " + vessel.vesselName);
 
                 GameEvents.onPartDie.Add(PartDie);
                 BDATargetManager.FiredMissiles.Add(this);
@@ -937,10 +937,10 @@ namespace BDArmory.Modules
                 bool targetBehindMissile = Vector3.Dot(TargetPosition - transform.position, transform.forward) < 0f;
                 if ((pastGracePeriod && targetBehindMissile) || noProgress) // Check that we're not moving away from the target after a grace period
                 {
-                    if(BDArmorySettings.DRAW_DEBUG_LABELS) Debug.Log("[BDArmory.MissileLauncher]: Missile has missed!");
+                    if (BDArmorySettings.DRAW_DEBUG_LABELS) Debug.Log("[BDArmory.MissileLauncher]: Missile has missed!");
 
                     if (vessel.altitude >= maxAltitude && maxAltitude != 0f)
-                        if(BDArmorySettings.DRAW_DEBUG_LABELS) Debug.Log("[BDArmory.MissileLauncher]: CheckMiss trigged by MaxAltitude");
+                        if (BDArmorySettings.DRAW_DEBUG_LABELS) Debug.Log("[BDArmory.MissileLauncher]: CheckMiss trigged by MaxAltitude");
 
                     HasMissed = true;
                     guidanceActive = false;
@@ -1075,35 +1075,38 @@ namespace BDArmory.Modules
 
                     finalMaxTorque = Mathf.Clamp((TimeIndex - dropTime) * torqueRampUp, 0, maxTorque); //ramp up torque
 
-                    if (GuidanceMode == GuidanceModes.AAMLead)
+                    switch (GuidanceMode)
                     {
-                        AAMGuidance();
+                        case GuidanceModes.AAMLead:
+                            AAMGuidance();
+                            break;
+                        case GuidanceModes.AAMPure: // Should just aim directly at the target?
+                            break;
+                        case GuidanceModes.AGM:
+                            AGMGuidance();
+                            break;
+                        case GuidanceModes.AGMBallistic:
+                            AGMBallisticGuidance();
+                            break;
+                        case GuidanceModes.BeamRiding:
+                            BeamRideGuidance();
+                            break;
+                        case GuidanceModes.Bomb: // Guided bombs should use AGMGuidance with zero thrust?
+                            break;
+                        case GuidanceModes.Cruise:
+                            CruiseGuidance();
+                            break;
+                        case GuidanceModes.RCS:
+                            part.transform.rotation = Quaternion.RotateTowards(part.transform.rotation, Quaternion.LookRotation(TargetPosition - part.transform.position, part.transform.up), turnRateDPS * Time.fixedDeltaTime);
+                            break;
+                        case GuidanceModes.SLW:
+                            SLWGuidance();
+                            break;
+                        case GuidanceModes.STS: // What is this?
+                            break;
+                        default: // GuidanceModes.None
+                            break;
                     }
-                    else if (GuidanceMode == GuidanceModes.AGM)
-                    {
-                        AGMGuidance();
-                    }
-                    else if (GuidanceMode == GuidanceModes.AGMBallistic)
-                    {
-                        AGMBallisticGuidance();
-                    }
-                    else if (GuidanceMode == GuidanceModes.BeamRiding)
-                    {
-                        BeamRideGuidance();
-                    }
-                    else if (GuidanceMode == GuidanceModes.RCS)
-                    {
-                        part.transform.rotation = Quaternion.RotateTowards(part.transform.rotation, Quaternion.LookRotation(TargetPosition - part.transform.position, part.transform.up), turnRateDPS * Time.fixedDeltaTime);
-                    }
-                    else if (GuidanceMode == GuidanceModes.Cruise)
-                    {
-                        CruiseGuidance();
-                    }
-                    else if (GuidanceMode == GuidanceModes.SLW)
-                    {
-                        SLWGuidance();
-                    }
-
                 }
                 else
                 {
@@ -1221,7 +1224,7 @@ namespace BDArmory.Modules
                             else
                                 RadarWarningReceiver.PingRWR(new Ray(transform.position, radarTarget.predictedPosition - transform.position), 45, RadarWarningReceiver.RWRThreatTypes.MissileLaunch, 2f);
 
-                            if(BDArmorySettings.DRAW_DEBUG_LABELS) Debug.Log("[BDArmory.MissileLauncher][Terminal Guidance]: Pitbull! Radar missileBase has gone active.  Radar sig strength: " + radarTarget.signalStrength.ToString("0.0") + " - target: " + radarTarget.vessel.name);
+                            if (BDArmorySettings.DRAW_DEBUG_LABELS) Debug.Log("[BDArmory.MissileLauncher][Terminal Guidance]: Pitbull! Radar missileBase has gone active.  Radar sig strength: " + radarTarget.signalStrength.ToString("0.0") + " - target: " + radarTarget.vessel.name);
                         }
                         else
                         {
@@ -1230,7 +1233,7 @@ namespace BDArmory.Modules
                             TargetVelocity = Vector3.zero;
                             TargetAcceleration = Vector3.zero;
                             targetGPSCoords = VectorUtils.WorldPositionToGeoCoords(TargetPosition, vessel.mainBody);
-                            if(BDArmorySettings.DRAW_DEBUG_LABELS) Debug.Log("[BDArmory.MissileLauncher][Terminal Guidance]: Missile radar could not acquire a target lock - Defaulting to GPS Target");
+                            if (BDArmorySettings.DRAW_DEBUG_LABELS) Debug.Log("[BDArmory.MissileLauncher][Terminal Guidance]: Missile radar could not acquire a target lock - Defaulting to GPS Target");
                         }
                         break;
 
@@ -1711,7 +1714,7 @@ namespace BDArmory.Modules
 
                     if (targetViewAngle > maxOffBoresight)
                     {
-                        if(BDArmorySettings.DRAW_DEBUG_LABELS) Debug.Log("[BDArmory.MissileLauncher]: AGM Missile guidance failed - target out of view");
+                        if (BDArmorySettings.DRAW_DEBUG_LABELS) Debug.Log("[BDArmory.MissileLauncher]: AGM Missile guidance failed - target out of view");
                         guidanceActive = false;
                     }
                     CheckMiss();
@@ -1780,7 +1783,7 @@ namespace BDArmory.Modules
         {
             if (HasExploded || !HasFired) return;
 
-            if(BDArmorySettings.DRAW_DEBUG_LABELS) Debug.Log("[BDArmory.MissileLauncher]: Detonate Triggered");
+            if (BDArmorySettings.DRAW_DEBUG_LABELS) Debug.Log("[BDArmory.MissileLauncher]: Detonate Triggered");
 
             BDArmorySetup.numberOfParticleEmitters--;
             HasExploded = true;
