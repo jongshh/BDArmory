@@ -193,6 +193,7 @@ namespace BDArmory.Core
         [BDAPersistantSettingsField] public static int VESSEL_SPAWN_NUMBER_OF_TEAMS = 0;           // Number of Teams: 0 - FFA, 1 - Folders, 2-10 specified directly
         [BDAPersistantSettingsField] public static string VESSEL_SPAWN_FILES_LOCATION = "";        // Spawn files location (under AutoSpawn).
         [BDAPersistantSettingsField] public static bool VESSEL_SPAWN_RANDOM_ORDER = true;          // Shuffle vessels before spawning them.
+        [BDAPersistantSettingsField] public static bool VESSEL_SPAWN_FIND_FOCUSED = false;         // Switch to the vessel with ' focused' in it's name after starting a competition (for bias testing).
 
         // Heartbleed
         [BDAPersistantSettingsField] public static float HEART_BLEED_RATE = 0.01f;

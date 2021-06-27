@@ -452,6 +452,15 @@ namespace BDArmory.Control
             finalGracePeriodStart = -1;
             lastTagUpdateTime = competitionStartTime;
             Debug.Log("[BDArmory.BDACompetitionMode:" + CompetitionID.ToString() + "]: Competition Started");
+            if (BDArmorySettings.VESSEL_SPAWN_FIND_FOCUSED)
+            {
+                foreach (var vessel in LoadedVesselSwitcher.Instance.WeaponManagers.SelectMany(tm => tm.Value).Where(wm => wm != null && wm.vessel != null).Select(wm => wm.vessel))
+                    if (vessel.vesselName.Contains(" focused"))
+                    {
+                        LoadedVesselSwitcher.Instance.ForceSwitchVessel(vessel);
+                        break;
+                    }
+            }
         }
 
         public void ResetCompetitionStuff()

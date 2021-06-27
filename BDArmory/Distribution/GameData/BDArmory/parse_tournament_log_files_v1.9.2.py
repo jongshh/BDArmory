@@ -13,6 +13,7 @@ parser.add_argument('-q', '--quiet', action='store_true', help="Don't print resu
 parser.add_argument('-n', '--no-files', action='store_true', help="Don't create summary files.")
 parser.add_argument('-s', '--score', action='store_false', help="Compute scores.")
 parser.add_argument('-so', '--scores-only', action='store_true', help="Only display the scores in the summary on the console.")
+parser.add_argument('-wo', '--wins-only', action='store_true', help="Only display the wins in the summary on the console.")
 parser.add_argument('-w', '--weights', type=str, default="1,0,0,-1.5,1,2e-3,3,1,5e-3,1e-5,0.5,0.01,1e-7,0,5e-2,0", help="Score weights (in order of main columns from 'Wins' to 'Ram').")
 parser.add_argument('-c', '--current-dir', action='store_true', help="Parse the logs in the current directory as if it was a tournament without the folder structure.")
 parser.add_argument('-N', type=int, help="Only the first N logs in the folder (in -c mode).")
@@ -241,9 +242,14 @@ for tournamentNumber, tournamentDir in enumerate(tournamentDirs):
 		if not args.quiet:
 			# Write results to console
 			strings = []
-			headers = ['Name', 'Wins', 'Survive', 'MIA', 'Deaths (BMRAS)', 'D.Order', 'D.Time', 'Kills (BMR)', 'Assists', 'Hits', 'Damage', 'MisHits', 'MisParts', 'MisDmg', 'HitByMis', 'Ram', 'Acc%', 'HP%', 'Dmg/Hit', 'Hits/Sp', 'Dmg/Sp'] if not args.scores_only else ['Name']
-			if args.score:
-				headers.insert(1, 'Score')
+			if args.scores_only:
+				headers = ['Name', 'Score']
+			elif args.wins_only:
+				headers = ['Name', 'Wins']
+			else:
+				headers = ['Name', 'Wins', 'Survive', 'MIA', 'Deaths (BMRAS)', 'D.Order', 'D.Time', 'Kills (BMR)', 'Assists', 'Hits', 'Damage', 'MisHits', 'MisParts', 'MisDmg', 'HitByMis', 'Ram', 'Acc%', 'HP%', 'Dmg/Hit', 'Hits/Sp', 'Dmg/Sp'] if not args.scores_only else ['Name']
+				if args.score:
+					headers.insert(1, 'Score')
 			summary_strings = {'header': {field: field for field in headers}}
 			for craft in sorted(summary['craft']):
 				tmp = summary['craft'][craft]
