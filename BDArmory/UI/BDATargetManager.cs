@@ -11,7 +11,6 @@ using BDArmory.Modules;
 using BDArmory.Parts;
 using BDArmory.Radar;
 using BDArmory.Targeting;
-using KSP.UI.Screens;
 using UnityEngine;
 
 namespace BDArmory.UI
@@ -30,7 +29,6 @@ namespace BDArmory.UI
         private StringBuilder debugString = new StringBuilder();
         private float updateTimer = 0;
 
-        public static bool hasAddedButton;
         static string gpsTargetsCfg = "GameData/BDArmory/PluginData/gpsTargets.cfg";
 
         void Awake()
@@ -81,9 +79,6 @@ namespace BDArmory.UI
             ActiveLasers = new List<ModuleTargetingCamera>();
 
             FiredMissiles = new List<IBDWeapon>();
-
-            //AddToolbarButton();
-            StartCoroutine(ToolbarButtonRoutine());
         }
 
         public static List<GPSTargetInfo> GPSTargetList(BDTeam team)
@@ -130,44 +125,6 @@ namespace BDArmory.UI
             LoadedVessels.RemoveAll(ves => ves == null);
             LoadedVessels.RemoveAll(ves => ves.loaded == false);
         }
-
-        void AddToolbarButton()
-        {
-            if (HighLogic.LoadedSceneIsFlight)
-            {
-                if (!hasAddedButton)
-                {
-                    Texture buttonTexture = GameDatabase.Instance.GetTexture(BDArmorySetup.textureDir + "icon", false);
-                    ApplicationLauncher.Instance.AddModApplication(ShowToolbarGUI, HideToolbarGUI, Dummy, Dummy, Dummy, Dummy, ApplicationLauncher.AppScenes.FLIGHT, buttonTexture);
-                    hasAddedButton = true;
-                }
-            }
-        }
-
-        IEnumerator ToolbarButtonRoutine()
-        {
-            if (hasAddedButton) yield break;
-            if (!HighLogic.LoadedSceneIsFlight) yield break;
-            while (!ApplicationLauncher.Ready)
-            {
-                yield return null;
-            }
-
-            AddToolbarButton();
-        }
-
-        public void ShowToolbarGUI()
-        {
-            BDArmorySetup.windowBDAToolBarEnabled = true;
-        }
-
-        public void HideToolbarGUI()
-        {
-            BDArmorySetup.windowBDAToolBarEnabled = false;
-        }
-
-        void Dummy()
-        { }
 
         void Update()
         {

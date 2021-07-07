@@ -1,4 +1,13 @@
-﻿v1.4.7.1
+﻿FIXES
+IMPROVEMENTS
+	- Automatically create the AutoSpawn folder on entering flight mode if it doesn't already exist.
+	- Always show a clock during competitions and competition start for time synchronisation of video post-processing.
+	- Move toolbar button logic to BDArmorySetup.cs and enable toolbar button in SPH and VAB too for accessing BDA settings window.
+	- Add an Advanced Tweakables toggle to the BDArmory settings for easier access.
+
+	- SI's armour overhaul <- FIXME get changelog from SI.
+
+v1.4.7.1
 FIXES
 	- Quick fix for craft names using invalid filename chars in the remote orchestration.
 	- Hide the Asteroid Rain radius slider when Follow Spread is enabled.

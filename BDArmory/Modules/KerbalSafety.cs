@@ -400,7 +400,7 @@ namespace BDArmory.Modules
             {
                 Debug.Log("[BDArmory.KerbalSafety]: " + kerbalName + " is MIA. Ejected: " + ejected + ", deployed chute: " + deployingChute);
             }
-            if (KerbalSafetyManager.Instance.kerbals.ContainsKey(kerbalName))
+            if (kerbalName != null && KerbalSafetyManager.Instance.kerbals.ContainsKey(kerbalName))
             {
                 KerbalSafetyManager.Instance.kerbals.Remove(kerbalName); // Stop managing this kerbal.
             }
@@ -483,6 +483,7 @@ namespace BDArmory.Modules
                         message = kerbalName + " failed to eject from " + part.vessel.vesselName + ", all exits were blocked. R.I.P.";
                         // BDACompetitionMode.Instance.competitionStatus.Add(message);
                         if (BDArmorySettings.DRAW_DEBUG_LABELS) Debug.Log("[BDArmory.KerbalSafety]: " + message);
+
                     }
                 }
             }

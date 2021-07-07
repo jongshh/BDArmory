@@ -25,6 +25,7 @@ namespace BDArmory.FX
         private float MaxTime { get; set; }
         public float Range { get; set; }
         public float Caliber { get; set; }
+        public float ProjMass { get; set; }
         public ExplosionSourceType ExplosionSource { get; set; }
         public string SourceVesselName { get; set; }
         public string SourceWeaponName { get; set; }
@@ -158,6 +159,11 @@ namespace BDArmory.FX
                 overlapSphereColliders = Physics.OverlapSphere(Position, Range, 9076737);
                 overlapSphereColliderCount = overlapSphereColliders.Length;
             }
+			      float shrapnelrange = Range;
+            if (ProjMass > 0)
+            {
+                shrapnelrange = Range * 2;
+			      }
             using (var hitCollidersEnu = overlapSphereColliders.Take(overlapSphereColliderCount).GetEnumerator())
             {
                 while (hitCollidersEnu.MoveNext())
@@ -258,16 +264,23 @@ namespace BDArmory.FX
                 if (IsAngleAllowed(Direction, hit))
                 {
                     //Adding damage hit
-                    eventList.Add(new PartBlastHitEvent()
+                    if(distance <= Range)//part within blast
                     {
-                        Distance = distance,
-                        Part = part,
-                        TimeToImpact = distance / ExplosionVelocity,
-                        HitPoint = hit.point,
-                        Hit = hit,
-                        SourceVesselName = sourceVesselName,
-                        IntermediateParts = intermediateParts
-                    });
+                        eventList.Add(new PartBlastHitEvent()
+                        {
+                            Distance = distance,
+                            Part = part,
+                            TimeToImpact = distance / ExplosionVelocity,
+                            HitPoint = hit.point,
+                            Hit = hit,
+                            SourceVesselName = sourceVesselName,
+                            IntermediateParts = intermediateParts
+                        });
+                    }
+                    if (ProjMass > 0)
+                    {
+                        ProjectileUtils.CalculateShrapnelDamage(part, hit, 120, Power, distance, sourceVesselName, ProjMass); //part hit by shrapnel, but not pressure wave
+                    }
                     partsAdded.Add(part);
                     return true;
                 }
@@ -477,49 +490,54 @@ namespace BDArmory.FX
                             BDArmorySettings.EXP_IMP_MOD,
                             eventToExecute.HitPoint + rb.velocity * TimeIndex);
                     }
-
-                    var damage = part.AddExplosiveDamage(blastInfo.Damage, Caliber, ExplosionSource);
-                    if (BDArmorySettings.BATTLEDAMAGE)
+                    var damage = 0f;
+                    if (!ProjectileUtils.CalculateExplosiveArmorDamage(part, blastInfo.TotalPressure, SourceVesselName, eventToExecute.Hit)) //false = armor blowthrough
                     {
-                        Misc.BattleDamageHandler.CheckDamageFX(part, 50, 0.5f, true, false, SourceVesselName, eventToExecute.Hit);
+                        damage = part.AddExplosiveDamage(blastInfo.Damage, Caliber, ExplosionSource);
                     }
-
-                    // Update scoring structures
-                    switch (ExplosionSource)
+                    if (damage > 0) //else damage from spalling done in CalcExplArmorDamage
                     {
-                        case ExplosionSourceType.Bullet:
-                        case ExplosionSourceType.Missile:
-                            var aName = eventToExecute.SourceVesselName; // Attacker
-                            var tName = part.vessel.GetName(); // Target
-                            if (aName != tName && BDACompetitionMode.Instance.Scores.ContainsKey(tName) && BDACompetitionMode.Instance.Scores.ContainsKey(aName))
-                            {
-                                var tData = BDACompetitionMode.Instance.Scores[tName];
-                                // Track damage
-                                switch (ExplosionSource)
+                        if (BDArmorySettings.BATTLEDAMAGE)
+                        {
+                            Misc.BattleDamageHandler.CheckDamageFX(part, 50, 0.5f, true, false, SourceVesselName, eventToExecute.Hit);
+                        }
+                        // Update scoring structures
+                        switch (ExplosionSource)
+                        {
+                            case ExplosionSourceType.Bullet:
+                            case ExplosionSourceType.Missile:
+                                var aName = eventToExecute.SourceVesselName; // Attacker
+                                var tName = part.vessel.GetName(); // Target
+                                if (aName != tName && BDACompetitionMode.Instance.Scores.ContainsKey(tName) && BDACompetitionMode.Instance.Scores.ContainsKey(aName))
                                 {
-                                    case ExplosionSourceType.Bullet:
-                                        if (tData.damageFromBullets.ContainsKey(aName))
-                                            tData.damageFromBullets[aName] += damage;
-                                        else
-                                            tData.damageFromBullets.Add(aName, damage);
-                                        if (BDArmorySettings.REMOTE_LOGGING_ENABLED)
-                                            BDAScoreService.Instance.TrackDamage(aName, tName, damage);
-                                        break;
-                                    case ExplosionSourceType.Missile:
-                                        if (tData.damageFromMissiles.ContainsKey(aName))
-                                            tData.damageFromMissiles[aName] += damage;
-                                        else
-                                            tData.damageFromMissiles.Add(aName, damage);
-                                        if (BDArmorySettings.REMOTE_LOGGING_ENABLED)
-                                            BDAScoreService.Instance.TrackMissileDamage(aName, tName, damage);
-                                        break;
-                                    default:
-                                        break;
+                                    var tData = BDACompetitionMode.Instance.Scores[tName];
+                                    // Track damage
+                                    switch (ExplosionSource)
+                                    {
+                                        case ExplosionSourceType.Bullet:
+                                            if (tData.damageFromBullets.ContainsKey(aName))
+                                                tData.damageFromBullets[aName] += damage;
+                                            else
+                                                tData.damageFromBullets.Add(aName, damage);
+                                            if (BDArmorySettings.REMOTE_LOGGING_ENABLED)
+                                                BDAScoreService.Instance.TrackDamage(aName, tName, damage);
+                                            break;
+                                        case ExplosionSourceType.Missile:
+                                            if (tData.damageFromMissiles.ContainsKey(aName))
+                                                tData.damageFromMissiles[aName] += damage;
+                                            else
+                                                tData.damageFromMissiles.Add(aName, damage);
+                                            if (BDArmorySettings.REMOTE_LOGGING_ENABLED)
+                                                BDAScoreService.Instance.TrackMissileDamage(aName, tName, damage);
+                                            break;
+                                        default:
+                                            break;
+                                    }
                                 }
-                            }
-                            break;
-                        default:
-                            break;
+                                break;
+                            default:
+                                break;
+                        }
                     }
                 }
                 else if (BDArmorySettings.DRAW_DEBUG_LABELS)
@@ -578,7 +596,7 @@ namespace BDArmory.FX
             }
         }
 
-        public static void CreateExplosion(Vector3 position, float tntMassEquivalent, string explModelPath, string soundPath, ExplosionSourceType explosionSourceType, float caliber = 0, Part explosivePart = null, string sourceVesselName = null, string sourceWeaponName = null, Vector3 direction = default(Vector3), bool isfx = false)
+        public static void CreateExplosion(Vector3 position, float tntMassEquivalent, string explModelPath, string soundPath, ExplosionSourceType explosionSourceType, float caliber = 0, Part explosivePart = null, string sourceVesselName = null, string sourceWeaponName = null, Vector3 direction = default(Vector3), bool isfx = false, float projectilemass = 0)
         {
             CreateObjectPool(explModelPath, soundPath);
 
@@ -605,7 +623,8 @@ namespace BDArmory.FX
             eFx.ExplosivePart = explosivePart;
             eFx.Direction = direction;
             eFx.isFX = isfx;
-            eFx.pEmitters = newExplosion.GetComponentsInChildren<KSPParticleEmitter>();
+eFx.ProjMass = projectilemass;
+eFx.pEmitters = newExplosion.GetComponentsInChildren<KSPParticleEmitter>();
             eFx.audioSource = newExplosion.GetComponent<AudioSource>();
             if (tntMassEquivalent <= 5)
             {

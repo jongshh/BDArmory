@@ -60,7 +60,9 @@ namespace BDArmory.Core.Extension
             if (p.HasArmor())
             {
                 float armorMass_ = p.GetArmorThickness();
-                float damageReduction = DamageReduction(armorMass_, damage_, sourceType, caliber);
+                float armorDensity_ = p.GetArmorDensity();
+                float armorStrength_ = p.GetArmorSrength();
+                float damageReduction = DamageReduction(armorMass_, armorDensity_, armorStrength_, damage_, sourceType, caliber);
 
                 damage_ = damageReduction;
             }
@@ -108,7 +110,9 @@ namespace BDArmory.Core.Extension
             if (p.HasArmor())
             {
                 float armorMass_ = p.GetArmorThickness();
-                float damageReduction = DamageReduction(armorMass_, damage_, ExplosionSourceType.Bullet, caliber, penetrationfactor);
+                float armorDensity_ = p.GetArmorDensity();
+                float armorStrength_ = p.GetArmorSrength();
+                float damageReduction = DamageReduction(armorMass_, armorDensity_, armorStrength_, damage_, ExplosionSourceType.Bullet, caliber, penetrationfactor);
 
                 damage_ = damageReduction;
             }
@@ -139,7 +143,7 @@ namespace BDArmory.Core.Extension
             if (BDArmorySettings.DRAW_DEBUG_LABELS)
             {
                 Debug.Log("[BDArmory.PartExtensions]: mass: " + mass + " caliber: " + caliber + " multiplier: " + multiplier + " velocity: " + impactVelocity + " penetrationfactor: " + penetrationfactor);
-                Debug.Log("[BDArmory.PartExtensions]: Ballistic Hitpoints Applied : " + damage_);
+                Debug.Log("[BDArmory.PartExtensions]: Ballistic Hitpoints Applied to " + p.name + ": " + damage_);
             }
         }
 
@@ -215,12 +219,12 @@ namespace BDArmory.Core.Extension
         public static void ReduceArmor(this Part p, double massToReduce)
         {
             if (!p.HasArmor()) return;
-            massToReduce = Math.Max(0.10, Math.Round(massToReduce, 2));
+            //massToReduce = Math.Max(0.10, Math.Round(massToReduce, 2));
             Dependencies.Get<DamageService>().ReduceArmor_svc(p, (float)massToReduce);
 
-            if (BDArmorySettings.DRAW_DEBUG_LABELS)
+            if (BDArmorySettings.DRAW_ARMOR_LABELS)
             {
-                Debug.Log("[BDArmory.PartExtensions]: Armor Removed : " + massToReduce);
+                Debug.Log("[BDArmory.PartExtensions]: Armor volume Removed : " + massToReduce);
             }
         }
 
@@ -228,6 +232,16 @@ namespace BDArmory.Core.Extension
         {
             if (p == null) return 0f;
             return Dependencies.Get<DamageService>().GetPartArmor_svc(p);
+        }
+        public static float GetArmorDensity(this Part p)
+        {
+            if (p == null) return 0f;
+            return Dependencies.Get<DamageService>().GetArmorDensity_svc(p);
+        }
+        public static float GetArmorSrength(this Part p)
+        {
+            if (p == null) return 0f;
+            return Dependencies.Get<DamageService>().GetArmorStrength_svc(p);
         }
 
         public static float GetArmorPercentage(this Part p)
@@ -273,7 +287,10 @@ namespace BDArmory.Core.Extension
             return part.Modules.Contains("MissileBase") || part.Modules.Contains("MissileLauncher") ||
                    part.Modules.Contains("BDModularGuidance");
         }
-
+        public static bool IsWeapon(this Part part)
+        {
+            return part.Modules.Contains("ModuleWeapon");
+        }
         public static float GetArea(this Part part, bool isprefab = false, Part prefab = null)
         {
             var size = part.GetSize();
@@ -327,8 +344,20 @@ namespace BDArmory.Core.Extension
 
         public static bool IsAero(this Part part)
         {
-            return part.Modules.Contains("ModuleControlSurface") ||
-                   part.Modules.Contains("ModuleLiftingSurface");
+            if (part.Modules.Contains("ModuleLiftingSurface") || part.Modules.Contains("FARWingAerodynamicModel"))
+            {
+                if (part.name.Contains("mk2") || part.name.Contains("Mk2") || part.name.Contains("M2X") || part.name.Contains("HeatShield")) // don't grab Mk2 parts or heatshields. Caps-sensitive
+                {
+                    return false;
+                }
+                else return true;
+            }
+            else if (part.Modules.Contains("ModuleControlSurface") ||
+                   part.Modules.Contains("FARControllableSurface"))
+            {
+                return true;
+            }
+            else return false;
         }
 
         public static string GetExplodeMode(this Part part)
@@ -378,14 +407,22 @@ namespace BDArmory.Core.Extension
             return hasFuel;
         }
 
-        public static float DamageReduction(float armor, float damage, ExplosionSourceType sourceType, float caliber = 0, float penetrationfactor = 0)
+        public static float DamageReduction(float armor, float density, float strength, float damage, ExplosionSourceType sourceType, float caliber = 0, float penetrationfactor = 0)
         {
             float _damageReduction;
 
             switch (sourceType)
             {
                 case ExplosionSourceType.Missile:
-                    damage *= Mathf.Clamp(-0.0005f * armor + 1.025f, 0f, 0.5f); // Cap damage reduction at 50% (armor = 1050)
+                    //damage *= Mathf.Clamp(-0.0005f * armor + 1.025f, 0f, 0.5f); // Cap damage reduction at 50% (armor = 1050)					
+                    if (BDArmorySettings.DRAW_ARMOR_LABELS)
+                    {
+                        Debug.Log("[BDArmory.PartExtensions]: Damage Before Reduction : " + damage);
+                        Debug.Log("[BDArmory.PartExtensions]: Damage Reduction (%) : " + 1 + (((strength * (density / 1000)) * armor) / 1000000));
+                        Debug.Log("[BDArmory.PartExtensions]: Damage After Armor : " + (damage /= 1 + (((strength * (density / 1000)) * armor) / 1000000)));
+                    }
+                    damage /= 1 + (((strength * (density / 1000)) * armor) / 1000000); //500mm of DU yields about 95% reduction, 500mm steel = 80% reduction, Aramid = 73% reduction
+
                     break;
                 default:
                     if (!(penetrationfactor >= 1f))
@@ -405,9 +442,9 @@ namespace BDArmory.Core.Extension
 
                         //y=(98.34817*x)/(97.85935+x)
 
-                        _damageReduction = (113 * armor) / (154 + armor);
+                        _damageReduction = (113 * armor) / (154 + armor); //should look at this later, review?
 
-                        if (BDArmorySettings.DRAW_DEBUG_LABELS)
+                        if (BDArmorySettings.DRAW_ARMOR_LABELS)
                         {
                             Debug.Log("[BDArmory.PartExtensions]: Damage Before Reduction : " + damage);
                             Debug.Log("[BDArmory.PartExtensions]: Damage Reduction (%) : " + 100 * (1 - Mathf.Clamp01((113f - _damageReduction) / 100f)));
@@ -421,6 +458,7 @@ namespace BDArmory.Core.Extension
 
             return damage;
         }
+
         public static bool isBattery(this Part part)
         {
             bool hasEC = false;

@@ -16,6 +16,10 @@ namespace BDArmory.Core.Services
 
         public abstract float GetPartArmor_svc(Part p);
 
+        public abstract float GetArmorDensity_svc(Part p);
+
+        public abstract float GetArmorStrength_svc(Part p);
+
         public abstract float GetMaxPartDamage_svc(Part p);
 
         public abstract float GetMaxArmor_svc(Part p);

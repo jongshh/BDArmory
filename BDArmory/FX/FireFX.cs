@@ -200,18 +200,25 @@ namespace BDArmory.FX
                     {
                         if (fuel != null)
                         {
-                            if (fuel.amount > (fuel.maxAmount * 0.15f) || (fuel.amount > 0 && fuel.amount < (fuel.maxAmount * 0.10f)))
+                            if (parentPart.vessel.atmDensity < 0.05 && ox == null)
                             {
-                                fuel.amount -= (burnRate * Mathf.Clamp((float)((1 - (fuel.amount / fuel.maxAmount)) * 4), 0.1f * BDArmorySettings.BD_TANK_LEAK_RATE, 4 * BDArmorySettings.BD_TANK_LEAK_RATE) * TimeWarp.deltaTime);
-                                burnScale = Mathf.Clamp((float)((1 - (fuel.amount / fuel.maxAmount)) * 4), 0.1f * BDArmorySettings.BD_TANK_LEAK_RATE, 2 * BDArmorySettings.BD_TANK_LEAK_RATE);
-                            }
-                            else if (fuel.amount < (fuel.maxAmount * 0.15f) && fuel.amount > (fuel.maxAmount * 0.10f))
-                            {
-                                Detonate();
+                                hasFuel = false;
                             }
                             else
                             {
-                                hasFuel = false;
+                                if (fuel.amount > (fuel.maxAmount * 0.15f) || (fuel.amount > 0 && fuel.amount < (fuel.maxAmount * 0.10f)))
+                                {
+                                    fuel.amount -= (burnRate * Mathf.Clamp((float)((1 - (fuel.amount / fuel.maxAmount)) * 4), 0.1f * BDArmorySettings.BD_TANK_LEAK_RATE, 4 * BDArmorySettings.BD_TANK_LEAK_RATE) * TimeWarp.deltaTime);
+                                    burnScale = Mathf.Clamp((float)((1 - (fuel.amount / fuel.maxAmount)) * 4), 0.1f * BDArmorySettings.BD_TANK_LEAK_RATE, 2 * BDArmorySettings.BD_TANK_LEAK_RATE);
+                                }
+                                else if (fuel.amount < (fuel.maxAmount * 0.15f) && fuel.amount > (fuel.maxAmount * 0.10f))
+                                {
+                                    Detonate();
+                                }
+                                else
+                                {
+                                    hasFuel = false;
+                                }
                             }
                         }
                         ox = parentPart.Resources.Where(pr => pr.resourceName == "Oxidizer").FirstOrDefault();
@@ -249,18 +256,25 @@ namespace BDArmory.FX
                         ec = parentPart.Resources.Where(pr => pr.resourceName == "ElectricCharge").FirstOrDefault();
                         if (ec != null)
                         {
-                            if (ec.amount > 0)
+                            if (parentPart.vessel.atmDensity < 0.05)
                             {
-                                ec.amount -= (burnRate * TimeWarp.deltaTime);
-                                Mathf.Clamp((float)ec.amount, 0, Mathf.Infinity);
-                                if (burnScale < 0)
-                                {
-                                    burnScale = 1;
-                                }
+                                hasFuel = false;
                             }
-                            if ((Time.time - startTime > 30) && engine == null)
+                            else
                             {
-                                Detonate();
+                                if (ec.amount > 0)
+                                {
+                                    ec.amount -= (burnRate * TimeWarp.deltaTime);
+                                    Mathf.Clamp((float)ec.amount, 0, Mathf.Infinity);
+                                    if (burnScale < 0)
+                                    {
+                                        burnScale = 1;
+                                    }
+                                }
+                                if ((Time.time - startTime > 30) && engine == null)
+                                {
+                                    Detonate();
+                                }
                             }
                         }
                     }

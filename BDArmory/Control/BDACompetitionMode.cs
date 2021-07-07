@@ -190,6 +190,7 @@ namespace BDArmory.Control
         public int CompetitionID; // time competition was started
         bool competitionShouldBeRunning = false;
         public double competitionStartTime = -1;
+        public double competitionPreStartTime = -1;
         public double nextUpdateTick = -1;
         private double decisionTick = -1;
         private double finalGracePeriodStart = -1;
@@ -235,11 +236,14 @@ namespace BDArmory.Control
         private Dictionary<string, string> pilotActions = new Dictionary<string, string>();
         #endregion
 
-        #region Fonts
+        #region GUI elements
         GUIStyle statusStyle;
-        GUIStyle statusShadowStyle;
-        GUIStyle clockStyle;
-        GUIStyle clockShadowStyle;
+        GUIStyle statusStyleShadow;
+        Rect statusRect;
+        Rect statusRectShadow;
+        Rect clockRect;
+        Rect clockRectShadow;
+        string guiStatusString;
         #endregion
 
         void Awake()
@@ -254,77 +258,88 @@ namespace BDArmory.Control
 
         void Start()
         {
-            statusStyle = new GUIStyle(BDArmorySetup.BDGuiSkin.label);
-            statusStyle.fontStyle = FontStyle.Bold;
-            statusStyle.fontSize = 22;
-            statusStyle.alignment = TextAnchor.UpperLeft;
-            statusShadowStyle = new GUIStyle(statusStyle);
-            statusShadowStyle.normal.textColor = new Color(0, 0, 0, 0.75f);
-            clockStyle = new GUIStyle(statusStyle);
-            clockStyle.fontSize = 14;
-            clockShadowStyle = new GUIStyle(clockStyle);
-            clockShadowStyle.normal.textColor = new Color(0, 0, 0, 0.75f);
+            UpdateGUIElements();
         }
 
         void OnGUI()
         {
             if (BDArmorySettings.DISPLAY_COMPETITION_STATUS)
             {
-                var displayRow = 100;
-                if (!BDArmorySetup.GAME_UI_ENABLED)
+                // Clock
+                if (competitionIsActive || competitionStarting)
                 {
-                    displayRow = 30;
+                    var gTime = (float)(Planetarium.GetUniversalTime() - (competitionIsActive ? competitionStartTime : competitionPreStartTime));
+                    var minutes = Mathf.FloorToInt(gTime / 60);
+                    var seconds = gTime % 60;
+                    string pTime = minutes.ToString("0") + ":" + seconds.ToString("00.00");
+                    GUI.Label(clockRectShadow, pTime, statusStyleShadow);
+                    GUI.Label(clockRect, pTime, statusStyle);
                 }
 
-                Rect cLabelRect = new Rect(30, displayRow, Screen.width, 100);
-                Rect cShadowRect = new Rect(cLabelRect);
-                cShadowRect.x += 2;
-                cShadowRect.y += 2;
-
-                string message = competitionStatus.ToString();
-                if (competitionStarting || competitionStartTime > 0)
+                // Messages
+                guiStatusString = competitionStatus.ToString();
+                if (BDArmorySetup.GAME_UI_ENABLED)
                 {
-                    string currentVesselStatus = "";
-                    if (FlightGlobals.ActiveVessel != null)
+                    if (competitionStarting || competitionStartTime > 0)
                     {
-                        var vesselName = FlightGlobals.ActiveVessel.GetName();
-                        string postFix = "";
-                        if (pilotActions.ContainsKey(vesselName))
-                            postFix = pilotActions[vesselName];
-                        if (Scores.ContainsKey(vesselName))
+                        string currentVesselStatus = "";
+                        if (FlightGlobals.ActiveVessel != null)
                         {
-                            ScoringData vData = Scores[vesselName];
-                            if (Planetarium.GetUniversalTime() - vData.lastHitTime < 2)
-                                postFix = " is taking damage from " + vData.lastPersonWhoHitMe;
+                            var vesselName = FlightGlobals.ActiveVessel.GetName();
+                            string postFix = "";
+                            if (pilotActions.ContainsKey(vesselName))
+                                postFix = pilotActions[vesselName];
+                            if (Scores.ContainsKey(vesselName))
+                            {
+                                ScoringData vData = Scores[vesselName];
+                                if (Planetarium.GetUniversalTime() - vData.lastHitTime < 2)
+                                    postFix = " is taking damage from " + vData.lastPersonWhoHitMe;
+                            }
+                            if (postFix != "" || vesselName != competitionStatus.lastActiveVessel)
+                                currentVesselStatus = vesselName + postFix;
+                            competitionStatus.lastActiveVessel = vesselName;
                         }
-                        if (postFix != "" || vesselName != competitionStatus.lastActiveVessel)
-                            currentVesselStatus = vesselName + postFix;
-                        competitionStatus.lastActiveVessel = vesselName;
+                        guiStatusString += (string.IsNullOrEmpty(guiStatusString) ? "" : "\n") + currentVesselStatus;
                     }
-                    message += "\n" + currentVesselStatus;
                 }
-
-                GUI.Label(cShadowRect, message, statusShadowStyle);
-                GUI.Label(cLabelRect, message, statusStyle);
-
-                if (!BDArmorySetup.GAME_UI_ENABLED && competitionStartTime > 0)
+                else
                 {
-                    Rect clockRect = new Rect(10, 6, Screen.width, 20);
-                    Rect clockShadowRect = new Rect(clockRect);
-                    clockShadowRect.x += 2;
-                    clockShadowRect.y += 2;
-                    var gTime = Planetarium.GetUniversalTime() - competitionStartTime;
-                    var minutes = (int)(Math.Floor(gTime / 60));
-                    var seconds = (int)(gTime % 60);
-                    string pTime = minutes.ToString("00") + ":" + seconds.ToString("00") + "     " + deadOrAlive;
-                    GUI.Label(clockShadowRect, pTime, clockShadowStyle);
-                    GUI.Label(clockRect, pTime, clockStyle);
+                    guiStatusString = deadOrAlive;
                 }
+                GUI.Label(statusRectShadow, guiStatusString, statusStyleShadow);
+                GUI.Label(statusRect, guiStatusString, statusStyle);
             }
             if (KSP.UI.Dialogs.FlightResultsDialog.isDisplaying && KSP.UI.Dialogs.FlightResultsDialog.showExitControls) // Prevent the Flight Results window from interrupting things when a certain vessel dies.
             {
                 KSP.UI.Dialogs.FlightResultsDialog.Close();
             }
+        }
+
+        public void UpdateGUIElements()
+        {
+            statusStyle = new GUIStyle(BDArmorySetup.BDGuiSkin.label);
+            statusStyle.fontStyle = FontStyle.Bold;
+            statusStyle.alignment = TextAnchor.UpperLeft;
+            if (BDArmorySetup.GAME_UI_ENABLED)
+            {
+                clockRect = new Rect(10, 42, 100, 30);
+                statusRect = new Rect(30, 80, Screen.width - 130, Mathf.FloorToInt(Screen.height / 2));
+                statusStyle.fontSize = 22;
+            }
+            else
+            {
+                clockRect = new Rect(10, 6, 80, 20);
+                statusRect = new Rect(80, 6, Screen.width - 80, 100);
+                statusStyle.fontSize = 14;
+            }
+            clockRectShadow = new Rect(clockRect);
+            clockRectShadow.x += 2;
+            clockRectShadow.y += 2;
+            statusRectShadow = new Rect(statusRect);
+            statusRectShadow.x += 2;
+            statusRectShadow.y += 2;
+            statusStyleShadow = new GUIStyle(statusStyle);
+            statusStyleShadow.normal.textColor = new Color(0, 0, 0, 0.75f);
         }
 
         void OnDestroy()
@@ -433,6 +448,7 @@ namespace BDArmory.Control
             GameEvents.onVesselCreate.Remove(DebrisDelayedCleanUp);
             GameEvents.onCometSpawned.Remove(RemoveCometVessel);
             rammingInformation = null; // Reset the ramming information.
+            deadOrAlive = "";
             if (BDArmorySettings.TRACE_VESSELS_DURING_COMPETITIONS)
                 LoadedVesselSwitcher.Instance.StopVesselTracing();
         }
@@ -481,6 +497,7 @@ namespace BDArmory.Control
             if (BDArmorySettings.ASTEROID_FIELD) { AsteroidField.Instance.Reset(); RemoveDebrisNow(); }
             if (BDArmorySettings.ASTEROID_RAIN) { AsteroidRain.Instance.Reset(); RemoveDebrisNow(); }
             finalGracePeriodStart = -1;
+            competitionPreStartTime = Planetarium.GetUniversalTime();
             competitionStartTime = competitionIsActive ? Planetarium.GetUniversalTime() : -1;
             nextUpdateTick = competitionStartTime + 2; // 2 seconds before we start tracking
             decisionTick = BDArmorySettings.COMPETITION_KILLER_GM_FREQUENCY > 60 ? -1 : competitionStartTime + BDArmorySettings.COMPETITION_KILLER_GM_FREQUENCY; // every 60 seconds we do nasty things

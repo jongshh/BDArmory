@@ -31,6 +31,7 @@ namespace BDArmory.Modules
         static public Dictionary<Vessel, List<MissileFire>> registryMissileFire;
         static public Dictionary<Vessel, List<MissileBase>> registryMissileBase;
         static public Dictionary<Vessel, List<BDModulePilotAI>> registryBDModulePilotAI;
+        static public Dictionary<Vessel, List<BDModuleSurfaceAI>> registryBDModuleSurfaceAI;
         static public Dictionary<Vessel, List<IBDAIControl>> registryIBDAIControl;
         static public Dictionary<Vessel, List<ModuleWeapon>> registryModuleWeapon;
         static public Dictionary<Vessel, List<IBDWeapon>> registryIBDWeapon;
@@ -55,6 +56,7 @@ namespace BDArmory.Modules
             if (registryIBDWeapon == null) { registryIBDWeapon = new Dictionary<Vessel, List<IBDWeapon>>(); }
             if (registryModuleEngines == null) { registryModuleEngines = new Dictionary<Vessel, List<ModuleEngines>>(); }
             if (registryBDModulePilotAI == null) { registryBDModulePilotAI = new Dictionary<Vessel, List<BDModulePilotAI>>(); }
+            if (registryBDModuleSurfaceAI == null) { registryBDModuleSurfaceAI = new Dictionary<Vessel, List<BDModuleSurfaceAI>>(); }
             if (registryIBDAIControl == null) { registryIBDAIControl = new Dictionary<Vessel, List<IBDAIControl>>(); }
             if (registryModuleCommand == null) { registryModuleCommand = new Dictionary<Vessel, List<ModuleCommand>>(); }
             if (registryKerbalSeat == null) { registryKerbalSeat = new Dictionary<Vessel, List<KerbalSeat>>(); }
@@ -80,6 +82,7 @@ namespace BDArmory.Modules
             registryIBDWeapon.Clear();
             registryModuleEngines.Clear();
             registryBDModulePilotAI.Clear();
+            registryBDModuleSurfaceAI.Clear();
             registryIBDAIControl.Clear();
             registryModuleCommand.Clear();
             registryKerbalSeat.Clear();
@@ -167,6 +170,11 @@ namespace BDArmory.Modules
                 registryBDModulePilotAI[vessel] = vessel.FindPartModulesImplementing<BDModulePilotAI>();
                 if (BDArmorySettings.DRAW_DEBUG_LABELS) Debug.Log($"[BDArmory.VesselModuleRegistry]: Specialised registry entry for {vessel.vesselName} updated to have {registryBDModulePilotAI[vessel].Count} modules of type {typeof(BDModulePilotAI).Name}.");
             }
+            if (registryBDModuleSurfaceAI.ContainsKey(vessel) && (partsAdded || registryBDModuleSurfaceAI[vessel].Count > 0))
+            {
+                registryBDModuleSurfaceAI[vessel] = vessel.FindPartModulesImplementing<BDModuleSurfaceAI>();
+                if (BDArmorySettings.DRAW_DEBUG_LABELS) Debug.Log($"[BDArmory.VesselModuleRegistry]: Specialised registry entry for {vessel.vesselName} updated to have {registryBDModuleSurfaceAI[vessel].Count} modules of type {typeof(BDModuleSurfaceAI).Name}.");
+            }
             if (registryIBDAIControl.ContainsKey(vessel) && (partsAdded || registryIBDAIControl[vessel].Count > 0))
             {
                 registryIBDAIControl[vessel] = vessel.FindPartModulesImplementing<IBDAIControl>();
@@ -233,6 +241,7 @@ namespace BDArmory.Modules
             if (typeof(T) == typeof(MissileBase)) { return GetMissileBases(vessel) as List<T>; }
             if (typeof(T) == typeof(BDModulePilotAI)) { return GetBDModulePilotAIs(vessel) as List<T>; }
             if (typeof(T) == typeof(IBDAIControl)) { return GetIBDAIControls(vessel) as List<T>; }
+            if (typeof(T) == typeof(BDModuleSurfaceAI)) { return GetBDModuleSurfaceAIs(vessel) as List<T>; }
             if (typeof(T) == typeof(ModuleWeapon)) { return GetModuleWeapons(vessel) as List<T>; }
             if (typeof(T) == typeof(IBDWeapon)) { return GetIBDWeapons(vessel) as List<T>; }
             if (typeof(T) == typeof(ModuleEngines)) { return GetModuleEngines(vessel) as List<T>; }
@@ -278,6 +287,7 @@ namespace BDArmory.Modules
             if (typeof(T) == typeof(MissileFire)) { return GetMissileFires(vessel).Count; }
             if (typeof(T) == typeof(MissileBase)) { return GetMissileBases(vessel).Count; }
             if (typeof(T) == typeof(BDModulePilotAI)) { return GetBDModulePilotAIs(vessel).Count; }
+            if (typeof(T) == typeof(BDModuleSurfaceAI)) { return GetBDModuleSurfaceAIs(vessel).Count; }
             if (typeof(T) == typeof(IBDAIControl)) { return GetIBDAIControls(vessel).Count; }
             if (typeof(T) == typeof(ModuleWeapon)) { return GetModuleWeapons(vessel).Count; }
             if (typeof(T) == typeof(IBDWeapon)) { return GetIBDWeapons(vessel).Count; }
@@ -301,6 +311,7 @@ namespace BDArmory.Modules
             registryMissileFire = registryMissileFire.Where(kvp => kvp.Key != null && kvp.Value.Count > 0).ToDictionary(kvp => kvp.Key, kvp => kvp.Value); // Remove null and empty vessel entries.
             registryMissileBase = registryMissileBase.Where(kvp => kvp.Key != null && kvp.Value.Count > 0).ToDictionary(kvp => kvp.Key, kvp => kvp.Value); // Remove null and empty vessel entries.
             registryBDModulePilotAI = registryBDModulePilotAI.Where(kvp => kvp.Key != null && kvp.Value.Count > 0).ToDictionary(kvp => kvp.Key, kvp => kvp.Value); // Remove null and empty vessel entries.
+            registryBDModuleSurfaceAI = registryBDModuleSurfaceAI.Where(kvp => kvp.Key != null && kvp.Value.Count > 0).ToDictionary(kvp => kvp.Key, kvp => kvp.Value); // Remove null and empty vessel entries.
             registryIBDAIControl = registryIBDAIControl.Where(kvp => kvp.Key != null && kvp.Value.Count > 0).ToDictionary(kvp => kvp.Key, kvp => kvp.Value); // Remove null and empty vessel entries.
             registryModuleWeapon = registryModuleWeapon.Where(kvp => kvp.Key != null && kvp.Value.Count > 0).ToDictionary(kvp => kvp.Key, kvp => kvp.Value); // Remove null and empty vessel entries.
             registryIBDWeapon = registryIBDWeapon.Where(kvp => kvp.Key != null && kvp.Value.Count > 0).ToDictionary(kvp => kvp.Key, kvp => kvp.Value); // Remove null and empty vessel entries.
@@ -385,6 +396,30 @@ namespace BDArmory.Modules
             }
             if (!registryBDModulePilotAI.ContainsKey(vessel)) { return GetBDModulePilotAIs(vessel).FirstOrDefault(); }
             return registryBDModulePilotAI[vessel].FirstOrDefault();
+        }
+
+        public static List<BDModuleSurfaceAI> GetBDModuleSurfaceAIs(Vessel vessel)
+        {
+            if (vessel == null) return null;
+            if (!registryBDModuleSurfaceAI.ContainsKey(vessel))
+            {
+                registryBDModuleSurfaceAI.Add(vessel, vessel.FindPartModulesImplementing<BDModuleSurfaceAI>());
+                vesselPartCounts[vessel] = vessel.Parts.Count;
+                if (BDArmorySettings.DRAW_DEBUG_LABELS) Debug.Log($"[BDArmory.VesselModuleRegistry]: Vessel {vessel.vesselName} added to specialised {typeof(BDModuleSurfaceAI).Name} registry.");
+            }
+            return registryBDModuleSurfaceAI[vessel];
+        }
+        public static BDModuleSurfaceAI GetBDModuleSurfaceAI(Vessel vessel, bool firstNonNull = false)
+        {
+            if (vessel == null) return null;
+            if (firstNonNull)
+            {
+                foreach (var module in GetBDModuleSurfaceAIs(vessel))
+                { if (module != null) return module; }
+                return null;
+            }
+            if (!registryBDModuleSurfaceAI.ContainsKey(vessel)) { return GetBDModuleSurfaceAIs(vessel).FirstOrDefault(); }
+            return registryBDModuleSurfaceAI[vessel].FirstOrDefault();
         }
 
         public static List<IBDAIControl> GetIBDAIControls(Vessel vessel)

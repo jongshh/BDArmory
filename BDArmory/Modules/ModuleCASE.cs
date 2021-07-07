@@ -1,4 +1,3 @@
-﻿
 using BDArmory.Competition;
 using BDArmory.Control;
 using BDArmory.Core;
@@ -342,7 +341,7 @@ namespace BDArmory.Modules
         }
         void OnDestroy()
         {
-            if (vessel != null && vessel.loaded && !vessel.packed && BDArmorySettings.BATTLEDAMAGE && BDArmorySettings.BD_AMMOBINS && BDArmorySettings.BD_VOLATILE_AMMO && HighLogic.LoadedSceneIsFlight && !(VesselSpawner.Instance != null && VesselSpawner.Instance.vesselsSpawning))
+            if (part != null && vessel != null && vessel.loaded && !vessel.packed && BDArmorySettings.BATTLEDAMAGE && BDArmorySettings.BD_AMMOBINS && BDArmorySettings.BD_VOLATILE_AMMO && HighLogic.LoadedSceneIsFlight && !(VesselSpawner.Instance != null && VesselSpawner.Instance.vesselsSpawning))
             {
                 DetonateIfPossible();
             }

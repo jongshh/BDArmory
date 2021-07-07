@@ -87,6 +87,14 @@ namespace BDArmory.Core.Services
         {
             return p.Modules.GetModule<HitpointTracker>().GetMaxArmor();
         }
+        public override float GetArmorDensity_svc(Part p)
+        {
+            return p.Modules.GetModule<HitpointTracker>().Density;
+        }
+        public override float GetArmorStrength_svc(Part p)
+        {
+            return p.Modules.GetModule<HitpointTracker>().Strength;
+        }
 
         public override void DestroyPart_svc(Part p)
         {

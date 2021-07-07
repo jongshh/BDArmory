@@ -52,7 +52,7 @@ namespace BDArmory.UI
             {
                 bulletInfo = BulletInfo.bullets[AList[a].ToString()];
                 guiAmmoTypeString = "";
-                if (bulletInfo.subProjectileCount > 1)
+                if (bulletInfo.subProjectileCount >= 2)
                 {
                     guiAmmoTypeString = Localizer.Format("#LOC_BDArmory_Ammo_Shot") + " ";
                 }
@@ -112,9 +112,10 @@ namespace BDArmory.UI
                 }
                 craftPart.Dispose();
             }
-            if (!open) return;
-            
-            windowRect = GUI.Window(this.GetInstanceID(), windowRect, AmmoSelectorWindow, "", BDArmorySetup.BDGuiSkin.window);
+            if (open)
+            {
+                windowRect = GUI.Window(this.GetInstanceID(), windowRect, AmmoSelectorWindow, "", BDArmorySetup.BDGuiSkin.window);
+            }
             PreventClickThrough();
         }
         private void AmmoSelectorWindow(int id)

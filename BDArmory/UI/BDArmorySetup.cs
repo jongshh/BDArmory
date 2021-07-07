@@ -16,9 +16,9 @@ using BDArmory.Misc;
 using BDArmory.Modules;
 using BDArmory.Parts;
 using BDArmory.Radar;
-using BDArmory.Targeting;
 using UnityEngine;
 using KSP.Localization;
+using KSP.UI.Screens;
 
 namespace BDArmory.UI
 {
@@ -78,6 +78,9 @@ namespace BDArmory.UI
         public static BDArmorySetup Instance;
         public static bool GAME_UI_ENABLED = true;
         public string Version { get; private set; } = "Unknown";
+
+        //toolbar button
+        static bool toolbarButtonAdded = false;
 
         //settings gui
         public static bool windowSettingsEnabled;
@@ -474,6 +477,7 @@ namespace BDArmory.UI
 
             BulletInfo.Load();
             RocketInfo.Load();
+            ArmorInfo.Load();
 
             // Spawn fields
             spawnFields = new Dictionary<string, SpawnField> {
@@ -482,6 +486,37 @@ namespace BDArmory.UI
                 { "alt", gameObject.AddComponent<SpawnField>().Initialise(0, BDArmorySettings.VESSEL_SPAWN_ALTITUDE, 0) },
             };
             compDistGui = BDArmorySettings.COMPETITION_DISTANCE.ToString();
+
+            if (HighLogic.LoadedSceneIsFlight || HighLogic.LoadedSceneIsEditor)
+            { StartCoroutine(ToolbarButtonRoutine()); }
+        }
+
+        IEnumerator ToolbarButtonRoutine()
+        {
+            if (toolbarButtonAdded) yield break;
+            while (!ApplicationLauncher.Ready)
+            { yield return null; }
+            if (toolbarButtonAdded) yield break;
+            toolbarButtonAdded = true;
+            Texture buttonTexture = GameDatabase.Instance.GetTexture(BDArmorySetup.textureDir + "icon", false);
+            ApplicationLauncher.Instance.AddModApplication(
+                ToggleToolbarButton,
+                ToggleToolbarButton,
+                () => { },
+                () => { },
+                () => { },
+                () => { },
+                ApplicationLauncher.AppScenes.FLIGHT | ApplicationLauncher.AppScenes.SPH | ApplicationLauncher.AppScenes.VAB,
+                buttonTexture
+            );
+        }
+        /// <summary>
+        /// Toggle the BDAToolbar or BDA settings window depending on the scene.
+        /// </summary>
+        void ToggleToolbarButton()
+        {
+            if (HighLogic.LoadedSceneIsFlight) { windowBDAToolBarEnabled = !windowBDAToolBarEnabled; }
+            else { windowSettingsEnabled = !windowSettingsEnabled; }
         }
 
         private void CheckIfWindowsSettingsAreWithinScreen()
@@ -1673,6 +1708,7 @@ namespace BDArmory.UI
             }
             if (BDArmorySettings.GENERAL_SETTINGS_TOGGLE)
             {
+                GameSettings.ADVANCED_TWEAKABLES = GUI.Toggle(SLineRect(++line), GameSettings.ADVANCED_TWEAKABLES, Localizer.Format("#autoLOC_900906") + (GameSettings.ADVANCED_TWEAKABLES ? "" : " <— Access many more AI tuning options")); // Advanced tweakables
                 BDArmorySettings.INSTAKILL = GUI.Toggle(SLeftRect(++line), BDArmorySettings.INSTAKILL, Localizer.Format("#LOC_BDArmory_Settings_Instakill"));//"Instakill"
                 BDArmorySettings.INFINITE_AMMO = GUI.Toggle(SRightRect(line), BDArmorySettings.INFINITE_AMMO, Localizer.Format("#LOC_BDArmory_Settings_InfiniteAmmo"));//"Infinite Ammo"
                 BDArmorySettings.BULLET_HITS = GUI.Toggle(SLeftRect(++line), BDArmorySettings.BULLET_HITS, Localizer.Format("#LOC_BDArmory_Settings_BulletHits"));//"Bullet Hits"
@@ -1746,7 +1782,23 @@ namespace BDArmory.UI
                         VehiclePhysics.Gravity.Refresh();
                     }
                 }
-
+                BDArmorySettings.SPACE_HACKS = GUI.Toggle(SLeftRect(++line), BDArmorySettings.SPACE_HACKS, Localizer.Format("#LOC_BDArmory_Settings_SpaceHacks"));
+                {
+                    if (BDArmorySettings.SPACE_HACKS)
+                    {
+                        BDArmorySettings.SF_FRICTION = GUI.Toggle(SLeftRect(++line, 1f), BDArmorySettings.SF_FRICTION, Localizer.Format("#LOC_BDArmory_Settings_SpaceFriction"));
+                        BDArmorySettings.SF_GRAVITY = GUI.Toggle(SLeftRect(++line, 1f), BDArmorySettings.SF_GRAVITY, Localizer.Format("#LOC_BDArmory_Settings_IgnoreGravity"));
+                        GUI.Label(SLeftRect(++line, 1f), $"{Localizer.Format("#LOC_BDArmory_Settings_SpaceFrictionMult")}:  ({BDArmorySettings.SF_DRAGMULT})", leftLabel);//Space Friction Mult
+                        BDArmorySettings.SF_DRAGMULT = Mathf.Round(GUI.HorizontalSlider(SRightSliderRect(line), BDArmorySettings.SF_DRAGMULT, 1f, 10));
+                        BDArmorySettings.SF_REPULSOR = GUI.Toggle(SLeftRect(++line, 1f), BDArmorySettings.SF_REPULSOR, Localizer.Format("#LOC_BDArmory_Settings_Repulsor"));
+                    }
+                    else
+                    {
+                        BDArmorySettings.SF_FRICTION = false;
+                        BDArmorySettings.SF_GRAVITY = false;
+                        BDArmorySettings.SF_REPULSOR = false;
+                    }
+                }
                 // Heartbleed
                 BDArmorySettings.HEART_BLEED_ENABLED = GUI.Toggle(SLeftRect(++line), BDArmorySettings.HEART_BLEED_ENABLED, Localizer.Format("#LOC_BDArmory_Settings_HeartBleed"));//"Heart Bleed"
                 if (BDArmorySettings.HEART_BLEED_ENABLED)
@@ -2448,11 +2500,13 @@ namespace BDArmory.UI
         void HideGameUI()
         {
             GAME_UI_ENABLED = false;
+            BDACompetitionMode.Instance.UpdateGUIElements();
         }
 
         void ShowGameUI()
         {
             GAME_UI_ENABLED = true;
+            BDACompetitionMode.Instance.UpdateGUIElements();
         }
 
         internal void OnDestroy()

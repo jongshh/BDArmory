@@ -7,6 +7,7 @@ namespace BDArmory.UI
         private static bool forceToUnShow = false;
         private static int useControlID = -1;
         private bool isClickedComboButton = false;
+        public bool isOpen { get { return isClickedComboButton; } }
         private int selectedItemIndex = -1;
 
         private Rect rect;

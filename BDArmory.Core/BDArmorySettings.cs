@@ -205,6 +205,13 @@ namespace BDArmory.Core
         [BDAPersistantSettingsField] public static float RESOURCE_STEAL_AMMO_RATION = 0.2f;
         [BDAPersistantSettingsField] public static float RESOURCE_STEAL_CM_RATION = 0f;
 
+        //Space Friction
+        [BDAPersistantSettingsField] public static bool SPACE_HACKS = false;
+        [BDAPersistantSettingsField] public static bool SF_FRICTION = false;
+        [BDAPersistantSettingsField] public static bool SF_GRAVITY = false;
+        [BDAPersistantSettingsField] public static bool SF_REPULSOR = false;
+        [BDAPersistantSettingsField] public static float SF_DRAGMULT = 2f;
+
         // Tournament settings
         [BDAPersistantSettingsField] public static bool SHOW_TOURNAMENT_OPTIONS = false;           // Show tournament options.
         [BDAPersistantSettingsField] public static float TOURNAMENT_DELAY_BETWEEN_HEATS = 10;      // Delay between heats
@@ -213,5 +220,7 @@ namespace BDArmory.Core
         [BDAPersistantSettingsField] public static int TOURNAMENT_TEAMS_PER_HEAT = 2;              // Teams Per Heat
         [BDAPersistantSettingsField] public static int TOURNAMENT_VESSELS_PER_TEAM = 2;            // Vessels Per Team
         [BDAPersistantSettingsField] public static bool TOURNAMENT_FULL_TEAMS = true;              // Full Teams
+
+        [BDAPersistantSettingsField] public static bool DRAW_ARMOR_LABELS = false;                  //armor only debug messages, for testing/debugging. remove/revert back to debug_labels later
     }
 }
