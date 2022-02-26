@@ -280,6 +280,7 @@
     <Compile Include="Evolution\EngineGimbalAxisNudgeMutation.cs" />
     <Compile Include="Evolution\ControlSurfaceNudgeMutation.cs" />
     <Compile Include="Evolution\EngineGimbalNudgeMutation.cs" />
+    <Compile Include="Analysis\FlightDynamics.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BDArmory.Core\BDArmory.Core.csproj">
@@ -772,6 +773,9 @@
     <Content Include="Distribution\GameData\BDArmory\Textures\settingsIcon.png" />
     <Content Include="Distribution\GameData\BDArmory\Textures\targetDirectionIndicator.png" />
     <Content Include="Distribution\GameData\BDArmory\Textures\whiteSquare.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Analysis\" />
   </ItemGroup>
   <PropertyGroup>
     <PostBuildEvent Condition="'$(OS)' == 'Windows_NT' ">
