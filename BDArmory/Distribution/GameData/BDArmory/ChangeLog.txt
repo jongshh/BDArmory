@@ -1,6 +1,10 @@
 ﻿FIXES
 - Remove the "-pre" from the version string, fix some typos.
 IMPROVEMENTS
+- General:
+	- Sort the AI and WM modules internally by distance to the root part to always select the correct AI/WM and update internal references when parasite vessels are deployed from the mothership vessel (competition scores aren't yet being updated).
+- AI:
+	- Allow a vessel that's lost parts to still be auto-tuned.
 - Weapons:
 	- Add pro-nav gain parameter as tunable parameter for missile parts (pronavGain), set pro-nav gain to 3 by default.
 

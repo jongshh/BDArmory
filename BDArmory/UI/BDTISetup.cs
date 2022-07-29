@@ -262,13 +262,11 @@ namespace BDArmory.UI
             ColorAssignments.Clear();
             UpdateList();
             int colorcount = 0;
-            foreach (var team in ColorAssignments)
+            var teams = ColorAssignments.Keys.ToList();
+            float teamsCount = (float)teams.Count;
+            foreach (var team in teams)
             {
-                colorcount++;
-                if (ColorAssignments.ContainsKey(team.Key))
-                {
-                    ColorAssignments[team.Key] = Color.HSVToRGB((colorcount / ColorAssignments.Keys.Count), 1f, 1f);
-                }
+                ColorAssignments[team] = Color.HSVToRGB(++colorcount / teamsCount, 1f, 1f);
             }
         }
         private void OnDestroy()

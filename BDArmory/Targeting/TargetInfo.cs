@@ -166,7 +166,7 @@ namespace BDArmory.Targeting
                 return false;
             }
         }
-        void Awake()
+        void Start()
         {
             if (!vessel)
             {

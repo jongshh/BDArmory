@@ -142,7 +142,7 @@ namespace BDArmory.Utils
         /// Update the registry entries when a tracked vessel gets modified.
         /// </summary>
         /// <param name="vessel">The vessel that was modified.</param>
-        public void OnVesselModifiedHandler(Vessel vessel)
+        void OnVesselModifiedHandler(Vessel vessel)
         {
             if (vessel == null || !vessel.loaded) return;
             if (vesselPartCounts.ContainsKey(vessel) && vessel.Parts.Count == vesselPartCounts[vessel]) return; // Already done.
@@ -163,7 +163,8 @@ namespace BDArmory.Utils
             // Specialised registries.
             if (registryMissileFire.ContainsKey(vessel) && (partsAdded || registryMissileFire[vessel].Count > 0))
             {
-                registryMissileFire[vessel] = vessel.FindPartModulesImplementing<MissileFire>();
+                var missileFires = vessel.FindPartModulesImplementing<MissileFire>();
+                registryMissileFire[vessel] = SortByProximityToRoot(ref missileFires);
                 if (BDArmorySettings.DEBUG_OTHER) Debug.Log($"[BDArmory.VesselModuleRegistry]: Specialised registry entry for {vessel.vesselName} updated to have {registryMissileFire[vessel].Count} modules of type {typeof(MissileFire).Name}.");
             }
             if (registryMissileBase.ContainsKey(vessel) && (partsAdded || registryMissileBase[vessel].Count > 0))
@@ -173,17 +174,20 @@ namespace BDArmory.Utils
             }
             if (registryBDModulePilotAI.ContainsKey(vessel) && (partsAdded || registryBDModulePilotAI[vessel].Count > 0))
             {
-                registryBDModulePilotAI[vessel] = vessel.FindPartModulesImplementing<BDModulePilotAI>();
+                var pilotAIModules = vessel.FindPartModulesImplementing<BDModulePilotAI>();
+                registryBDModulePilotAI[vessel] = SortByProximityToRoot(ref pilotAIModules);
                 if (BDArmorySettings.DEBUG_OTHER) Debug.Log($"[BDArmory.VesselModuleRegistry]: Specialised registry entry for {vessel.vesselName} updated to have {registryBDModulePilotAI[vessel].Count} modules of type {typeof(BDModulePilotAI).Name}.");
             }
             if (registryBDModuleSurfaceAI.ContainsKey(vessel) && (partsAdded || registryBDModuleSurfaceAI[vessel].Count > 0))
             {
-                registryBDModuleSurfaceAI[vessel] = vessel.FindPartModulesImplementing<BDModuleSurfaceAI>();
+                var surfaceAIModules = vessel.FindPartModulesImplementing<BDModuleSurfaceAI>();
+                registryBDModuleSurfaceAI[vessel] = SortByProximityToRoot(ref surfaceAIModules);
                 if (BDArmorySettings.DEBUG_OTHER) Debug.Log($"[BDArmory.VesselModuleRegistry]: Specialised registry entry for {vessel.vesselName} updated to have {registryBDModuleSurfaceAI[vessel].Count} modules of type {typeof(BDModuleSurfaceAI).Name}.");
             }
             if (registryIBDAIControl.ContainsKey(vessel) && (partsAdded || registryIBDAIControl[vessel].Count > 0))
             {
-                registryIBDAIControl[vessel] = vessel.FindPartModulesImplementing<IBDAIControl>();
+                var IBDAIControls = vessel.FindPartModulesImplementing<IBDAIControl>();
+                registryIBDAIControl[vessel] = SortByProximityToRoot2(ref IBDAIControls);
                 if (BDArmorySettings.DEBUG_OTHER) Debug.Log($"[BDArmory.VesselModuleRegistry]: Specialised registry entry for {vessel.vesselName} updated to have {registryIBDAIControl[vessel].Count} modules of type {typeof(IBDAIControl).Name}.");
             }
             if (registryModuleWeapon.ContainsKey(vessel) && (partsAdded || registryModuleWeapon[vessel].Count > 0))
@@ -335,6 +339,40 @@ namespace BDArmory.Utils
             registryKerbalEVA = registryKerbalEVA.Where(kvp => kvp.Key != null && kvp.Value.Count > 0).ToDictionary(kvp => kvp.Key, kvp => kvp.Value); // Remove null and empty vessel entries.
         }
 
+        /// <summary>
+        /// Sort a list of part modules by their proximity to the root part.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="modules"></param>
+        public static List<T> SortByProximityToRoot<T>(ref List<T> modules) where T : PartModule
+        {
+            modules.Sort((m1, m2) => (ProximityToRoot(m1.part).CompareTo(ProximityToRoot(m2.part))));
+            return modules;
+        }
+        public static List<T> SortByProximityToRoot2<T>(ref List<T> modules) where T : IBDAIControl
+        {
+            modules.Sort((m1, m2) => (ProximityToRoot(m1.part).CompareTo(ProximityToRoot(m2.part))));
+            return modules;
+        }
+        /// <summary>
+        /// Get the proximity to the root part.
+        /// </summary>
+        /// <param name="part"></param>
+        /// <returns>Proximity to the root part or -1 if no root part was found.</returns>
+        public static int ProximityToRoot(Part part)
+        {
+            int proximity = 0;
+            Part currentPart = part;
+            while (currentPart is not null && currentPart != currentPart.vessel.rootPart)
+            {
+                currentPart = currentPart.parent;
+                ++proximity;
+            }
+            if (currentPart is null)
+                return -1;
+            return proximity;
+        }
+
         #region Specialised methods
         // This would be much easier if C# implemented proper C++ style template specialisation.
         // These specialised methods give an extra speed boost by avoiding the boxing/unboxing associated with storing the modules as objects in the main registry.
@@ -345,7 +383,8 @@ namespace BDArmory.Utils
             if (vessel == null || !vessel.loaded) return new List<MissileFire>();
             if (!registryMissileFire.ContainsKey(vessel))
             {
-                registryMissileFire.Add(vessel, vessel.FindPartModulesImplementing<MissileFire>());
+                var missileFires = vessel.FindPartModulesImplementing<MissileFire>();
+                registryMissileFire.Add(vessel, SortByProximityToRoot(ref missileFires));
                 vesselPartCounts[vessel] = vessel.Parts.Count;
                 if (BDArmorySettings.DEBUG_OTHER) Debug.Log($"[BDArmory.VesselModuleRegistry]: Vessel {vessel.vesselName} added to specialised {typeof(MissileFire).Name} registry.");
             }
@@ -393,7 +432,8 @@ namespace BDArmory.Utils
             if (vessel == null || !vessel.loaded) return new List<BDModulePilotAI>();
             if (!registryBDModulePilotAI.ContainsKey(vessel))
             {
-                registryBDModulePilotAI.Add(vessel, vessel.FindPartModulesImplementing<BDModulePilotAI>());
+                var pilotAIModules = vessel.FindPartModulesImplementing<BDModulePilotAI>();
+                registryBDModulePilotAI.Add(vessel, SortByProximityToRoot(ref pilotAIModules));
                 vesselPartCounts[vessel] = vessel.Parts.Count;
                 if (BDArmorySettings.DEBUG_OTHER) Debug.Log($"[BDArmory.VesselModuleRegistry]: Vessel {vessel.vesselName} added to specialised {typeof(BDModulePilotAI).Name} registry.");
             }
@@ -417,7 +457,8 @@ namespace BDArmory.Utils
             if (vessel == null || !vessel.loaded) return new List<BDModuleSurfaceAI>();
             if (!registryBDModuleSurfaceAI.ContainsKey(vessel))
             {
-                registryBDModuleSurfaceAI.Add(vessel, vessel.FindPartModulesImplementing<BDModuleSurfaceAI>());
+                var surfaceAIModules = vessel.FindPartModulesImplementing<BDModuleSurfaceAI>();
+                registryBDModuleSurfaceAI.Add(vessel, SortByProximityToRoot(ref surfaceAIModules));
                 vesselPartCounts[vessel] = vessel.Parts.Count;
                 if (BDArmorySettings.DEBUG_OTHER) Debug.Log($"[BDArmory.VesselModuleRegistry]: Vessel {vessel.vesselName} added to specialised {typeof(BDModuleSurfaceAI).Name} registry.");
             }
@@ -441,7 +482,8 @@ namespace BDArmory.Utils
             if (vessel == null || !vessel.loaded) return new List<IBDAIControl>();
             if (!registryIBDAIControl.ContainsKey(vessel))
             {
-                registryIBDAIControl.Add(vessel, vessel.FindPartModulesImplementing<IBDAIControl>());
+                var IBDAIControls = vessel.FindPartModulesImplementing<IBDAIControl>();
+                registryIBDAIControl.Add(vessel, SortByProximityToRoot2(ref IBDAIControls));
                 vesselPartCounts[vessel] = vessel.Parts.Count;
                 if (BDArmorySettings.DEBUG_OTHER) Debug.Log($"[BDArmory.VesselModuleRegistry]: Vessel {vessel.vesselName} added to specialised {typeof(IBDAIControl).Name} registry.");
             }

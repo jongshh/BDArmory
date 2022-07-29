@@ -86,6 +86,7 @@ namespace BDArmory.Control
 
         public void incrementRippleIndex(string weaponname)
         {
+            if (!gunRippleIndex.ContainsKey(weaponname)) { Debug.Log($"DEBUG {weaponname} on {vessel.vesselName} is not in gunRippleIndex!"); }
             gunRippleIndex[weaponname]++;
             if (gunRippleIndex[weaponname] >= rippleGunCount[weaponname])
             {
@@ -1097,6 +1098,7 @@ namespace BDArmory.Control
                 GameEvents.onPartDie.Add(OnPartDie);
                 GameEvents.onVesselPartCountChanged.Add(UpdateMaxGunRange);
                 GameEvents.onVesselPartCountChanged.Add(UpdateCurrentHP);
+                GameEvents.onVesselPartCountChanged.Add(OnVesselPartCountChanged);
 
                 totalHP = GetTotalHP();
                 currentHP = totalHP;
@@ -1161,8 +1163,52 @@ namespace BDArmory.Control
 
         void OnVesselCreate(Vessel v)
         {
-            if (v == null) return;
+            if (vessel is null || v != vessel) return;
+            if (AI is not null && AI.weaponManager is not null) // Tell the previous WM to update its modules.
+            {
+                Debug.Log($"DEBUG Updating modules on {AI.vessel}");
+                AI.weaponManager.RefreshModules();
+                AI.weaponManager.UpdateList();
+            }
             RefreshModules();
+            if (BDACompetitionMode.Instance.competitionIsActive)
+                StartCoroutine(AddToCompetitionWhenReady());
+        }
+        IEnumerator AddToCompetitionWhenReady()
+        {
+            var wait = new WaitForFixedUpdate();
+            var start = Time.time;
+            while ((BDACompetitionMode.Instance.IsValidVessel(vessel) == BDACompetitionMode.InvalidVesselReason.None && (string.IsNullOrEmpty(vessel.vesselName) || !vessel.loaded)) && Time.time - start < 10)
+            {
+                yield return wait;
+            }
+            if (Time.time - start < 10 && BDACompetitionMode.Instance.IsValidVessel(vessel) == BDACompetitionMode.InvalidVesselReason.None && !BDACompetitionMode.Instance.Scores.Players.Contains(vessel.vesselName) && !vessel.vesselName.Contains(" Fighter_"))
+            {
+                UpdateList();
+                if (guardMode) { ToggleGuardMode(); ToggleGuardMode(); } // Disable, then re-enable guard mode to reset weapon stuff.
+                if (vessel.vesselType == VesselType.Plane && vessel.vesselName.EndsWith(" Plane"))
+                {
+                    vessel.vesselName = vessel.vesselName.Remove(vessel.vesselName.Length - 6) + " Fighter";
+                    int i = 1;
+                    var potentialName = vessel.vesselName + $"_{i}";
+                    while (BDACompetitionMode.Instance.Scores.Players.Contains(potentialName))
+                    {
+                        ++i;
+                        potentialName = vessel.vesselName + $"_{i}";
+                    }
+                    vessel.vesselName = potentialName;
+                }
+                BDACompetitionMode.Instance.Scores.AddPlayer(vessel);
+                Debug.Log($"DEBUG Adding {vessel.vesselName} to the competition.");
+            }
+        }
+
+        void OnVesselPartCountChanged(Vessel v)
+        {
+            if (vessel is null || vessel != v) return;
+            Debug.Log($"DEBUG PartCountChange on {vessel}");
+            RefreshModules();
+            UpdateList();
         }
 
         void OnPartJointBreak(PartJoint j, float breakForce)
@@ -1179,6 +1225,7 @@ namespace BDArmory.Control
 
             if ((j.Parent && j.Parent.vessel == vessel) || (j.Child && j.Child.vessel == vessel))
             {
+                Debug.Log($"DEBUG PartJointBreak on {vessel}");
                 RefreshModules();
                 UpdateList();
             }
@@ -1377,6 +1424,7 @@ namespace BDArmory.Control
             GameEvents.onPartDie.Remove(OnPartDie);
             GameEvents.onVesselPartCountChanged.Remove(UpdateMaxGunRange);
             GameEvents.onVesselPartCountChanged.Remove(UpdateCurrentHP);
+            GameEvents.onVesselPartCountChanged.Remove(OnVesselPartCountChanged);
             GameEvents.onEditorPartPlaced.Remove(UpdateMaxGunRange);
             GameEvents.onEditorPartDeleted.Remove(UpdateMaxGunRange);
         }
@@ -2103,9 +2151,9 @@ namespace BDArmory.Control
                                     guardFiringMissile = false;
                                     yield break;
                                 }
-                                
+
                             }
-                    }              
+                    }
                     else //no gps target and no tgp, cancel.
                     {
                         guardFiringMissile = false;
@@ -2638,7 +2686,7 @@ namespace BDArmory.Control
                 if (pilotAI)
                 {
                     pilotAI.RequestExtend("Nuke away!", guardTarget, missile.StandOffDistance * 1.25f, guardTarget.CoM); // Extend from projected detonation site if within blast radius
-                } 
+                }
             }
             return true;
         }
@@ -2873,7 +2921,7 @@ namespace BDArmory.Control
 
             //gun ripple stuff
             if (selectedWeapon != null && (selectedWeapon.GetWeaponClass() == WeaponClasses.Gun || selectedWeapon.GetWeaponClass() == WeaponClasses.Rocket || selectedWeapon.GetWeaponClass() == WeaponClasses.DefenseLaser))
-                //&& currentGun.useRippleFire) //currentGun.roundsPerMinute < 1500)
+            //&& currentGun.useRippleFire) //currentGun.roundsPerMinute < 1500)
             {
                 float counter = 0; // Used to get a count of the ripple weapons.  a float version of rippleGunCount.
                 gunRippleIndex.Clear();
@@ -2967,12 +3015,12 @@ namespace BDArmory.Control
                         counter += weaponRpm; // grab sum of weapons rpm
                     }
                 gunRippleRpm = counter;
-                
+
                 //ripple for non-homogeneous groups needs to be setup per guntype, else a slow cannon will have the same firedelay as a fast MG
                 using (List<ModuleWeapon>.Enumerator weapon = rippleWeapons.GetEnumerator())
                     while (weapon.MoveNext())
                     {
-                        int GunCount = 0; 
+                        int GunCount = 0;
                         if (weapon.Current == null) continue;
                         weapon.Current.useRippleFire = ro.rippleFire;
                         if (!rippleGunCount.ContainsKey(weapon.Current.WeaponName)) //don't setup copies of a guntype if we've already done that
@@ -3517,6 +3565,7 @@ namespace BDArmory.Control
         void RefreshModules()
         {
             VesselModuleRegistry.OnVesselModified(vessel); // Make sure the registry is up-to-date.
+            AI = VesselModuleRegistry.GetIBDAIControl(vessel, true);
             radars = VesselModuleRegistry.GetModules<ModuleRadar>(vessel);
             if (radars != null)
             {
@@ -3545,6 +3594,7 @@ namespace BDArmory.Control
             cloaks = VesselModuleRegistry.GetModules<ModuleCloakingDevice>(vessel);
             targetingPods = VesselModuleRegistry.GetModules<ModuleTargetingCamera>(vessel);
             wmModules = VesselModuleRegistry.GetModules<IBDWMModule>(vessel);
+            UpdateList();
         }
 
         #endregion Weapon Info
@@ -3629,7 +3679,7 @@ namespace BDArmory.Control
                 }
             }
             overrideTarget = null; //null the override target if it cannot be used
-            
+
             TargetInfo potentialTarget = null;
             //=========HIGH PRIORITY MISSILES=============
             //first engage any missiles targeting this vessel
@@ -4172,7 +4222,7 @@ namespace BDArmory.Control
                             if (mlauncher != null)
                             {
                                 if (mlauncher.TargetingMode == MissileBase.TargetingModes.Radar && radars.Count <= 0) continue; //dont select RH missiles when no radar aboard
-                                if (mlauncher.TargetingMode == MissileBase.TargetingModes.Laser && targetingPods.Count <=0) continue; //don't select LH missiles when no FLIR aboard
+                                if (mlauncher.TargetingMode == MissileBase.TargetingModes.Laser && targetingPods.Count <= 0) continue; //don't select LH missiles when no FLIR aboard
                                 candidateDetDist = mlauncher.DetonationDistance;
                                 candidateAccel = mlauncher.thrust / mlauncher.part.mass; //for anti-missile, prioritize proxidetonation and accel
                                 bool EMP = mlauncher.warheadType == MissileBase.WarheadTypes.EMP;
@@ -4808,7 +4858,7 @@ namespace BDArmory.Control
                             double srfSpeed = currentTarget.Vessel.horizontalSrfSpeed;
                             bool EMP = Missile.warheadType == MissileBase.WarheadTypes.EMP;
                             int candidatePriority = Mathf.RoundToInt(Missile.priority);
-                                                         
+
                             if (EMP && target.isDebilitated) continue;
                             //if (targetWeapon != null && targetWeapon.GetWeaponClass() == WeaponClasses.Bomb) targetYield = -1; //reset targetyield so larger bomb yields don't supercede missiles
                             if (targetWeapon != null && targetWeaponPriority > candidatePriority)
@@ -5331,8 +5381,8 @@ namespace BDArmory.Control
             {
                 viewModifier = vesselcamo.opticalReductionFactor;
             }
-                if ((target.Vessel.transform.position - transform.position).sqrMagnitude < (guardRange * viewModifier) *  (guardRange * viewModifier) &&
-                Vector3.Angle(-vessel.ReferenceTransform.forward, target.Vessel.transform.position - vessel.CoM) < guardAngle / 2)
+            if ((target.Vessel.transform.position - transform.position).sqrMagnitude < (guardRange * viewModifier) * (guardRange * viewModifier) &&
+            Vector3.Angle(-vessel.ReferenceTransform.forward, target.Vessel.transform.position - vessel.CoM) < guardAngle / 2)
             {
                 if (RadarUtils.TerrainCheck(target.Vessel.transform.position, transform.position)) //vessel behind terrain
                 {

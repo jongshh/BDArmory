@@ -228,9 +228,7 @@ namespace BDArmory.Radar
                     IRSTName = part.partInfo.title;
                 }
 
-                signalPersistTime = omnidirectional
-    ? 360 / (scanRotationSpeed + 5)
-    : directionalFieldOfView / (scanRotationSpeed + 5);
+                signalPersistTime = omnidirectional ? 360 / (scanRotationSpeed + 5) : directionalFieldOfView / (scanRotationSpeed + 5);
 
                 if (rotationTransformName != string.Empty)
                 {
