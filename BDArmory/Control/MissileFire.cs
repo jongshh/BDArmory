@@ -1164,7 +1164,7 @@ namespace BDArmory.Control
         void OnVesselCreate(Vessel v)
         {
             if (vessel is null || v != vessel) return;
-            if (AI is not null && AI.weaponManager is not null) // Tell the previous WM to update its modules.
+            if (AI is not null && AI.weaponManager is not null) // Tell the previous WM to update its modules (not actually sure this is the previous WM...).
             {
                 Debug.Log($"DEBUG Updating modules on {AI.vessel}");
                 AI.weaponManager.RefreshModules();
