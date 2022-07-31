@@ -1,13 +1,35 @@
-﻿FIXES
-- Remove the "-pre" from the version string, fix some typos.
-IMPROVEMENTS
+﻿﻿v1.5.1.0
+IMPROVEMENTS / FIXES
 - General:
-	- Sort the AI and WM modules internally by distance to the root part to always select the correct AI/WM and update internal references when parasite vessels are deployed from the mothership vessel (competition scores aren't yet being updated).
+	- Remove the "-pre" from the version string, fix some typos.
 - AI:
-	- Allow a vessel that's lost parts to still be auto-tuned.
+	- Allow a vessel that's lost parts after launch to still be auto-tuned.
+	- Don't reset the assigned fly-to position when arriving at an orbiting point so that planes actually orbit the targeted point.
+	- Resume various pilot commands if interrupted once the cause of the interruption is removed.
+	- Adjust the fly-to point's altitude closer to the default altitude when at longer ranges so planes with higher default altitudes will attack from above and vice-versa.
+	- Reduce the half-life of the velocity smoothing for the turn radius calculation to allow faster updates for terrain avoidance.
+	- AI can now fire antirad missiles at targets detected via RWR.
+	- Fix AI not firing heatseekers.
+	- Fix launch authorisation check throwing an NRE for modular missiles.
+	- Further fix to bombs ignoring max missiles/tge.
+	- Sort the AI and WM modules internally by distance to the root part to always select the correct AI/WM and update internal references when parasite vessels are deployed from the mothership vessel (competition scores aren't yet being updated).
+- Competition:
+	- Calculate the proper separation between teams for starting a competition - fixes the competitions not starting bug.
+	- Set the number of teams to 0 in one-at-a-time waypoint mode tournaments so spawning works correctly.
+	- Ignore modular missile engines when activating all engines during spawning.
 - Weapons:
 	- Add pro-nav gain parameter as tunable parameter for missile parts (pronavGain), set pro-nav gain to 3 by default.
-
+	- Anti-rad missiles now continue to target the last known GPS point instead of disabling guidance.
+	- Fix ShapedCharge warheads doing no damage.
+	- Activate modular missile engines directly instead of using staging (which sometimes doesn't work).
+	- Apply Floating Origin/Krakensbane corrections to missile guidances - fixes missiles detonating partway to target due to miss checks.
+- Armor:
+	- Fix ProcArmor max scalar clamp not appearing.
+	- Add Yield and YoungModulus fields to armour for reflection - fixes armour definitions without these properties not loading properly.
+	- Tweak penetration calcs for ultra-low ductility armor materials.
+- UI:
+	- Missile names now linked to launching craft teamcolor.
+	- Set the AI GUI window rect in Start, not Awake, to guarantee that BDArmorySettings values have been read - fixes the 0-height AI GUI window.
 
 v1.5.0.0
 FIXES

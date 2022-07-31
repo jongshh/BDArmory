@@ -71,8 +71,6 @@ namespace BDArmory.UI
         {
             if (Instance != null) Destroy(Instance);
             Instance = this;
-            BDArmorySetup.WindowRectAI = new Rect(BDArmorySetup.WindowRectAI.x, BDArmorySetup.WindowRectAI.y, WindowWidth, BDArmorySetup.WindowRectAI.height);
-            WindowHeight = BDArmorySetup.WindowRectAI.height;
         }
 
         void Start()
@@ -88,6 +86,9 @@ namespace BDArmory.UI
 
             if (BDArmorySettings.AI_TOOLBAR_BUTTON) AddToolbarButton();
             if (button != null) button.enabled = windowBDAAIGUIEnabled;
+
+            BDArmorySetup.WindowRectAI = new Rect(BDArmorySetup.WindowRectAI.x, BDArmorySetup.WindowRectAI.y, WindowWidth, BDArmorySetup.WindowRectAI.height);
+            WindowHeight = Mathf.Max(WindowHeight, 305);
 
             Label = new GUIStyle();
             Label.alignment = TextAnchor.UpperLeft;

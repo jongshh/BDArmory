@@ -288,6 +288,8 @@ namespace BDArmory.Radar
                         RadarUtils.WorldToRadar(source, referenceTransform, RwrDisplayRect, rwrDisplayRange), Vector3.zero,
                         true, (float)type);    // HACK! Evil misuse of signalstrength for the threat type!
                     pingWorldPositions[openIndex] = source; //FIXME source is improperly defined
+                    if (weaponManager.hasAntiRadiationOrdinance)
+                        BDATargetManager.ReportVessel(AIUtils.VesselClosestTo(source), weaponManager); // Report RWR ping as target for anti-rads
                     StartCoroutine(PingLifeRoutine(openIndex, persistTime));
 
                     PlayWarningSound(type, (source - vessel.transform.position).sqrMagnitude);

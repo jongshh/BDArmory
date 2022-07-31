@@ -954,6 +954,8 @@ namespace BDArmory.Weapons.Missiles
 
         public override void OnFixedUpdate()
         {
+            base.OnFixedUpdate();
+            FloatingOriginCorrection();
             try // FIXME Remove this once the fix is sufficiently tested.
             {
                 debugString.Length = 0;

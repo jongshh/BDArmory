@@ -155,6 +155,20 @@ namespace BDArmory.Radar
             get { return displayedTargets[lockedTargetIndexes[activeLockedTargetIndex]]; }
         }
 
+        public TargetSignatureData activeIRTarget()
+        {
+            TargetSignatureData data;
+            for (int i = 0; i < displayedIRTargets.Count; i++)
+            {
+                if (displayedIRTargets[i].vessel == weaponManager.currentTarget)
+                {
+                    data =  displayedIRTargets[i].targetData;
+                }
+            }
+            data = TargetSignatureData.noTarget;
+            return data;
+        }
+
         //turret slaving
         public bool slaveTurrets;
 

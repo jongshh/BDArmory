@@ -649,9 +649,9 @@ namespace BDArmory.FX
                 }
                 else //majority of force concentrated in blast cone for shaped warheads, not going to apply much force to stuff outside 
                 {
-                    if (realDistance > Range / 2) //further away than half the blast range, falloff blast effect outside primary AoE
+                    if (realDistance < Range / 2) //further away than half the blast range, falloff blast effect outside primary AoE
                     {
-                        blastInfo = BlastPhysicsUtils.CalculatePartBlastEffects(part, realDistance, vesselMass * 1000f, Power / 4, Range / 2);
+                        blastInfo = BlastPhysicsUtils.CalculatePartBlastEffects(part, realDistance, vesselMass * 1000f, Power / 3, Range / 2);
                     }
                     else return;
                 }

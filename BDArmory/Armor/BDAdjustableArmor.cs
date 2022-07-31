@@ -58,7 +58,7 @@ namespace BDArmory.Armor
                 }
         }
 
-        [KSPEvent(guiActive = false, guiActiveEditor = false, guiName = "#LOC_BDArmory_UnclampTuning_enabledText", active = true)]//Toggle scale limit
+        [KSPEvent(guiActive = false, guiActiveEditor = true, guiName = "#LOC_BDArmory_UnclampTuning_enabledText", active = true)]//Toggle scale limit
         public void ToggleScaleClamp()
         {
             clamped = !clamped;

@@ -435,6 +435,7 @@ namespace BDArmory.Control
         public bool debilitated = false;
 
         public bool guardFiringMissile;
+        public bool hasAntiRadiationOrdinance;
         public bool antiRadTargetAcquired;
         Vector3 antiRadiationTarget;
         public bool laserPointDetected;
@@ -1873,7 +1874,7 @@ namespace BDArmory.Control
                     }
 
                     //try uncaged IR lock with radar
-                    if (guardTarget && !heatTarget.exists && vesselRadarData && vesselRadarData.radarCount > 0)
+                    if (guardTarget && !heatTarget.exists && vesselRadarData && vesselRadarData.radarCount > 0)//Switch to IRST detection?
                     {
                         if (!vesselRadarData.locked ||
                             (vesselRadarData.lockedTargetData.targetData.predictedPosition -
@@ -1884,7 +1885,6 @@ namespace BDArmory.Control
                             yield return new WaitForSeconds(Mathf.Min(1, (targetScanInterval * 0.25f)));
                         }
                     }
-
                     // if (AIMightDirectFire() && ml && heatTarget.exists)
                     // {
                     //     float LAstartTime = Time.time;
@@ -1932,6 +1932,7 @@ namespace BDArmory.Control
                         FireCurrentMissile(true);
                         //StartCoroutine(MissileAwayRoutine(mlauncher));
                     }
+                    //else //event that heatTarget.exists && heatTarget != guardtarget?
                 }
                 else if (ml.TargetingMode == MissileBase.TargetingModes.Gps)
                 {
@@ -2755,6 +2756,7 @@ namespace BDArmory.Control
             targetMissiles = false;
             weaponTypesGround.Clear();
             weaponTypesSLW.Clear();
+            hasAntiRadiationOrdinance = false;
             if (vessel == null || !vessel.loaded) return;
 
             using (var weapon = VesselModuleRegistry.GetModules<IBDWeapon>(vessel).GetEnumerator())
@@ -2814,7 +2816,14 @@ namespace BDArmory.Control
                     weapon.Current.GetWeaponClass() == WeaponClasses.Missile ||
                     weapon.Current.GetWeaponClass() == WeaponClasses.SLW)
                     {
+                        MissileLauncher ml = CurrentMissile as MissileLauncher;
+                        BDModularGuidance mmg = CurrentMissile as BDModularGuidance;
                         weapon.Current.GetPart().FindModuleImplementing<MissileBase>().GetMissileCount(); // #191, Do it this way so the GetMissileCount only updates when missile fired
+
+                        if ((ml is not null && ml.TargetingMode == MissileBase.TargetingModes.AntiRad) || (mmg is not null && mmg.TargetingMode == MissileBase.TargetingModes.AntiRad))
+                        {
+                            hasAntiRadiationOrdinance = true;
+                        }
                     }
                 }
 
@@ -5407,7 +5416,25 @@ namespace BDArmory.Control
                 staleTarget = false;
                 return true;
             }
-
+            if (rwr && rwr.rwrEnabled && rwr.displayRWR && hasAntiRadiationOrdinance)//see if RWR is picking up a ping from unseen radar source and craft has HARMs
+            {
+                if (selectedWeapon.GetWeaponClass() == WeaponClasses.Missile && CurrentMissile != null && CurrentMissile.TargetingMode == MissileBase.TargetingModes.AntiRad)
+                {
+                    MissileLauncher ml = CurrentMissile as MissileLauncher;
+                    for (int i = 0; i < rwr.pingsData.Length; i++)
+                    {
+                        if (rwr.pingsData[i].exists && (ml != null ? ml.antiradTargets.Contains(rwr.pingsData[i].signalStrength) : (rwr.pingsData[i].signalStrength == 0 || rwr.pingsData[i].signalStrength == 5)) && rwr.pingsData[i].vessel == target.Vessel) //MMGs have limited Antirad options compared to standard
+                        {
+                            detectedTargetTimeout = 20;
+                            staleTarget = false;  //targeted by HARM
+                            return true;
+                        }
+                    }
+                }
+                detectedTargetTimeout = 20; //know target is somewhere over in that area
+                staleTarget = true;
+                return true;
+            }
             if (checkForstaleTarget) //merely look to see if a target was last detected within 30s
             {
                 if (target.detectedTime.TryGetValue(Team, out float detectedTime) && Time.time - detectedTime < Mathf.Max(30, targetScanInterval))
@@ -5519,11 +5546,18 @@ namespace BDArmory.Control
                 float scanRadius = CurrentMissile.lockedSensorFOV * 0.5f;
                 float maxOffBoresight = CurrentMissile.maxOffBoresight * 0.85f;
 
-                if (vesselRadarData && vesselRadarData.locked)
+                if (vesselRadarData)
                 {
-                    heatTarget = vesselRadarData.lockedTargetData.targetData;
+                    if (vesselRadarData.irstCount > 0)
+                    {
+                        heatTarget = vesselRadarData.activeIRTarget(); //point seeker at active target's IR return
+                    }
+                    else
+                    {
+                        if (vesselRadarData.locked) //uncaged radar lock
+                            heatTarget = vesselRadarData.lockedTargetData.targetData;
+                    }
                 }
-
                 Vector3 direction =
                     heatTarget.exists && Vector3.Angle(heatTarget.position - CurrentMissile.MissileReferenceTransform.position, CurrentMissile.GetForwardTransform()) < maxOffBoresight ?
                     heatTarget.predictedPosition - CurrentMissile.MissileReferenceTransform.position
@@ -5620,7 +5654,8 @@ namespace BDArmory.Control
             {
                 if (BDArmorySettings.DEBUG_MISSILES)
                     Debug.Log("[BDArmory.MissileData]: Sending targetInfo to bomb...");
-                if (guardMode && ((bombAimerPosition - guardTarget.CoM).sqrMagnitude < ml.GetBlastRadius()))
+                //if (guardMode && ((bombAimerPosition - guardTarget.CoM).sqrMagnitude < ml.GetBlastRadius()))
+                if (guardMode && guardTarget != null)
                 {
                     ml.targetVessel = guardTarget.gameObject.GetComponent<TargetInfo>();
                     if (BDArmorySettings.DEBUG_MISSILES)
@@ -5754,7 +5789,7 @@ namespace BDArmory.Control
 
                             // Check that launch is possible before entering GuardMissileRoutine, or that missile is on a turret
                             MissileLauncher ml = CurrentMissile as MissileLauncher;
-                            launchAuthorized = launchAuthorized && (GetLaunchAuthorization(guardTarget, this) || ml.missileTurret);
+                            launchAuthorized = launchAuthorized && (GetLaunchAuthorization(guardTarget, this) || (ml is not null && ml.missileTurret));
 
 
                             if (BDArmorySettings.DEBUG_MISSILES)
@@ -5903,6 +5938,10 @@ namespace BDArmory.Control
                     priorGunThreatVessel = results.threatVessel;
                     incomingMissTime = 0f;
                 }
+                if ((pilotAI != null && incomingMissTime >= pilotAI.evasionTimeThreshold && incomingMissDistance < pilotAI.evasionThreshold) || AI != null && pilotAI == null) // If we haven't been under fire long enough, ignore gunfire
+                {
+                    FireOCM(false); //enable visual coutnermeasures if under fire
+                }
                 if (results.threatWeaponManager != null)
                 {
                     incomingMissDistance = results.missDistance + results.missDeviation;
@@ -5931,7 +5970,6 @@ namespace BDArmory.Control
                             }
                         }
                 }
-                FireOCM(false);
                 StartCoroutine(UnderAttackRoutine()); //this seems to be firing all the time, not just when bullets are flying towards craft...?
                 StartCoroutine(UnderFireRoutine());
             }
