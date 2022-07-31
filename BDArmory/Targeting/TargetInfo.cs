@@ -233,7 +233,7 @@ namespace BDArmory.Targeting
         {
             //remove delegate from peace enable event
             BDArmorySetup.OnPeaceEnabled -= OnPeaceEnabled;
-            vessel.OnJustAboutToBeDestroyed -= AboutToBeDestroyed;
+            if (vessel is not null) vessel.OnJustAboutToBeDestroyed -= AboutToBeDestroyed;
             GameEvents.onVesselPartCountChanged.Remove(VesselModified);
             GameEvents.onVesselDestroy.Remove(CleanFriendliesEngaging);
             BDATargetManager.RemoveTarget(this);
