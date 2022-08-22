@@ -30,13 +30,14 @@ namespace BDArmory.Armor
         public float maxScale = 16;
 
         [KSPEvent(guiActive = false, guiActiveEditor = false, guiName = "#LOC_BDArmory_ArmorTriIso", active = true)]//Toggle Tri Type
-        public void ToggleTriTypeOption()
+        public void ToggleTriTypeOption() => ToggleTriTypeOptionHandler();
+        void ToggleTriTypeOptionHandler(bool applySym = true)
         {
             scaleneTri = !scaleneTri;
 
             Fields["scaleneWidth"].guiActiveEditor = scaleneTri;
             UI_FloatRange AWidth = (UI_FloatRange)Fields["Width"].uiControlEditor;
-            AWidth.maxValue = scaleneTri ? maxScale/2 : maxScale;
+            AWidth.maxValue = scaleneTri ? clamped ? maxScale / 2 : 50 : clamped ? maxScale : 100;
             AWidth.minValue = scaleneTri ? 0.1f : 0.5f;
 
             if (scaleneTri)
@@ -50,27 +51,29 @@ namespace BDArmory.Armor
                 Events["ToggleTriTypeOption"].guiName = Localizer.Format("#LOC_BDArmory_ArmorTriIso");
             }
             GUIUtils.RefreshAssociatedWindows(part);
-            using (List<Part>.Enumerator sym = part.symmetryCounterparts.GetEnumerator())
-                while (sym.MoveNext())
-                {
-                    if (sym.Current == null) continue;
-                    sym.Current.FindModuleImplementing<BDAdjustableArmor>().ToggleTriTypeOption();
-                }
+            if (applySym)
+            {
+                using (List<Part>.Enumerator sym = part.symmetryCounterparts.GetEnumerator())
+                    while (sym.MoveNext())
+                    {
+                        if (sym.Current == null) continue;
+                        sym.Current.FindModuleImplementing<BDAdjustableArmor>().ToggleTriTypeOptionHandler(false);
+                    }
+            }
         }
 
-        [KSPEvent(guiActive = false, guiActiveEditor = true, guiName = "#LOC_BDArmory_UnclampTuning_enabledText", active = true)]//Toggle scale limit
+        [KSPEvent(guiActive = false, guiActiveEditor = true, guiName = "#LOC_BDArmory_UnclampTuning_disabledText", active = true)]//Toggle scale limit
         public void ToggleScaleClamp()
         {
             clamped = !clamped;
-
             UI_FloatRange AWidth = (UI_FloatRange)Fields["Width"].uiControlEditor;
-            UI_FloatRange SWidth = (UI_FloatRange)Fields["scaleneWidth"].uiControlEditor;
-            UI_FloatRange ALength = (UI_FloatRange)Fields["Length"].uiControlEditor;
             AWidth.maxValue = scaleneTri ? clamped ? maxScale / 2 : 50 : clamped ? maxScale : 100;
-            SWidth.maxValue = clamped ? maxScale / 2 : 50;
+            UI_FloatRange ALength = (UI_FloatRange)Fields["Length"].uiControlEditor;
             ALength.maxValue = clamped ? maxScale : 100;
+            UI_FloatRange SWidth = (UI_FloatRange)Fields["scaleneWidth"].uiControlEditor;
+            SWidth.maxValue = clamped ? maxScale / 2 : 50;
 
-            if (clamped)
+            if (!clamped)
             {
                 Events["ToggleScaleClamp"].guiName = Localizer.Format("#LOC_BDArmory_UnclampTuning_enabledText");
             }
@@ -85,6 +88,7 @@ namespace BDArmory.Armor
                     if (sym.Current == null) continue;
                     sym.Current.FindModuleImplementing<BDAdjustableArmor>().ToggleScaleClamp();
                 }
+            GUIUtils.RefreshAssociatedWindows(part);
         }
         bool clamped = true;
 
@@ -94,6 +98,8 @@ namespace BDArmory.Armor
 
         [KSPField]
         public bool isTriangularPanel = false;
+
+        [KSPField(isPersistant = true)]
         bool scaleneTri = false;
 
         [KSPField]
@@ -177,7 +183,7 @@ namespace BDArmory.Armor
 
         public void AdjustWidth(BaseField field, object obj)
         {
-            Width = Mathf.Clamp(Width, scaleneTri ? 0.1f : 0.5f, scaleneTri ? maxScale / 2 : maxScale);
+            Width = Mathf.Clamp(Width, scaleneTri ? 0.1f : 0.5f, scaleneTri ? clamped ? maxScale / 2 : 50 : clamped ? maxScale : 100);
             for (int i = 0; i < armorTransforms.Length; i++)
             {
                 armorTransforms[i].localScale = new Vector3(Width, Length, armorthickness);
@@ -200,7 +206,7 @@ namespace BDArmory.Armor
         }
         public void AdjustSWidth(BaseField field, object obj)
         {
-            scaleneWidth = Mathf.Clamp(scaleneWidth, 0.1f, maxScale / 2);
+            scaleneWidth = Mathf.Clamp(scaleneWidth, 0.1f, clamped ? maxScale / 2 : 50);
             for (int i = 0; i < scaleneTransforms.Length; i++)
             {
                 scaleneTransforms[i].localScale = new Vector3(scaleneWidth * 2, Length, armorthickness);
@@ -216,7 +222,7 @@ namespace BDArmory.Armor
         }
         public void AdjustLength(BaseField field, object obj)
         {
-            Length = Mathf.Clamp(Length, 0.5f, maxScale);
+            Length = Mathf.Clamp(Length, 0.5f, clamped ? maxScale : 100);
             for (int i = 0; i < armorTransforms.Length; i++)
             {
                 armorTransforms[i].localScale = new Vector3(Width, Length, armorthickness);

@@ -36,7 +36,7 @@ namespace BDArmory.Settings
         [BDAPersistentSettingsField] public static float GUI_OPACITY = 1f;                   // Modify the GUI opacity.
 
         // General toggle settings
-        //[BDAPersistentSettingsField] public static bool INSTAKILL = true; //Depreciated, only affects lasers; use an Instagib mutator isntead
+        //[BDAPersistentSettingsField] public static bool INSTAKILL = true; //Deprecated, only affects lasers; use an Instagib mutator isntead
         [BDAPersistentSettingsField] public static bool AI_TOOLBAR_BUTTON = true;                 // Show or hide the BDA AI toolbar button.
         [BDAPersistentSettingsField] public static bool INFINITE_AMMO = false;
         [BDAPersistentSettingsField] public static bool BULLET_HITS = true;

@@ -202,7 +202,7 @@ namespace BDArmory.Guidances
         }
 
         /// <summary>
-        /// Calculate a very accurate time to impact, use the out timeToimpact property if the method returned true. DEPRECIATED, use TimeToCPA.
+        /// Calculate a very accurate time to impact, use the out timeToimpact property if the method returned true. DEPRECATED, use TimeToCPA.
         /// </summary>
         /// <param name="targetVelocity"></param>
         /// <param name="missileVessel"></param>

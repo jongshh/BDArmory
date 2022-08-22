@@ -257,14 +257,6 @@ namespace BDArmory.Competition.VesselSpawning
                 }
             }
 
-            // Revert the camera and focus on one of the vessels.
-            SpawnUtils.RevertSpawnLocationCamera(true);
-            if ((FlightGlobals.ActiveVessel == null || FlightGlobals.ActiveVessel.state == Vessel.State.DEAD) && spawnedVessels.Count > 0)
-            {
-                LoadedVesselSwitcher.Instance.ForceSwitchVessel(spawnedVessels.Take(UnityEngine.Random.Range(1, spawnedVessels.Count)).Last().Value); // Update the camera.
-            }
-            FlightCamera.fetch.SetDistance(50);
-
             yield return PostSpawnMainSequence(spawnConfig, spawnAirborne);
             if (spawnFailureReason != SpawnFailureReason.None)
             {
@@ -272,6 +264,14 @@ namespace BDArmory.Competition.VesselSpawning
                 vesselsSpawning = false;
                 yield break;
             }
+
+            // Revert the camera and focus on one of the vessels.
+            SpawnUtils.RevertSpawnLocationCamera(true);
+            if ((FlightGlobals.ActiveVessel == null || FlightGlobals.ActiveVessel.state == Vessel.State.DEAD) && spawnedVessels.Count > 0)
+            {
+                LoadedVesselSwitcher.Instance.ForceSwitchVessel(spawnedVessels.Take(UnityEngine.Random.Range(1, spawnedVessels.Count)).Last().Value); // Update the camera.
+            }
+            FlightCamera.fetch.SetDistance(50);
 
             if (spawnConfig.assignTeams)
             {
@@ -289,7 +289,7 @@ namespace BDArmory.Competition.VesselSpawning
             }
             #endregion
 
-            LogMessage("Vessel spawning SUCCEEDED!", true, false);
+            LogMessage("Vessel spawning SUCCEEDED!", true, BDArmorySettings.DEBUG_SPAWNING);
             vesselSpawnSuccess = true;
             vesselsSpawning = false;
         }

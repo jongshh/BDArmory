@@ -1595,7 +1595,7 @@ namespace BDArmory.Control
                 if (BDArmorySettings.DEBUG_AI) Debug.Log("[BDArmory.BDModulePilotAI]: " + vessel.vesselName + " is no longer inhibiting gain alt");
             }
 
-            if (!gainAltInhibited && belowMinAltitude && (currentStatus == "Engaging" || currentStatus == "Evading"))
+            if (!gainAltInhibited && belowMinAltitude && (currentStatus == "Engaging" || currentStatus == "Evading") && vessel.atmDensity > 0.1f)
             { // Vessel went below minimum altitude while "Engaging" or "Evading", enable the gain altitude inhibitor.
                 gainAltInhibited = true;
                 if (BDArmorySettings.DEBUG_AI) Debug.Log("[BDArmory.BDModulePilotAI]: " + vessel.vesselName + " was " + currentStatus + " and went below min altitude, inhibiting gain alt.");
@@ -2020,6 +2020,7 @@ namespace BDArmory.Control
                     if (v.LandedOrSplashed) vectorToTarget += upDirection * defaultAltitude; // If the target is landed or splashed, aim for the default altitude while we're outside our gun's range.
                     target = vesselTransform.position + GetLimitedClimbDirectionForSpeed(vectorToTarget);
                 }
+                //change target offset if no selected weapon and at target alt? target += targetVelocity * closing time?
                 else
                 {
                     finalMaxSteer = GetSteerLimiterForSpeedAndPower();
@@ -2145,7 +2146,7 @@ namespace BDArmory.Control
                     targetPosition = vessel.transform.position + vessel.Velocity();
                 }
 
-                targetPosition = LongRangeAltitudeCorrection(targetPosition);
+                targetPosition = LongRangeAltitudeCorrection(targetPosition); //have this only trigger in atmo?
                 targetPosition = FlightPosition(targetPosition, minAltitude);
                 targetPosition = vesselTransform.position + ((targetPosition - vesselTransform.position).normalized * 100);
             }
@@ -2199,7 +2200,9 @@ namespace BDArmory.Control
             //slow down for tighter turns
             float velAngleToTarget = Mathf.Clamp(Vector3.Angle(targetPosition - vesselTransform.position, vessel.Velocity()), 0, 90);
             float speedReductionFactor = 1.25f;
-            float finalSpeed = Mathf.Min(speedController.targetSpeed, Mathf.Clamp(maxSpeed - (speedReductionFactor * velAngleToTarget), idleSpeed, maxSpeed));
+            float finalSpeed;
+            if (vessel.atmDensity > 0.05f) finalSpeed = Mathf.Min(speedController.targetSpeed, Mathf.Clamp(maxSpeed - (speedReductionFactor * velAngleToTarget), idleSpeed, maxSpeed));
+            else finalSpeed = Mathf.Min(speedController.targetSpeed, maxSpeed);
             debugString.AppendLine($"Final Target Speed: {finalSpeed}");
 
             if (!overrideThrottle)
@@ -2378,7 +2381,7 @@ namespace BDArmory.Control
             if (autoTune)
             { pidAutoTuning.Update(pitchError, rollError, yawError); }
 
-            if (BDArmorySettings.DEBUG_TELEMETRY)
+            if (BDArmorySettings.DEBUG_TELEMETRY || BDArmorySettings.DEBUG_AI)
             {
                 debugString.AppendLine(String.Format("steerMode: {0}, rollError: {1,7:F4}, pitchError: {2,7:F4}, yawError: {3,7:F4}", steerMode, rollError, pitchError, yawError));
                 debugString.AppendLine($"finalMaxSteer: {finalMaxSteer:G3}, dynAdj: {dynamicAdjustment:G3}");
@@ -2747,7 +2750,9 @@ namespace BDArmory.Control
                         {
                             cross = -cross;
                         }
-                        FlyToPosition(s, vesselTransform.position + (50 * vessel.Velocity() / vessel.srfSpeed) + (100 * cross));
+                        Vector3 targetDirection = vesselTransform.position + (50 * vessel.Velocity() / vessel.srfSpeed) + (100 * cross);
+                        RCSEvade(s, targetDirection);//add spacemode RCS dodging; missile evasion, fire in targetDirection
+                        FlyToPosition(s, targetDirection);
                         return;
                     }
                     else // Fly at 90 deg to missile to put max distance between ourselves and dispensed flares/chaff
@@ -2760,11 +2765,15 @@ namespace BDArmory.Control
                         float sign = Vector3.SignedAngle(threatDirection, Vector3.ProjectOnPlane(vessel.Velocity(), upDirection), upDirection);
                         Vector3 breakDirection = Vector3.ProjectOnPlane(Vector3.Cross(Mathf.Sign(sign) * upDirection, threatDirection), upDirection);
 
-                        // Dive to gain energy and hopefully lead missile into ground
-                        float angle = (Mathf.Clamp((float)vessel.radarAltitude - minAltitude, 0, 1500) / 1500) * 90;
-                        angle = Mathf.Clamp(angle, 0, 75) * Mathf.Deg2Rad;
-                        Vector3 targetDirection = Vector3.RotateTowards(breakDirection, -upDirection, angle, 0);
-                        targetDirection = Vector3.RotateTowards(vessel.Velocity(), targetDirection, 15f * Mathf.Deg2Rad, 0).normalized;
+                        // Dive to gain energy and hopefully lead missile into ground when not in space
+                        if (vessel.atmDensity > 0.05)
+                        {
+                            float angle = (Mathf.Clamp((float)vessel.radarAltitude - minAltitude, 0, 1500) / 1500) * 90;
+                            angle = Mathf.Clamp(angle, 0, 75) * Mathf.Deg2Rad;
+                            breakDirection = Vector3.RotateTowards(breakDirection, -upDirection, angle, 0);
+                        }
+
+                        Vector3 targetDirection = Vector3.RotateTowards(vessel.Velocity(), breakDirection, 15f * Mathf.Deg2Rad, 0).normalized;
 
                         steerMode = SteerModes.Aiming;
 
@@ -2778,7 +2787,7 @@ namespace BDArmory.Control
                             useAB = true;
                             AdjustThrottle(maxSpeed, false, useAB);
                         }
-
+                        RCSEvade(s, targetDirection);//add spacemode RCS dodging; missile evasion, fire in targetDirection
                         FlyToPosition(s, vesselTransform.position + (targetDirection * 100), true);
                         return;
                     }
@@ -2809,6 +2818,7 @@ namespace BDArmory.Control
                         { // This adds +-500/(threat distance) to the left or right relative to the breakTarget vector, regardless of the size of breakTarget
                             breakTarget += 500f / threatRelativePosition.magnitude * Vector3.Cross(threatRelativePosition.normalized, Mathf.Sign(Mathf.Sin((float)vessel.missionTime / 2)) * vessel.upAxis);
                             debugString.AppendLine($" from directly ahead!");
+                            RCSEvade(s, new Vector3(1 * evasionNonlinearityDirection, 0, 0));//add spacemode RCS dodging; forward incoming fire, flank L/R
                         }
                         else if (threatDirectionFactor < -0.9) //within ~28 degrees behind
                         {
@@ -2825,6 +2835,7 @@ namespace BDArmory.Control
                                     steerMode = SteerModes.Aiming;
                                     AdjustThrottle(minSpeed, true, false);
                                 }
+                                RCSEvade(s, new Vector3(Mathf.Sin((float)vessel.missionTime / 2), Mathf.Cos((float)vessel.missionTime / 2), 0));//add spacemode RCS dodging; aft incoming fire, orbit about prograde
                             }
                             else
                             { // This sets breakTarget to the attackers position, then applies an up to 500m offset to the right or left (relative to the vessel) for the first half of the default evading period, then sets the breakTarget to be 150m right or left of the attacker.
@@ -2837,6 +2848,7 @@ namespace BDArmory.Control
                                 debugString.AppendLine($" from directly behind and close; breaking hard");
                                 steerMode = SteerModes.Aiming;
                                 AdjustThrottle(minSpeed, true, false); // Brake to slow down and turn faster while breaking target
+                                RCSEvade(s, new Vector3(0, 0, -1));//add spacemode RCS dodging; fire available retrothrusters
                             }
                         }
                         else
@@ -2854,6 +2866,7 @@ namespace BDArmory.Control
                                 breakTarget = vesselTransform.up * 1500;
                                 breakTarget += Mathf.Sin((float)vessel.missionTime / 2) * vesselTransform.right * 1000 - Mathf.Cos((float)vessel.missionTime / 2) * vesselTransform.forward * 1000;
                                 debugString.AppendLine($" from far side; engaging barrel roll");
+                                RCSEvade(s, new Vector3(0, 1 * evasionNonlinearityDirection, 0));//add spacemode RCS dodging; flank incoming fire, flank U/D
                             }
                         }
 
@@ -2884,6 +2897,21 @@ namespace BDArmory.Control
             //+ (Mathf.Sin (Time.time/3) * upDirection * minAltitude/3);
             debugString.AppendLine($"Evading unknown attacker");
             FlyToPosition(s, target);
+        }
+
+        public void RCSEvade(FlightCtrlState s, Vector3 EvadeDir)
+        {
+            if (!BDArmorySettings.SPACE_HACKS || vessel.atmDensity > 0.05) return;
+            if (!vessel.ActionGroups[KSPActionGroup.RCS])
+            {
+                vessel.ActionGroups.SetGroup(KSPActionGroup.RCS, true);
+            }
+            //Vector3d RCS needs to be fed a vector based on the direction of dodging we need to do
+            // grab list of engines on ship, find all that are independant throttle, find all that are pointed in the right direction(Vector3.Dot(thrustTransform, evadeDir)?
+            //then activate them? Alternatively, method for letting non-ModuleRCS engines act like RCS?
+            s.X = Mathf.Clamp((float)EvadeDir.x, -1, 1); //left/right
+            s.Y = Mathf.Clamp((float)EvadeDir.z, -1, 1); //fore/aft
+            s.Z = Mathf.Clamp((float)EvadeDir.y, -1, 1); //up/down
         }
 
         void UpdateVelocityRelativeDirections() // Vectors that are used in TakeOff and FlyAvoidTerrain.
@@ -2933,9 +2961,16 @@ namespace BDArmory.Control
             ray = new Ray(vessel.transform.position, relativeVelocityDownDirection); // Check here below.
             Vector3 terrainBelowNormal = (Physics.Raycast(ray, out rayHit, minAltitude + 1.0f, (int)LayerMasks.Scenery)) ? rayHit.normal : upDirection; // Terrain normal below here.
             Vector3 normalToUse = Vector3.Dot(vessel.srf_vel_direction, terrainBelowNormal) < Vector3.Dot(vessel.srf_vel_direction, terrainBelowAheadNormal) ? terrainBelowNormal : terrainBelowAheadNormal; // Use the normal that has the steepest slope relative to our velocity.
-            forwardPoint = vessel.transform.position + Vector3.ProjectOnPlane(forwardDirection, normalToUse).normalized * 100; // Forward point adjusted for terrain.
-            float rise = Mathf.Clamp((float)vessel.srfSpeed * 0.215f, 5, 100); // Up to 45° rise angle above terrain changes at 465m/s.
-            FlyToPosition(s, forwardPoint + upDirection * rise);
+            if (BDArmorySettings.SPACE_HACKS && vessel.atmDensity < 0.1f) //no need to worry about stalling in null atmo
+            {
+                FlyToPosition(s, vessel.transform.position + terrainBelowAheadNormal * 100); //point nose perpendicular to surface for maximum vertical thrust.
+            }
+            else
+            {
+                forwardPoint = vessel.transform.position + Vector3.ProjectOnPlane(forwardDirection, normalToUse).normalized * 100; // Forward point adjusted for terrain.
+                float rise = Mathf.Clamp((float)vessel.srfSpeed * 0.215f, 5, 100); // Up to 45° rise angle above terrain changes at 465m/s.
+                FlyToPosition(s, forwardPoint + upDirection * rise);
+            }
         }
 
         void UpdateTerrainAlertDetectionRadius(Vessel v)
@@ -2953,7 +2988,8 @@ namespace BDArmory.Control
             float controlLagTime = 1.5f; // Time to fully adjust control surfaces. (Typical values seem to be 0.286s -- 1s for neutral to deployed according to wing lift comparison.) FIXME maybe this could also be a slider.
 
             ++terrainAlertTicker;
-            int terrainAlertTickerThreshold = BDArmorySettings.TERRAIN_ALERT_FREQUENCY * (int)(1 + Mathf.Pow((float)vessel.radarAltitude / 500.0f, 2.0f) / Mathf.Max(1.0f, (float)vessel.srfSpeed / 150.0f)); // Scale with altitude^2 / speed.
+            // int terrainAlertTickerThreshold = BDArmorySettings.TERRAIN_ALERT_FREQUENCY * (int)(1 + (((float)vessel.radarAltitude / 500.0f) * ((float)vessel.radarAltitude / 500.0f)) / Mathf.Max(1.0f, (float)vessel.srfSpeed / 150.0f)); // Scale with altitude^2 / speed.
+            int terrainAlertTickerThreshold = BDArmorySettings.TERRAIN_ALERT_FREQUENCY * (int)(1 + ((float)(vessel.radarAltitude * vessel.radarAltitude) / 250000.0f) / Mathf.Max(1.0f, (float)vessel.srfSpeed / 150.0f)); // Scale with altitude^2 / speed.
             if (terrainAlertTicker >= terrainAlertTickerThreshold)
             {
                 terrainAlertTicker = 0;
@@ -3372,7 +3408,7 @@ namespace BDArmory.Control
 
             float currentG = -Vector3.Dot(vessel.acceleration, vessel.ReferenceTransform.forward);
             float negLim, posLim;
-            negLim = negPitchDynPresLimitIntegrator * invVesselDynPreskPa + negPitchDynPresLimit;
+            negLim = vessel.atmDensity > 0.05 ? negPitchDynPresLimitIntegrator * invVesselDynPreskPa + negPitchDynPresLimit : -1;
             if (negLim > s.pitch)
             {
                 if (currentG > -(maxAllowedGForce * 0.97f * bodyGravity))
@@ -3391,7 +3427,7 @@ namespace BDArmory.Control
                 s.pitch = negLim;
                 debugString.AppendLine($"Limiting Neg Gs");
             }
-            posLim = posPitchDynPresLimitIntegrator * invVesselDynPreskPa + posPitchDynPresLimit;
+            posLim = vessel.atmDensity > 0.05 ? posPitchDynPresLimitIntegrator * invVesselDynPreskPa + posPitchDynPresLimit : 1;
             if (posLim < s.pitch)
             {
                 if (currentG < (maxAllowedGForce * 0.97f * bodyGravity))
@@ -3518,7 +3554,7 @@ namespace BDArmory.Control
             var scale = weaponManager is not null ? Mathf.Max(2500f, weaponManager.gunRange) : 2500f;
             var scaledDistance = (targetPosition - vessel.transform.position).magnitude / scale;
             if (scaledDistance <= 1) return targetPosition; // No modification if the target is within the gun range.
-            scaledDistance = Mathf.Sqrt(scaledDistance);
+            scaledDistance = BDAMath.Sqrt(scaledDistance);
             var targetAlt = BodyUtils.GetRadarAltitudeAtPos(targetPosition);
             var newAlt = targetAlt / scaledDistance + defaultAltitude * (scaledDistance - 1) / scaledDistance;
             debugString.AppendLine($"Adjusting fly-to altitude from {targetAlt:0}m to {newAlt:0}m (scaled distance: {scaledDistance:0.0}m)");
@@ -3674,7 +3710,7 @@ namespace BDArmory.Control
             else if (command == PilotCommands.Attack)
             {
                 if (targetVessel != null) // && (BDArmorySettings.RUNWAY_PROJECT || (targetVessel.vesselTransform.position - vessel.vesselTransform.position).sqrMagnitude <= weaponManager.gunRange * weaponManager.gunRange)
-                    // && (targetVessel.vesselTransform.position - vessel.vesselTransform.position).sqrMagnitude <= weaponManager.guardRange * weaponManager.guardRange) // If the vessel has a target within visual range, let it fight!
+                                          // && (targetVessel.vesselTransform.position - vessel.vesselTransform.position).sqrMagnitude <= weaponManager.guardRange * weaponManager.guardRange) // If the vessel has a target within visual range, let it fight!
                 {
                     ReleaseCommand(false);
                     return;

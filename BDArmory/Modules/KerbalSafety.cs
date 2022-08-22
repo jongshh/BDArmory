@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -241,7 +242,16 @@ namespace BDArmory.Modules
                 }
             }
             if (vessel.protoVessel != null)
-            { ShipConstruction.RecoverVesselFromFlight(vessel.protoVessel, HighLogic.CurrentGame.flightState, true); }
+            {
+                try
+                {
+                    ShipConstruction.RecoverVesselFromFlight(vessel.protoVessel, HighLogic.CurrentGame.flightState, true);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"[BDArmory.KerbalSafety]: Exception thrown while removing vessel: {e.Message}");
+                }
+            }
         }
 
         void EatenByTheKraken(GameEvents.HostedFromToAction<Vessel, CelestialBody> fromTo)
@@ -729,7 +739,14 @@ namespace BDArmory.Modules
             if (BDArmorySettings.DEBUG_OTHER)
                 Debug.Log("[BDArmory.KerbalSafety]: Recovering " + kerbalName + ".");
             recovered = true;
-            ShipConstruction.RecoverVesselFromFlight(kerbalEVA.vessel.protoVessel, HighLogic.CurrentGame.flightState, true);
+            try
+            {
+                ShipConstruction.RecoverVesselFromFlight(kerbalEVA.vessel.protoVessel, HighLogic.CurrentGame.flightState, true);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[BDArmory.KerbalSafety]: Exception thrown while removing vessel: {e.Message}");
+            }
         }
         #endregion
     }

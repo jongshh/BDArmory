@@ -37,7 +37,7 @@ namespace BDArmory.FX
         public string SourceVessel;
         private string explModelPath = "BDArmory/Models/explosion/explosion";
         private string explSoundPath = "BDArmory/Sounds/explode1";
-        int explosionLayerMask = (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.EVA | LayerMasks.Unknown19 | LayerMasks.Unknown23); // Why 19 and 23?
+        const int explosionLayerMask = (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.EVA | LayerMasks.Unknown19 | LayerMasks.Unknown23 | LayerMasks.Wheels); // Why 19 and 23?
         bool parentBeingDestroyed = false;
 
         PartResource fuel;

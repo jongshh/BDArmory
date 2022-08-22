@@ -1,4 +1,88 @@
-﻿﻿v1.5.1.0
+﻿IMPROVEMENTS / FIXES
+- General:
+	- Fix packaging issue in recent releases that contain incorrect capitalisation of certain files and folders.
+	- Adjust capitalization of "sounds" folders for parts to be consistent.
+	- Fix memory leaks caught by KSPCF.
+	- Make wheels susceptible to bullets and explosions too.
+	- Fix off-centered arrow on inline radome texture  Git Issue #409
+	- Re-fix lead issue on Apple Silicon.
+- UI:
+	- Fix exception when resetting colours in Team Icons.
+	- Prevent the kill timer from showing in the Loaded Vessel Switcher window for surface vessels.
+	- Updated German localization by EzBro.
+- Competition:
+	- Fix exception in auto-resuming tournaments when SpawnProbe.craft isn't found.
+	- Fix incorrect Kill Steal attribution from 1v1 fights.
+- Spawning:
+	- Wait until after vessels are unpacked before reverting the spawn camera - fixes an exception with EVA kerbals and KSPCF.
+	- Fix freezing when vessel removal throws an exception.
+- GameModes:
+	- Space Combat Tools:
+		- Better implement SpaceFriction initialization at round start.
+		- Fix AI sometimes limiting to idle speed instead of max speed in space.
+		- Add limits to prevent G/AoA limiter returning infinity values in space.
+	- Battle Damage:
+		- Add selfsealing options to Monoprop tanks.
+		- Tanks using B9PartSwitcher for fuel switching now get selfsealing options.
+- AI:
+	- Fix incorrect inputField for off-target dynamic roll damping.
+	- Fix RippleIndex Errors from weapons overheating/reloading.
+	- Fix AI ignoring max missiles per target setting for GPS missiles
+	- Spaceborne pilotAIs will now dodge via RCS translation.
+	- Craft with guard mode enabled now automatically receive radar contacts via the datalink from friendlies if they have an onboard radar that can receive radar data (canReceiveRadarData = true in part).
+	- Corrections to aiming at orbital speeds and long distances (for deep space combat).
+		- Caveats:
+			- There is a discontinuity in the way KSP handles floating origin/Krakensbane adjustments at 100km above each world that can adversely affect trans-100km orbit aiming slightly (high bullet speeds mostly negates this).
+			- KSP won't load surface vessels when the current vessel is over ~90km (on Kerbin) for some unknown reason despite a sufficient PRE range, so orbital bombardment only works from LKO.
+			- The targeting reticle currently isn't being correctly placed when manually aiming at closeby targets (will be fixed later).
+- Detectors:
+	- Fix IRST preventing Radar GUI close.
+	- Fix NRE in targeting camera when the camera parent transform is null.
+	- Re-work IR occlusion to look at engine and engine plume heat for non-prop engines, weight parts by mass and proximity to heat source for occlusion, and incorporate occlusion from the engine outside of a 50 deg angle of the engine exhaust.
+	- Correct spelling of "receive" (and variants) and adjust BDA parts that use "canRecieveRadarData" to use "canReceiveRadarData" instead ("canRecieveRadarData" is retained for compatibility, but other mods should make this adjustment!).
+- ECM
+	- Radar missile position distortion due to chaff now relies on the ratio of ECM jammer strength to craft signature with RCS reduction to bias the position distortion from chaff to further behind the craft. Net effect is craft with jammers, and especially low RCS craft with jammers, will have an easier time evading radar missiles.
+	- Lockbreak from jammers now affects RCS with RCS reduction instead of base RCS. Craft can now mix RCS reduction parts and jammers to break locks without worrying about them conflicting.
+	- Incorporate stand-off jamming effects. Friendly craft with jammers now result in your craft being harder to detect and lock. Strength of this effect is determined by the lockBreakerStrength of the friendly jammers, relative distance of friendly jammers (friendly jammers closer to enemy will have a stronger effect), and if the jammers are close in field of view for the enemy (friendly jammers in same field of view will have a stronger effect). Debug readout is available by enabling the Detectors debug option.
+	-  AI no longer will turn off jammers automatically if they were manually enabled prior to being turned on by the AI
+- Weapons:
+	- Fix FXLookAtConstraint modules on various turrets.
+	- Fix incorrect charge sound path for lasers.
+	- Make the ABL use proper looping audio and add a cool-down sound.
+	- Fix the ABL laser beam continuing to show while overheated when used manually.
+	- Fix for NRE when heatseeker is manually selected prior to activating guard mode.
+	- Fix Weapon manager PAW engagement options not affecting AI weapon selection in flight.
+	- Missiles and nukes will now properly play their explosion sound effects.
+	- AI controlled turrets will no longer return to rest position when overheated/reloading.
+	- Fix terminal heat guidance for missiles, including not being decoyed by flares.
+	- Improve consistency of anti-radiation distance target check.
+	- Add paramater gpsUpdates for GPS guided missiles. gpsUpdates >= 0 in the missile config will allow the missile to get position updates of the target from the craft that launched the missile (if it can still see the target) every gpsUpdates seconds.
+	- Corrections to tracer placement and alignment at orbital speeds (for deep space combat).
+		- Note: Enable "Vessel-Relative Bullet Checks" when at these speeds for correct collision checks between bullets and vessels. Disable it at lower speeds as it can be a CPU hog.
+	- Fix delay/penetrating fuze rounds sometimes not detonating.
+	- Penetrating rounds now register damage to all parts they hit, not just first.
+	- Fix 'Weapon requires EC' message spam if active vessel is not the one with the weapon in question.
+	- Weapons using ECPerShot now only drain ElectricCharge if the vessel has sufficient EC to fire the weapon.
+- Armor:
+	- Adjusted post-penetration behavior of high velocity rounds, rounds now erode instead of slowing down at high velocities.
+		- Multi-plate armor schemes now behave more realistically and will require more careful material selection and configuration.
+		- Whipple shields for hypervelocity rounds are now viable and desirable. This behavior is however still very crude and does not qualitative match realistic behavior.
+	- Adjusted stats for S-Glass and Kevlar materials to have realistic RHA equivalency.
+		- Re-implemented Tate-Alekseevksy equation for low-ductility materials.
+	- Added debug console output for armor penetration behavior. Now when Debug -> Armor is on, console will output armor penetration parameters.
+  
+v1.5.1.2
+FIXES
+- Fix adjustable armor unclamped scaling.
+- Loosen distance checks for anti-radiation missiles fired at fast-moving targets (fixes instances when AI would not fire anti-radiation missiles at fast-moving targets).
+- Fixes for some issues occuring on KSP 1.9.
+
+v1.5.1.1
+FIXES
+- Fix AI not firing anti-radiation missiles at targets detected via RWR.
+- Fix KeyNotFoundException error in weapon selection code.
+
+v1.5.1.0
 IMPROVEMENTS / FIXES
 - General:
 	- Remove the "-pre" from the version string, fix some typos.
@@ -17,6 +101,7 @@ IMPROVEMENTS / FIXES
 	- Calculate the proper separation between teams for starting a competition - fixes the competitions not starting bug.
 	- Set the number of teams to 0 in one-at-a-time waypoint mode tournaments so spawning works correctly.
 	- Ignore modular missile engines when activating all engines during spawning.
+	- Fix the waypoint altitude slider to actually apply to waypoints when starting a waypoint run.
 - Weapons:
 	- Add pro-nav gain parameter as tunable parameter for missile parts (pronavGain), set pro-nav gain to 3 by default.
 	- Anti-rad missiles now continue to target the last known GPS point instead of disabling guidance.
@@ -1659,14 +1744,14 @@ IMPROVEMENTS
 			- HeatRay = false // beam lasers now AoE, add heat instead of damage
 			- ElectroLaser = false // lasers now have EMP effect, use ECPerShot
 			- BulletType = a; b; c // for ammo swap, add each ammo type the weapon can use separated with a semicolon
-			- AirDetonation, proximityDetonation depreciated, moved to bulletDef.cfg
+			- AirDetonation, proximityDetonation deprecated, moved to bulletDef.cfg
 		- New Bullet_defs settings
 			- subprojectileCount = n // number of projectiles per round, default 1
 			- fuzeType = None // choose from None, Timed, Proximity, or Flak
 			- projectileColor = 255, 15, 0, 128//RGBA 0-255, final color of shot if fadeColor = True
 			- fadeColor = False //fade color from startColor to projectileColor?
 			- startColor = 255, 90, 0, 32 // initial shot color if fadeColor = True
-			- BlastPower, Heat, radius depreciated
+			- BlastPower, Heat, radius deprecated
 		- New Rocket_defs settings
 			- rocketMass = n //weight in tons (10kg rocket is 0.01, etc)
 			- caliber = n // rocket diameter

@@ -14,7 +14,7 @@ namespace BDArmory.FX
         Vector3 angularVelocity;
 
         float atmDensity;
-        int collisionLayerMask = (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.Unknown19); // Why 19?
+        const int collisionLayerMask = (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.Unknown19 | LayerMasks.Wheels); // Why 19?
 
         void OnEnable()
         {

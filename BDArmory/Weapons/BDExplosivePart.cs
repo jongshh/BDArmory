@@ -383,7 +383,7 @@ namespace BDArmory.Weapons
                 return detonate = false;
             }
 
-            using (var hitsEnu = Physics.OverlapSphere(transform.position, detonationRange, (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.Unknown19)).AsEnumerable().GetEnumerator())
+            using (var hitsEnu = Physics.OverlapSphere(transform.position, detonationRange, (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.Unknown19 | LayerMasks.Wheels)).AsEnumerable().GetEnumerator())
             {
                 while (hitsEnu.MoveNext())
                 {

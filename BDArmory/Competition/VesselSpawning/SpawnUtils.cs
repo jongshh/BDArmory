@@ -150,66 +150,13 @@ namespace BDArmory.Competition.VesselSpawning
         #endregion
 
         #region Intake hacks
-        public static void HackIntakesOnNewVessels(bool enable)
-        {
-            if (enable)
-            {
-                GameEvents.onVesselLoaded.Add(HackIntakesEventHandler);
-                GameEvents.OnVesselRollout.Add(HackIntakes);
-            }
-            else
-            {
-                GameEvents.onVesselLoaded.Remove(HackIntakesEventHandler);
-                GameEvents.OnVesselRollout.Remove(HackIntakes);
-            }
-        }
-        static void HackIntakesEventHandler(Vessel vessel) => HackIntakes(vessel, true);
+        public static void HackIntakesOnNewVessels(bool enable) => SpawnUtilsInstance.Instance.HackIntakesOnNewVessels(enable);
+        public static void HackIntakes(Vessel vessel, bool enable) => SpawnUtilsInstance.Instance.HackIntakes(vessel, enable);
+        #endregion
 
-        public static void HackIntakes(Vessel vessel, bool enable)
-        {
-            if (vessel == null || !vessel.loaded) return;
-            if (enable)
-            {
-                foreach (var intake in VesselModuleRegistry.GetModules<ModuleResourceIntake>(vessel))
-                    intake.checkForOxygen = false;
-            }
-            else
-            {
-                foreach (var intake in VesselModuleRegistry.GetModules<ModuleResourceIntake>(vessel))
-                {
-                    var checkForOxygen = ConfigNodeUtils.FindPartModuleConfigNodeValue(intake.part.partInfo.partConfig, "ModuleResourceIntake", "checkForOxygen");
-                    if (!string.IsNullOrEmpty(checkForOxygen)) // Use the default value from the part.
-                    {
-                        try
-                        {
-                            intake.checkForOxygen = bool.Parse(checkForOxygen);
-                        }
-                        catch (Exception e)
-                        {
-                            Debug.LogError($"[BDArmory.BDArmorySetup]: Failed to parse checkForOxygen configNode of {intake.name}: {e.Message}");
-                        }
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"[BDArmory.BDArmorySetup]: No default value for checkForOxygen found in partConfig for {intake.name}, defaulting to true.");
-                        intake.checkForOxygen = true;
-                    }
-                }
-            }
-        }
-        public static void HackIntakes(ShipConstruct ship) // This version only needs to enable the hack.
-        {
-            if (ship == null) return;
-            foreach (var part in ship.Parts)
-            {
-                var intakes = part.FindModulesImplementing<ModuleResourceIntake>();
-                if (intakes.Count() > 0)
-                {
-                    foreach (var intake in intakes)
-                        intake.checkForOxygen = false;
-                }
-            }
-        }
+        #region Space hacks
+        public static void SpaceFrictionOnNewVessels(bool enable) => SpawnUtilsInstance.Instance.SpaceFrictionOnNewVessels(enable);
+        public static void SpaceHacks(Vessel vessel) => SpawnUtilsInstance.Instance.SpaceHacks(vessel);
         #endregion
 
         #region Vessel Removal
@@ -285,14 +232,20 @@ namespace BDArmory.Competition.VesselSpawning
             spawnLocationCamera = new GameObject("StationaryCameraParent");
             spawnLocationCamera = (GameObject)Instantiate(spawnLocationCamera, Vector3.zero, Quaternion.identity);
             spawnLocationCamera.SetActive(false);
-            if (BDArmorySettings.HACK_INTAKES) SpawnUtils.HackIntakesOnNewVessels(true);
+        }
+
+        void Start()
+        {
+            if (BDArmorySettings.HACK_INTAKES) HackIntakesOnNewVessels(true);
+            if (BDArmorySettings.SPACE_HACKS) SpaceFrictionOnNewVessels(true);
         }
 
         void OnDestroy()
         {
             VesselSpawnerField.Save();
             Destroy(spawnLocationCamera);
-            SpawnUtils.HackIntakesOnNewVessels(false);
+            HackIntakesOnNewVessels(false);
+            SpaceFrictionOnNewVessels(false);
         }
 
         #region Vessel Removal
@@ -311,10 +264,17 @@ namespace BDArmory.Competition.VesselSpawning
             ++removeVesselsPending;
             if (vessel != FlightGlobals.ActiveVessel && vessel.vesselType != VesselType.SpaceObject)
             {
-                if (KerbalSafetyManager.Instance.safetyLevel != KerbalSafetyLevel.Off)
-                    KerbalSafetyManager.Instance.RecoverVesselNow(vessel);
-                else
-                    ShipConstruction.RecoverVesselFromFlight(vessel.protoVessel, HighLogic.CurrentGame.flightState, true);
+                try
+                {
+                    if (KerbalSafetyManager.Instance.safetyLevel != KerbalSafetyLevel.Off)
+                        KerbalSafetyManager.Instance.RecoverVesselNow(vessel);
+                    else
+                        ShipConstruction.RecoverVesselFromFlight(vessel.protoVessel, HighLogic.CurrentGame.flightState, true);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"[BDArmory.SpawnUtils]: Exception thrown while removing vessel: {e.Message}");
+                }
             }
             else
             {
@@ -463,6 +423,7 @@ namespace BDArmory.Competition.VesselSpawning
         public void RevertSpawnLocationCamera(bool keepTransformValues = true)
         {
             if (spawnLocationCamera == null || !spawnLocationCamera.activeSelf) return;
+            if (BDArmorySettings.DEBUG_SPAWNING) Debug.Log($"[BDArmory.SpawnUtils]: Reverting spawn location camera.");
             if (delayedShowSpawnPointCoroutine != null) { StopCoroutine(delayedShowSpawnPointCoroutine); delayedShowSpawnPointCoroutine = null; }
             var flightCamera = FlightCamera.fetch;
             if (originalCameraParentTransform != null)
@@ -479,6 +440,101 @@ namespace BDArmory.Competition.VesselSpawning
             if (FlightGlobals.ActiveVessel != null && FlightGlobals.ActiveVessel.state != Vessel.State.DEAD)
                 LoadedVesselSwitcher.Instance.ForceSwitchVessel(FlightGlobals.ActiveVessel); // Update the camera.
             spawnLocationCamera.SetActive(false);
+        }
+        #endregion
+
+        #region Intake hacks
+        public void HackIntakesOnNewVessels(bool enable)
+        {
+            if (enable)
+            {
+                GameEvents.onVesselLoaded.Add(HackIntakesEventHandler);
+                GameEvents.OnVesselRollout.Add(HackIntakes);
+            }
+            else
+            {
+                GameEvents.onVesselLoaded.Remove(HackIntakesEventHandler);
+                GameEvents.OnVesselRollout.Remove(HackIntakes);
+            }
+        }
+        void HackIntakesEventHandler(Vessel vessel) => HackIntakes(vessel, true);
+
+        public void HackIntakes(Vessel vessel, bool enable)
+        {
+            if (vessel == null || !vessel.loaded) return;
+            if (enable)
+            {
+                foreach (var intake in VesselModuleRegistry.GetModules<ModuleResourceIntake>(vessel))
+                    intake.checkForOxygen = false;
+            }
+            else
+            {
+                foreach (var intake in VesselModuleRegistry.GetModules<ModuleResourceIntake>(vessel))
+                {
+                    var checkForOxygen = ConfigNodeUtils.FindPartModuleConfigNodeValue(intake.part.partInfo.partConfig, "ModuleResourceIntake", "checkForOxygen");
+                    if (!string.IsNullOrEmpty(checkForOxygen)) // Use the default value from the part.
+                    {
+                        try
+                        {
+                            intake.checkForOxygen = bool.Parse(checkForOxygen);
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogError($"[BDArmory.BDArmorySetup]: Failed to parse checkForOxygen configNode of {intake.name}: {e.Message}");
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[BDArmory.BDArmorySetup]: No default value for checkForOxygen found in partConfig for {intake.name}, defaulting to true.");
+                        intake.checkForOxygen = true;
+                    }
+                }
+            }
+        }
+        public void HackIntakes(ShipConstruct ship) // This version only needs to enable the hack.
+        {
+            if (ship == null) return;
+            foreach (var part in ship.Parts)
+            {
+                var intakes = part.FindModulesImplementing<ModuleResourceIntake>();
+                if (intakes.Count() > 0)
+                {
+                    foreach (var intake in intakes)
+                        intake.checkForOxygen = false;
+                }
+            }
+        }
+        #endregion
+
+        #region Space hacks
+        public void SpaceFrictionOnNewVessels(bool enable)
+        {
+            if (enable)
+            {
+                GameEvents.onVesselLoaded.Add(SpaceHacksEventHandler);
+                GameEvents.OnVesselRollout.Add(SpaceHacks);
+            }
+            else
+            {
+                GameEvents.onVesselLoaded.Remove(SpaceHacksEventHandler);
+                GameEvents.OnVesselRollout.Remove(SpaceHacks);
+            }
+        }
+        void SpaceHacksEventHandler(Vessel vessel) => SpaceHacks(vessel);
+
+        public void SpaceHacks(Vessel vessel)
+        {
+            if (vessel == null || !vessel.loaded) return;
+
+            if (VesselModuleRegistry.GetMissileFire(vessel, true) != null && vessel.rootPart.FindModuleImplementing<ModuleSpaceFriction>() == null)
+            {
+                vessel.rootPart.AddModule("ModuleSpaceFriction");
+            }
+        }
+        public void SpaceHacks(ShipConstruct ship) // This version only needs to enable the hack.
+        {
+            if (ship == null) return;
+            ship.Parts[0].AddModule("ModuleSpaceFriction");
         }
         #endregion
     }

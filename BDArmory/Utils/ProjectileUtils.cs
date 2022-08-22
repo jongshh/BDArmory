@@ -61,10 +61,10 @@ namespace BDArmory.Utils
             }
 
             // Update scoring structures
-            if (firstHit)
-            {
-                ApplyScore(hitPart, sourceVessel.GetName(), distanceTraveled, damage, name, explosionSource, true);
-            }
+            //if (firstHit)
+            //{
+                ApplyScore(hitPart, sourceVessel.GetName(), distanceTraveled, damage, name, explosionSource, firstHit);
+            //}
             ResourceUtils.StealResources(hitPart, sourceVessel);
         }
         public static void ApplyScore(Part hitPart, string sourceVessel, double distanceTraveled, float damage, string name, ExplosionSourceType ExplosionSource, bool newhit = false)
@@ -709,11 +709,16 @@ namespace BDArmory.Utils
 
         public static float CalculatePenetration(float caliber, float bulletVelocity,
             float bulletMass, float apBulletMod, float Strength, float vFactor,
-            float muParam1, float muParam2, float muParam3, bool sabot = false)
+            float muParam1, float muParam2, float muParam3, bool sabot = false,
+            float length = 0)
         {
             // Calculate the length of the projectile
-            float length = ((bulletMass * 1000.0f * 400.0f) / ((caliber * caliber *
+            if (length == 0)
+            {
+                length = ((bulletMass * 1000.0f * 400.0f) / ((caliber * caliber *
                     Mathf.PI) * (sabot ? 19.0f : 11.34f)) + 1.0f) * 10.0f;
+            }
+            
             float penetration = 0;
             // 1400 is an arbitrary velocity around where the linear function used to
             // simplify diverges from the result predicted by the Frank and Zook S2 based
@@ -743,7 +748,7 @@ namespace BDArmory.Utils
             {
                 // Formula based on IDA paper P5032, Appendix D, modified to match the
                 // Krupp equation this mod used before.
-                penetration = (Mathf.Sqrt(bulletMass * 1000.0f / (0.7f * Strength * Mathf.PI
+                penetration = (BDAMath.Sqrt(bulletMass * 1000.0f / (0.7f * Strength * Mathf.PI
                     * caliber)) * 0.727457902089f * bulletVelocity) * apBulletMod;
             }
             else
@@ -770,7 +775,7 @@ namespace BDArmory.Utils
             return penetration;
         }
 
-
+        /*
         // Deprecated formula
         // Using this for the moment as the Tate formula doesn't work well with ceramic/ceramic-adjacent ultra-low ductility armor materials. Numbers aren't as accurate, but are close enough for BDA
         public static float CalculateCeramicPenetration(float caliber, float newCaliber, float projMass, float impactVel, float Ductility, float Density, float Strength, float thickness, float APmod, bool sabot = false)
@@ -810,7 +815,8 @@ namespace BDArmory.Utils
                 Debug.Log("[BDArmory.ProjectileUtils{Calc Penetration}]: Length: " + length + "; sabot: " + sabot + " ;Penetration: " + Mathf.Round(penetration / 10) + " cm");
             }
             return penetration;
-        }             
+        }
+        */
 
         public static float CalculateThickness(Part hitPart, float anglemultiplier)
         {

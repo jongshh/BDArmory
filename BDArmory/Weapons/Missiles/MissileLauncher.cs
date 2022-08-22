@@ -407,7 +407,8 @@ namespace BDArmory.Weapons.Missiles
             if (HighLogic.LoadedSceneIsFlight)
             {
                 //TODO: Backward compatibility wordaround
-                if (part.FindModuleImplementing<BDExplosivePart>() == null)
+                var tnt = part.FindModuleImplementing<BDExplosivePart>();
+                if (tnt is null)
                 {
                     FromBlastPowerToTNTMass();
                 }
@@ -415,6 +416,8 @@ namespace BDArmory.Weapons.Missiles
                 {
                     //New Explosive module
                     DisablingExplosives(part);
+                    if (tnt.explModelPath == ModuleWeapon.defaultExplModelPath) tnt.explModelPath = explModelPath; // If the BDExplosivePart is using the default explosion part and sound,
+                    if (tnt.explSoundPath == ModuleWeapon.defaultExplSoundPath) tnt.explSoundPath = explSoundPath; // override them with those of the MissileLauncher (if specified).
                 }
 
                 MissileReferenceTransform = part.FindModelTransform("missileTransform");
@@ -603,7 +606,8 @@ namespace BDArmory.Weapons.Missiles
 
             SetInitialDetonationDistance();
 
-            // set uncagedLock = true if depreciated allAspect = true
+            // set uncagedLock = true if deprecated allAspect = true
+            if (allAspect) Debug.LogWarning($"[BDArmory.MissileLauncher]: Missile {part.name} is using deprecated 'allAspect' attribute. Please update the config to use 'uncagedLock' instead.");
             uncagedLock = (allAspect) ? allAspect : uncagedLock;
 
             // fill lockedSensorFOVBias with default values if not set by part config:
@@ -1079,7 +1083,8 @@ namespace BDArmory.Weapons.Missiles
                         if (launcher.hasRCS) launcher.KillRCS();
                     }
 
-                    if (sqrDist < Mathf.Pow(GetBlastRadius() * 0.5f, 2)) part.Destroy();
+                    var distThreshold = 0.5f * GetBlastRadius();
+                    if (sqrDist < distThreshold * distThreshold) part.Destroy();
 
                     isTimed = true;
                     detonationTime = TimeIndex + 1.5f;
@@ -1274,7 +1279,7 @@ namespace BDArmory.Weapons.Missiles
                 {
                     case TargetingModes.Heat:
                         // gets ground heat targets and after locking one, disallows the lock to break to another target
-                        heatTarget = BDATargetManager.GetHeatTarget(SourceVessel, vessel, new Ray(transform.position + (50 * GetForwardTransform()), GetForwardTransform()), heatTarget, terminalGuidanceDistance, heatThreshold, true, lockedSensorFOVBias, lockedSensorVelocityBias, SourceVessel ? VesselModuleRegistry.GetModule<MissileFire>(SourceVessel) : null);
+                        heatTarget = BDATargetManager.GetHeatTarget(SourceVessel, vessel, new Ray(transform.position + (50 * GetForwardTransform()), GetForwardTransform()), heatTarget, lockedSensorFOV / 2, heatThreshold, uncagedLock, lockedSensorFOVBias, lockedSensorVelocityBias, SourceVessel ? VesselModuleRegistry.GetModule<MissileFire>(SourceVessel) : null);
                         if (heatTarget.exists)
                         {
                             if (BDArmorySettings.DEBUG_MISSILES)
@@ -1282,18 +1287,23 @@ namespace BDArmory.Weapons.Missiles
                                 Debug.Log("[BDArmory.MissileLauncher][Terminal Guidance]: Heat target acquired! Position: " + heatTarget.position + ", heatscore: " + heatTarget.signalStrength);
                             }
                             TargetAcquired = true;
-                            TargetPosition = heatTarget.position + (heatTarget.velocity * Time.fixedDeltaTime);
+                            TargetPosition = heatTarget.position + (2 * heatTarget.velocity * Time.fixedDeltaTime); // Not sure why this is 2*
                             TargetVelocity = heatTarget.velocity;
                             TargetAcceleration = heatTarget.acceleration;
-                            lockFailTimer = 0;
-                            targetGPSCoords = VectorUtils.WorldPositionToGeoCoords(TargetPosition, vessel.mainBody);
+                            lockFailTimer = -1; // ensures proper entry into UpdateHeatTarget()
+
+                            // Disable terminal guidance and switch to regular heat guidance for next update
+                            terminalGuidanceShouldActivate = false;
+                            TargetingMode = TargetingModes.Heat;
 
                             // Adjust heat score based on distance missile will travel in the next update
                             if (heatTarget.signalStrength > 0)
                             {
                                 float currentFactor = (1400 * 1400) / Mathf.Clamp((heatTarget.position - transform.position).sqrMagnitude, 90000, 36000000);
                                 Vector3 currVel = (float)vessel.srfSpeed * vessel.Velocity().normalized;
-                                float futureFactor = (1400 * 1400) / Mathf.Clamp((TargetPosition - (transform.position + (currVel * Time.fixedDeltaTime))).sqrMagnitude, 90000, 36000000);
+                                heatTarget.position = heatTarget.position + heatTarget.velocity * Time.fixedDeltaTime;
+                                heatTarget.velocity = heatTarget.velocity + heatTarget.acceleration * Time.fixedDeltaTime;
+                                float futureFactor = (1400 * 1400) / Mathf.Clamp((heatTarget.position - (transform.position + (currVel * Time.fixedDeltaTime))).sqrMagnitude, 90000, 36000000);
                                 heatTarget.signalStrength *= futureFactor / currentFactor;
                             }
                         }
@@ -1315,7 +1325,7 @@ namespace BDArmory.Weapons.Missiles
 
                         //RadarUtils.UpdateRadarLock(ray, maxOffBoresight, activeRadarMinThresh, ref scannedTargets, 0.4f, true, RadarWarningReceiver.RWRThreatTypes.MissileLock, true);
                         RadarUtils.RadarUpdateMissileLock(ray, maxOffBoresight, ref scannedTargets, 0.4f, this);
-                        float sqrThresh = Mathf.Pow(terminalGuidanceDistance * 1.5f, 2);
+                        float sqrThresh = terminalGuidanceDistance * terminalGuidanceDistance * 2.25f; // (terminalGuidanceDistance * 1.5f)^2
 
                         //float smallestAngle = maxOffBoresight;
                         TargetSignatureData lockedTarget = TargetSignatureData.noTarget;
@@ -1839,14 +1849,15 @@ namespace BDArmory.Weapons.Missiles
                 else // AAM Lead
                     aamTarget = MissileGuidance.GetAirToAirTarget(TargetPosition, TargetVelocity, TargetAcceleration, vessel, out timeToImpact, optimumAirspeed);
 
-                
+
                 if (Vector3.Angle(aamTarget - transform.position, transform.forward) > maxOffBoresight * 0.75f)
                 {
                     aamTarget = TargetPosition;
                 }
 
                 //proxy detonation
-                if (proxyDetonate && !DetonateAtMinimumDistance && ((TargetPosition + (TargetVelocity * Time.fixedDeltaTime)) - (transform.position)).sqrMagnitude < Mathf.Pow(GetBlastRadius() * 0.5f, 2))
+                var distThreshold = 0.5f * GetBlastRadius();
+                if (proxyDetonate && !DetonateAtMinimumDistance && ((TargetPosition + (TargetVelocity * Time.fixedDeltaTime)) - (transform.position)).sqrMagnitude < distThreshold * distThreshold)
                 {
                     part.Destroy(); //^look into how this interacts with MissileBase.DetonationState
                 }
@@ -1909,7 +1920,8 @@ namespace BDArmory.Weapons.Missiles
                 }
 
                 //proxy detonation
-                if (proxyDetonate && !DetonateAtMinimumDistance && ((TargetPosition + (TargetVelocity * Time.fixedDeltaTime)) - (transform.position)).sqrMagnitude < Mathf.Pow(GetBlastRadius() * 0.5f, 2))
+                var distThreshold = 0.5f * GetBlastRadius();
+                if (proxyDetonate && !DetonateAtMinimumDistance && ((TargetPosition + (TargetVelocity * Time.fixedDeltaTime)) - (transform.position)).sqrMagnitude < distThreshold * distThreshold)
                 {
                     part.Destroy();
                 }

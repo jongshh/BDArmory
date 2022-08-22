@@ -1301,7 +1301,7 @@ namespace BDArmory.Targeting
 
             RaycastHit rayHit;
             Ray ray = new Ray(cameraParentTransform.position + (50 * cameraParentTransform.forward), cameraParentTransform.forward);
-            bool raycasted = Physics.Raycast(ray, out rayHit, maxRayDistance - 50, (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.EVA | LayerMasks.Unknown19 | LayerMasks.Unknown23));
+            bool raycasted = Physics.Raycast(ray, out rayHit, maxRayDistance - 50, (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.EVA | LayerMasks.Unknown19 | LayerMasks.Unknown23 | LayerMasks.Wheels));
             if (raycasted)
             {
                 if (FlightGlobals.getAltitudeAtPos(rayHit.point) < 0)
@@ -1377,7 +1377,7 @@ namespace BDArmory.Targeting
 
             RaycastHit rayHit;
             Ray ray = new Ray(cameraParentTransform.position + (50 * cameraParentTransform.forward), cameraParentTransform.forward);
-            if (Physics.Raycast(ray, out rayHit, maxRayDistance - 50, (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.EVA | LayerMasks.Unknown19 | LayerMasks.Unknown23)))
+            if (Physics.Raycast(ray, out rayHit, maxRayDistance - 50, (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.EVA | LayerMasks.Unknown19 | LayerMasks.Unknown23 | LayerMasks.Wheels)))
             {
                 targetPointPosition = rayHit.point;
 
@@ -1476,13 +1476,22 @@ namespace BDArmory.Targeting
             radarLock = false;
             StopResetting();
             ClearTarget();
-            if (cameraParentTransform == null) yield break;
+            if (cameraParentTransform == null)
+            {
+                slewingToPosition = false;
+                yield break;
+            }
             while (!stopPTPR && Vector3.Angle(cameraParentTransform.transform.forward, position - (cameraParentTransform.transform.position)) > 0.1f)
             {
                 Vector3 newForward = Vector3.RotateTowards(cameraParentTransform.transform.forward, position - cameraParentTransform.transform.position, 90 * Mathf.Deg2Rad * Time.fixedDeltaTime, 0);
                 //cameraParentTransform.rotation = Quaternion.LookRotation(newForward, VectorUtils.GetUpDirection(transform.position));
                 PointCameraModel(newForward);
                 yield return new WaitForFixedUpdate();
+                if (cameraParentTransform == null)
+                {
+                    slewingToPosition = false;
+                    yield break;
+                }
                 if (gimbalLimitReached)
                 {
                     ClearTarget();
@@ -1498,7 +1507,6 @@ namespace BDArmory.Targeting
                 GroundStabilize();
             }
             slewingToPosition = false;
-            yield break;
         }
 
         void StopResetting()
@@ -1527,9 +1535,8 @@ namespace BDArmory.Targeting
                         weaponManager.slavingTurrets = false;
                     }
                 }
-
-                GameEvents.onVesselCreate.Remove(Disconnect);
             }
+            GameEvents.onVesselCreate.Remove(Disconnect);
         }
 
         Vector2 TargetAzimuthElevationScreenPos(Rect screenRect, Vector3 targetPosition, float textureSize)

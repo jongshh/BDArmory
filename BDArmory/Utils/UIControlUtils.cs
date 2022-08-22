@@ -41,7 +41,8 @@ namespace BDArmory.Utils
         public static Type VersionTaggedType(Type baseClass)
         {
             var ass = baseClass.Assembly;
-            Type tagged = ass.GetTypes().Where(t => t.BaseType == baseClass).Where(t => t.FullName.StartsWith(baseClass.FullName)).FirstOrDefault();
+            // FIXME The below works to prevent ReflectionTypeLoadException on KSP 1.9, there might be a better way other than OtherUtils.GetLoadableTypes though?
+            Type tagged = OtherUtils.GetLoadableTypes(ass).Where(t => t.BaseType == baseClass).Where(t => t.FullName.StartsWith(baseClass.FullName)).FirstOrDefault(); 
             if (tagged != null)
                 return tagged;
             return baseClass;

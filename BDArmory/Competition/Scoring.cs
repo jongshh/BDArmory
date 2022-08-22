@@ -328,7 +328,7 @@ namespace BDArmory.Competition
                 ScoreData[victim].previousLastDamageTime = ScoreData[victim].lastDamageTime;
                 ScoreData[victim].previousPersonWheDamagedMe = ScoreData[victim].lastPersonWhoDamagedMe;
             }
-            else if (ScoreData[victim].previousLastDamageTime < timeOfCollision && ScoreData[victim].previousPersonWheDamagedMe != attacker) // Newer than the current previous last damage, but older than the most recent damage from someone else.
+            else if (ScoreData[victim].previousLastDamageTime < timeOfCollision && !string.IsNullOrEmpty(ScoreData[victim].previousPersonWheDamagedMe) && ScoreData[victim].previousPersonWheDamagedMe != attacker) // Newer than the current previous last damage, but older than the most recent damage from someone else.
             {
                 ScoreData[victim].previousLastDamageTime = timeOfCollision;
                 ScoreData[victim].previousPersonWheDamagedMe = attacker;

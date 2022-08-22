@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+using BDArmory.Utils;
+
 namespace BDArmory.Extensions
 {
     public static class VesselExtensions
@@ -25,19 +27,19 @@ namespace BDArmory.Extensions
             return v.altitude < -20; //some boats sit slightly underwater, this is only for submersibles
         }
 
-        public static Vector3d Velocity(this Vessel v)
+        /// <summary>
+        /// Get the vessel's velocity accounting for whether it's in orbit and optionally whether it's above 100km (which is another hard-coded KSP limit).
+        /// </summary>
+        /// <param name="v"></param>
+        /// <param name="altitudeCheck"></param>
+        /// <returns></returns>
+        public static Vector3d Velocity(this Vessel v, bool altitudeCheck = true)
         {
             try
             {
                 if (v == null) return Vector3d.zero;
-                if (!v.InOrbit())
-                {
-                    return v.srf_velocity;
-                }
-                else
-                {
-                    return v.obt_velocity;
-                }
+                if (v.InOrbit() && (!altitudeCheck || v.altitude > 1e5f)) return v.obt_velocity;
+                else return v.srf_velocity;
             }
             catch (Exception e)
             {
@@ -47,18 +49,9 @@ namespace BDArmory.Extensions
             }
         }
 
-        public static double GetFutureAltitude(this Vessel vessel, float predictionTime = 10)
-        {
-            Vector3 futurePosition = vessel.CoM + vessel.Velocity() * predictionTime
-                                                + 0.5f * vessel.acceleration_immediate * Mathf.Pow(predictionTime, 2);
+        public static double GetFutureAltitude(this Vessel vessel, float predictionTime = 10) => GetRadarAltitudeAtPos(AIUtils.PredictPosition(vessel, predictionTime));
 
-            return GetRadarAltitudeAtPos(futurePosition);
-        }
-
-        public static Vector3 GetFuturePosition(this Vessel vessel, float predictionTime = 10)
-        {
-            return vessel.CoM + vessel.Velocity() * predictionTime + 0.5f * vessel.acceleration_immediate * Math.Pow(predictionTime, 2);
-        }
+        public static Vector3 GetFuturePosition(this Vessel vessel, float predictionTime = 10) => AIUtils.PredictPosition(vessel, predictionTime);
 
         public static float GetRadarAltitudeAtPos(Vector3 position)
         {

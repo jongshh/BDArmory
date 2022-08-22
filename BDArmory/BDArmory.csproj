@@ -472,7 +472,7 @@
     <None Include="Distribution\GameData\BDArmory\Parts\bammGuidance\part.cfg" />
     <None Include="Distribution\GameData\BDArmory\Parts\browninganm2\browninganm2.cfg" />
     <None Include="Distribution\GameData\BDArmory\Parts\browninganm2\model.mu" />
-    <None Include="Distribution\GameData\BDArmory\Parts\browninganm2\Sounds\fire.ogg" />
+    <None Include="Distribution\GameData\BDArmory\Parts\browninganm2\sounds\fire.ogg" />
     <None Include="Distribution\GameData\BDArmory\Parts\clusterBomb\clusterBomb.cfg" />
     <None Include="Distribution\GameData\BDArmory\Parts\clusterBomb\model.mu" />
     <None Include="Distribution\GameData\BDArmory\Parts\cmDropper\chaffDispenser.cfg" />
@@ -527,9 +527,9 @@
     <None Include="Distribution\GameData\BDArmory\Parts\m1Abrams\sounds\shot.ogg" />
     <None Include="Distribution\GameData\BDArmory\Parts\m230ChainGun\m230.cfg" />
     <None Include="Distribution\GameData\BDArmory\Parts\m230ChainGun\model.mu" />
-    <None Include="Distribution\GameData\BDArmory\Parts\m230ChainGun\Sounds\m230loop.ogg" />
-    <None Include="Distribution\GameData\BDArmory\Parts\m230ChainGun\Sounds\m230loopEnd.ogg" />
-    <None Include="Distribution\GameData\BDArmory\Parts\m230ChainGun\Sounds\m230shot.ogg" />
+    <None Include="Distribution\GameData\BDArmory\Parts\m230ChainGun\sounds\m230loop.ogg" />
+    <None Include="Distribution\GameData\BDArmory\Parts\m230ChainGun\sounds\m230loopEnd.ogg" />
+    <None Include="Distribution\GameData\BDArmory\Parts\m230ChainGun\sounds\m230shot.ogg" />
     <None Include="Distribution\GameData\BDArmory\Parts\maverick\maverickMissile.cfg" />
     <None Include="Distribution\GameData\BDArmory\Parts\maverick\model.mu" />
     <None Include="Distribution\GameData\BDArmory\Parts\MissileBay\BombBay.cfg" />
@@ -545,8 +545,8 @@
     <None Include="Distribution\GameData\BDArmory\Parts\mk82Bomb\model.mu" />
     <None Include="Distribution\GameData\BDArmory\Parts\oMillennium\model.mu" />
     <None Include="Distribution\GameData\BDArmory\Parts\oMillennium\oMillennium.cfg" />
-    <None Include="Distribution\GameData\BDArmory\Parts\oMillennium\Sounds\oFireEnd.ogg" />
-    <None Include="Distribution\GameData\BDArmory\Parts\oMillennium\Sounds\oFiring.ogg" />
+    <None Include="Distribution\GameData\BDArmory\Parts\oMillennium\sounds\oFireEnd.ogg" />
+    <None Include="Distribution\GameData\BDArmory\Parts\oMillennium\sounds\oFiring.ogg" />
     <None Include="Distribution\GameData\BDArmory\Parts\pac-3\model.mu" />
     <None Include="Distribution\GameData\BDArmory\Parts\pac-3\pac3.cfg" />
     <None Include="Distribution\GameData\BDArmory\Parts\patriotLauncher\model.mu" />

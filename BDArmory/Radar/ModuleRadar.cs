@@ -81,7 +81,10 @@ namespace BDArmory.Radar
         public bool canTrackWhileScan = false;      //when tracking/locking, can we still detect/scan?
 
         [KSPField]
-        public bool canRecieveRadarData = false;    //can radar data be received from friendly sources?
+        public bool canReceiveRadarData = false;    //can radar data be received from friendly sources?
+
+        [KSPField] // DEPRECATED
+        public bool canRecieveRadarData = false;    // Original mis-spelling of "receive" for compatibility.
 
         [KSPField]
         public FloatCurve radarDetectionCurve = new FloatCurve();		//FloatCurve defining at what range which RCS size can be detected
@@ -303,9 +306,10 @@ namespace BDArmory.Radar
             radarEnabled = true;
 
             var mf = VesselModuleRegistry.GetMissileFire(vessel, true);
-            if (mf != null && vesselRadarData != null) vesselRadarData.weaponManager = mf;
+            if (mf is not null && vesselRadarData is not null) vesselRadarData.weaponManager = mf;
             UpdateToggleGuiName();
             vesselRadarData.AddRadar(this);
+            if (mf is not null && mf.guardMode) vesselRadarData.LinkAllRadars();
         }
 
         public void DisableRadar()
@@ -444,6 +448,12 @@ namespace BDArmory.Radar
             if ((canScan && (radarMinDistanceDetect == float.MaxValue)) || (canLock && (radarMinDistanceLockTrack == float.MaxValue)))
             {
                 Debug.Log("[BDArmory.ModuleRadar]: WARNING: " + part.name + " has legacy definition, missing new radarDetectionCurve and radarLockTrackCurve definitions! Please update for the part to be usable!");
+            }
+
+            if (canRecieveRadarData)
+            {
+                Debug.LogWarning($"[BDArmory.ModuleRadar]: Radar part {part.name} is using deprecated 'canRecieveRadarData' attribute. Please update the config to use 'canReceiveRadarData' instead.");
+                canReceiveRadarData = canRecieveRadarData;
             }
         }
 
@@ -1085,7 +1095,7 @@ namespace BDArmory.Radar
         // RMB info in editor
         public override string GetInfo()
         {
-            bool isLinkOnly = (canRecieveRadarData && !canScan && !canLock);
+            bool isLinkOnly = (canReceiveRadarData && !canScan && !canLock);
 
             StringBuilder output = new StringBuilder();
             output.Append(Environment.NewLine);
@@ -1106,7 +1116,7 @@ namespace BDArmory.Radar
                 {
                     output.AppendLine(Localizer.Format("#autoLOC_bda_1000028", maxLocks));
                 }
-                output.AppendLine(Localizer.Format("#autoLOC_bda_1000029", canRecieveRadarData));
+                output.AppendLine(Localizer.Format("#autoLOC_bda_1000029", canReceiveRadarData));
 
                 output.Append(Environment.NewLine);
                 output.AppendLine(Localizer.Format("#autoLOC_bda_1000030"));

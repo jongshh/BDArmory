@@ -21,7 +21,7 @@ namespace BDArmory.Utils
         {
             Vector3 pos = v.CoM;
             pos += v.Velocity() * time;
-            pos += 0.5f * v.acceleration * time * time;
+            pos += 0.5f * v.acceleration_immediate * time * time;
             return pos;
         }
 

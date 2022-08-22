@@ -211,10 +211,10 @@ namespace BDArmory.Modules
         Coroutine firebottleRoutine;
 
         PartResource fuel;
+        PartResource monoprop;
         PartResource solid;
         public bool isOnFire = false;
         bool procPart = false;
-
         public bool externallyCalled = false;
         ModuleEngines engine;
         ModuleCommand cockpit;
@@ -224,6 +224,14 @@ namespace BDArmory.Modules
             if (part.name.Contains("B9.Aero.Wing.Procedural") || part.name.Contains("procedural")) //could add other proc parts here for similar support
             {
                 procPart = true;
+            }
+            else
+            {
+                if (part.Modules.Contains("ModuleB9PartSwitch"))
+                {
+                    var B9FuelSwitch = ConfigNodeUtils.FindPartModuleConfigNodeValue(part.partInfo.partConfig, "ModuleB9PartSwitch", "baseVolume");
+                    if (B9FuelSwitch != null) procPart = true;
+                }
             }
             if (HighLogic.LoadedSceneIsEditor)
             {
@@ -247,6 +255,7 @@ namespace BDArmory.Modules
             else
             {
                 fuel = part.Resources.Where(pr => pr.resourceName == "LiquidFuel").FirstOrDefault();
+                monoprop = part.Resources.Where(pr => pr.resourceName == "MonoPropellant").FirstOrDefault();
                 solid = part.Resources.Where(pr => pr.resourceName == "SolidFuel").FirstOrDefault();
 
                 engine = part.FindModuleImplementing<ModuleEngines>();
@@ -256,7 +265,7 @@ namespace BDArmory.Modules
                     Events["ToggleInertOption"].guiActiveEditor = false;
                     if (solid != null && engine.throttleLocked && !engine.allowShutdown) //SRB?
                     {
-                        if (fuel == null || (fuel != null && solid.maxAmount > fuel.maxAmount))
+                        if (fuel == null && monoprop == null || ((fuel != null && solid.maxAmount > fuel.maxAmount) || (monoprop != null && solid.maxAmount > monoprop.maxAmount)))
                         {
                             part.RemoveModule(this); //don't add firebottles to SRBs, but allow for the S1.5.5 MH soyuz tank with integrated seperatrons
                         }
@@ -268,7 +277,11 @@ namespace BDArmory.Modules
                         }
                     }
                 }
-                else if (fuel == null && solid == null)
+                else if (monoprop != null)
+                {
+                    Events["ToggleInertOption"].guiActiveEditor = false; //inerting isn't going to do anything against a substance that contains its own oxidizer
+                }
+                else if (fuel == null && monoprop == null && solid == null)
                 {
                     Events["ToggleTankOption"].guiActiveEditor = false;
                     Events["ToggleInertOption"].guiActiveEditor = false;
@@ -304,7 +317,7 @@ namespace BDArmory.Modules
                 GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
             if (HighLogic.LoadedSceneIsFlight)
             {
-                if (cockpit == null && engine == null && fuel == null) part.RemoveModule(this); //PWing with no tank
+                if (cockpit == null && engine == null && (fuel == null && monoprop == null)) part.RemoveModule(this); //PWing with no tank
             }
             FBSetup(null, null);
             //Debug.Log("[BDArmory.SelfSealingTank]: SST: " + SSTank + "; Inerting: " + InertTank + "; armored cockpit: " + armoredCockpit);
@@ -513,10 +526,11 @@ namespace BDArmory.Modules
                     if (updateTimer < 0)
                     {
                         fuel = part.Resources.Where(pr => pr.resourceName == "LiquidFuel").FirstOrDefault();
-                        if (fuel != null)
+                        monoprop = part.Resources.Where(pr => pr.resourceName == "MonoPropellant").FirstOrDefault();
+                        if (fuel != null || monoprop != null)
                         {
                             Events["ToggleTankOption"].guiActiveEditor = true;
-                            Events["ToggleInertOption"].guiActiveEditor = true;
+                            if (fuel != null) Events["ToggleInertOption"].guiActiveEditor = true; //I don't think inerting would work on something containing its own oxidizer...
                             if (!InertTank)
                             {
                                 Fields["FireBottles"].guiActiveEditor = true;
@@ -552,7 +566,7 @@ namespace BDArmory.Modules
                 if (InertTank) return;
                 if (!isOnFire)
                 {
-                    if ((fuel != null && fuel.amount > 0) && part.temperature > 493) //autoignition temp of kerosene is 220 c
+                    if (((fuel != null && fuel.amount > 0) || (monoprop != null && monoprop.amount > 0) )&& part.temperature > 493) //autoignition temp of kerosene is 220 c. hydrazine is 24-270, so this works for monoprop as well
                     {
                         string fireStarter;
                         var vesselFire = part.vessel.GetComponentInChildren<FireFX>();

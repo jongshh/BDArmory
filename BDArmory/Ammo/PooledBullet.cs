@@ -241,11 +241,7 @@ namespace BDArmory.Bullets
             {
                 bulletTrail.positionCount = linePositions.Length;
             }
-            linePositions[0] = transform.position + ((currentVelocity - FlightGlobals.ActiveVessel.Velocity()) * tracerDeltaFactor * 0.45f * Time.fixedDeltaTime);
-            // linePositions[0] = transform.position + currentVelocity * tracerDeltaFactor * 0.45f * Time.fixedDeltaTime;
-            // linePositions[0] = transform.position + (currentVelocity + 0.5f * Time.fixedDeltaTime * FlightGlobals.getGeeForceAtPosition(transform.position)) * Time.fixedDeltaTime; // DEBUG Show the bullet path over the next fixedDeltaTime.
-            linePositions[1] = transform.position;
-            bulletTrail.SetPositions(linePositions);
+            // Note: call SetTracerPosition() after enabling the bullet and making adjustments to it's position.
 
             if (!shaderInitialized)
             {
@@ -346,26 +342,12 @@ namespace BDArmory.Bullets
                 startPosition -= FloatingOrigin.OffsetNonKrakensbane;
             }
 
-            if (tracerLength == 0)
-            {
-                // visual tracer velocity is relative to the observer
-                linePositions[0] = transform.position + ((currentVelocity - FlightGlobals.ActiveVessel.Velocity()) * tracerDeltaFactor * 0.45f * Time.fixedDeltaTime);
-                // linePositions[0] = transform.position + currentVelocity * tracerDeltaFactor * 0.45f * Time.fixedDeltaTime;
-                // linePositions[0] = transform.position + (currentVelocity + 0.5f * Time.fixedDeltaTime * FlightGlobals.getGeeForceAtPosition(transform.position)) * Time.fixedDeltaTime; // DEBUG Show the bullet path over the next fixedDeltaTime.
-            }
-            else
-            {
-                linePositions[0] = transform.position + ((currentVelocity - FlightGlobals.ActiveVessel.Velocity()).normalized * tracerLength);
-            }
-
             if (fadeColor)
             {
                 FadeColor();
                 bulletTrail.material.SetColor("_TintColor", currentColor * tracerLuminance);
             }
-            linePositions[1] = transform.position;
-
-            bulletTrail.SetPositions(linePositions);
+            SetTracerPosition();
 
             if (Time.time > timeToLiveUntil) //kill bullet when TTL ends
             {
@@ -553,7 +535,7 @@ namespace BDArmory.Bullets
             if (!BDArmorySettings.VESSEL_RELATIVE_BULLET_CHECKS) return;
             List<Vessel> nearbyVessels = new List<Vessel>();
 
-            var layerMask = (int)(LayerMasks.Parts | LayerMasks.EVA);
+            const int layerMask = (int)(LayerMasks.Parts | LayerMasks.EVA | LayerMasks.Wheels);
             var overlapSphereColliderCount = Physics.OverlapSphereNonAlloc(transform.position, currentVelocity.magnitude * period * 2f, overlapSphereColliders, layerMask); // Overlapsphere of 2*period assuming that vessels are moving at similar speeds to the bullet.
             if (overlapSphereColliderCount == overlapSphereColliders.Length)
             {
@@ -591,7 +573,7 @@ namespace BDArmory.Bullets
             var relativeVelocity = currentVelocity - (Vector3)vessel.Velocity();
             float dist = relativeVelocity.magnitude * period;
             bulletRay = new Ray(currPosition, relativeVelocity + 0.5f * period * FlightGlobals.getGeeForceAtPosition(transform.position));
-            var layerMask = (int)(LayerMasks.Parts | LayerMasks.EVA);
+            const int layerMask = (int)(LayerMasks.Parts | LayerMasks.EVA | LayerMasks.Wheels);
 
             var hitCount = Physics.RaycastNonAlloc(bulletRay, hits, dist, layerMask);
             if (hitCount == hits.Length) // If there's a whole bunch of stuff in the way (unlikely), then we need to increase the size of our hits buffer.
@@ -668,7 +650,7 @@ namespace BDArmory.Bullets
         {
             float dist = currentVelocity.magnitude * period;
             bulletRay = new Ray(currPosition, currentVelocity + 0.5f * period * FlightGlobals.getGeeForceAtPosition(transform.position));
-            var layerMask = (int)(LayerMasks.Parts | LayerMasks.EVA | LayerMasks.Scenery);
+            const int layerMask = (int)(LayerMasks.Parts | LayerMasks.EVA | LayerMasks.Wheels | LayerMasks.Scenery);
             var hitCount = Physics.RaycastNonAlloc(bulletRay, hits, dist, layerMask);
             if (hitCount == hits.Length) // If there's a whole bunch of stuff in the way (unlikely), then we need to increase the size of our hits buffer.
             {
@@ -826,6 +808,7 @@ namespace BDArmory.Bullets
             //calculate armor strength
             float penetration = 0;
             float penetrationFactor = 0;
+            float length = 0;
             var Armor = hitPart.FindModuleImplementing<HitpointTracker>();
             if (Armor != null)
             {
@@ -845,36 +828,49 @@ namespace BDArmory.Bullets
                 {
                     Debug.Log("[BDArmory.PooledBullet]: ArmorVars found: Strength : " + Strength + "; Ductility: " + Ductility + "; Hardness: " + hardness + "; MaxTemp: " + safeTemp + "; Density: " + Density + "; thickness: " + thickness);
                 }
-                
+
                 //calculate bullet deformation
                 float newCaliber = caliber;
+                length = ((bulletMass * 1000.0f * 400.0f) / ((caliber * caliber *
+                    Mathf.PI) * (sabot ? 19.0f : 11.34f)) + 1.0f) * 10.0f;
+
+                /*
                 if (Ductility > 0.05)
                 {
-                    if (!sabot)
-                    {
-                        // Moved the bulletEnergy and armorStrength calculations here because
-                        // they are no longer needed for CalculatePenetration. This should
-                        // improve performance somewhat for sabot rounds, which is a good
-                        // thing since that new model requires the use of Mathf.Log and
-                        // Mathf.Exp.
-                        float bulletEnergy = ProjectileUtils.CalculateProjectileEnergy(bulletMass, impactSpeed);
-                        float armorStrength = ProjectileUtils.CalculateArmorStrength(caliber, thickness, Ductility, Strength, Density, safeTemp, hitPart);
-                        newCaliber = ProjectileUtils.CalculateDeformation(armorStrength, bulletEnergy, caliber, impactSpeed, hardness, Density, HERatio, apBulletMod, sabot);
+                */
 
-                        // Also set the params to the non-sabot ones
-                        muParam1 = Armor.muParam1;
-                        muParam2 = Armor.muParam2;
-                        muParam3 = Armor.muParam3;
-                    }
-                    else
-                    {
-                        // If it's a sabot just set the params to the sabot ones
-                        muParam1 = Armor.muParam1S;
-                        muParam2 = Armor.muParam2S;
-                        muParam3 = Armor.muParam3S;
-                    }
-                    //penetration = ProjectileUtils.CalculatePenetration(caliber, newCaliber, bulletMass, impactSpeed, Ductility, Density, Strength, thickness, apBulletMod, sabot);
-                    penetration = ProjectileUtils.CalculatePenetration(caliber, impactSpeed, bulletMass, apBulletMod, Strength, vFactor, muParam1, muParam2, muParam3, sabot);
+                if (!sabot)
+                {
+                    // Moved the bulletEnergy and armorStrength calculations here because
+                    // they are no longer needed for CalculatePenetration. This should
+                    // improve performance somewhat for sabot rounds, which is a good
+                    // thing since that new model requires the use of Mathf.Log and
+                    // Mathf.Exp.
+                    float bulletEnergy = ProjectileUtils.CalculateProjectileEnergy(bulletMass, impactSpeed);
+                    float armorStrength = ProjectileUtils.CalculateArmorStrength(caliber, thickness, Ductility, Strength, Density, safeTemp, hitPart);
+                    newCaliber = ProjectileUtils.CalculateDeformation(armorStrength, bulletEnergy, caliber, impactSpeed, hardness, Density, HERatio, apBulletMod, sabot);
+
+                    // Also set the params to the non-sabot ones
+                    muParam1 = Armor.muParam1;
+                    muParam2 = Armor.muParam2;
+                    muParam3 = Armor.muParam3;
+                }
+                else
+                {
+                    // If it's a sabot just set the params to the sabot ones
+                    muParam1 = Armor.muParam1S;
+                    muParam2 = Armor.muParam2S;
+                    muParam3 = Armor.muParam3S;
+                }
+                //penetration = ProjectileUtils.CalculatePenetration(caliber, newCaliber, bulletMass, impactSpeed, Ductility, Density, Strength, thickness, apBulletMod, sabot);
+                penetration = ProjectileUtils.CalculatePenetration(caliber, impactSpeed, bulletMass, apBulletMod, Strength, vFactor, muParam1, muParam2, muParam3, sabot, length);
+
+                if (BDArmorySettings.DEBUG_ARMOR)
+                {
+                    Debug.Log("[BDArmory.PooledBullet] Penetration: " + penetration + "mm. impactSpeed: " + impactSpeed + "m/s. bulletMass = " + bulletMass + "kg. Caliber: " + caliber + "mm. Length: " + length + "mm. Sabot: " + sabot);
+                }
+
+                /*
                 }
                 else
                 {
@@ -883,6 +879,8 @@ namespace BDArmory.Bullets
                     newCaliber = ProjectileUtils.CalculateDeformation(armorStrength, bulletEnergy, caliber, impactSpeed, hardness, Density, HERatio, apBulletMod, sabot);
                     penetration = ProjectileUtils.CalculateCeramicPenetration(caliber, newCaliber, bulletMass, impactSpeed, Ductility, Density, Strength, thickness, apBulletMod, sabot);
                 }
+                */
+
                 caliber = newCaliber; //update bullet with new caliber post-deformation(if any)
                 penetrationFactor = ProjectileUtils.CalculateArmorPenetration(hitPart, penetration, thickness);
                 //Reactive Armor calcs
@@ -1001,8 +999,86 @@ namespace BDArmory.Bullets
             }
             else //penetration >= 1
             {
-                currentVelocity = currentVelocity * (1 - (float)Math.Sqrt(thickness / penetration));
-                impactVelocity = impactVelocity * (1 - (float)Math.Sqrt(thickness / penetration));
+                // Old Post Pen Behavior
+                //currentVelocity = currentVelocity * (1 - (float)Math.Sqrt(thickness / penetration));
+                //impactVelocity = impactVelocity * (1 - (float)Math.Sqrt(thickness / penetration));
+
+                // New Post Pen Behavior, this is quite game-ified and not really based heavily on
+                // actual proper equations, however it does try to get the same kind of behavior as
+                // would be found IRL. Primarily, this means high velocity impacts will be mostly
+                // eroding the projectile rather than slowing it down (all studies of this behavior
+                // show residual velocity only decreases slightly during penetration while the
+                // projectile is getting eroded, then starts decreasing rapidly as the projectile
+                // approaches a L/D ratio of 1. Erosion is drastically increased at 2500 m/s + in
+                // order to try and replicate the projectile basically vaporizing at high velocities.
+                // Note that the velocity thresholds are really mostly arbitrary and that the vaporizing
+                // behavior isn't that accurate since the projectile would remain semi-coherent immediately
+                // after penetration and would disperse over time, hence the spacing in stuff like
+                // whipple shields but that behavior is fairly complex and I'm already in way over my head.
+
+                // Calculating this ratio once since we're going to need it a bunch
+                float adjustedPenRatio = (1 - (float)Math.Sqrt(thickness / penetration));
+
+                // If impact is at high speed
+                if (impactSpeed > 1200f)
+                {
+                    // If the projectile is still above a L/D ratio of 1.2 (should be 1 but I want to
+                    // avoid the edge case in the pen formula where L/D = 1
+                    if (length / caliber > 1.2f)
+                    {
+                        // Then we set the mass ratio to the default for impacts under 2500 m/s
+                        // we take off 5% by default to decrease penetration efficiency through
+                        // multiple plates a little more
+                        float massRatio = 0.95f * adjustedPenRatio;
+
+                        if (impactSpeed > 2500f)
+                        {
+                            // If impact speed is really high then spaced armor wil work exceptionally
+                            // well, with increasing results as the velocity of the projectile goes
+                            // higher. This is mostly to make whipple shields viable and desireable
+                            // in railgun combat. Ideally we'd be modelling the projectile vaporizing
+                            // and then losing coherence as it travels through empty space between the
+                            // outer plate and the inner plate but I'm not quite sure how that behavior
+                            // would look like. Best way to probably do that is to decrease projectile
+                            // lifespan and to add a lastImpact timestamp and do some kind of decrease
+                            // in mass as a function of the time between impacts.
+                            massRatio = 2375f / impactSpeed * adjustedPenRatio;
+                        }
+
+                        // We cap the minimum L/D to be 1.2 to avoid that edge case in the pen formula
+                        if (massRatio < 1.2f * caliber / length)
+                        {
+                            bulletMass = 1.2f * bulletMass * caliber / length;
+
+                            // In the case we are reaching that cap we decrease the velocity by
+                            // the adjustedPenRatio
+                            currentVelocity = currentVelocity * adjustedPenRatio;
+                            impactVelocity = impactVelocity * adjustedPenRatio;
+                        }
+                        else
+                        {
+                            bulletMass = bulletMass * massRatio;
+
+                            // If we don't, I.E. the round isn't completely eroded, we decrease
+                            // the velocity by a max of 5%, proportional to the adjustedPenRatio
+                            currentVelocity = currentVelocity * (0.95f + 0.05f * adjustedPenRatio);
+                            impactVelocity = impactVelocity * (0.95f + 0.05f * adjustedPenRatio);
+                        }
+                    }
+                    else
+                    {
+                        // If the projectile has already been eroded away we just decrease the
+                        // velocity by the adjustedPenRatio
+                        currentVelocity = currentVelocity * adjustedPenRatio;
+                        impactVelocity = impactVelocity * adjustedPenRatio;
+                    }
+                }
+                else
+                {
+                    // Low velocity impacts behave the same as before
+                    currentVelocity = currentVelocity * adjustedPenRatio;
+                    impactVelocity = impactVelocity * adjustedPenRatio;
+                }
 
                 currentSpeed = currentVelocity.magnitude;
                 timeElapsedSinceCurrentSpeedWasAdjusted = 0;
@@ -1091,7 +1167,7 @@ namespace BDArmory.Bullets
                 {
                     Debug.Log("[BDArmory.PooledBullet]: Bullet Velocity too low, stopping");
                 }
-                KillBullet();
+                if (!fuzeTriggered) KillBullet();
                 distanceTraveled += hit.distance;
                 return true;
             }
@@ -1264,7 +1340,7 @@ namespace BDArmory.Bullets
             }
             if (fuzeType == BulletFuzeTypes.Proximity || fuzeType == BulletFuzeTypes.Flak)
             {
-                using (var hitsEnu = Physics.OverlapSphere(transform.position, detonationRange, (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.Unknown19)).AsEnumerable().GetEnumerator())
+                using (var hitsEnu = Physics.OverlapSphere(transform.position, detonationRange, (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.Unknown19 | LayerMasks.Wheels)).AsEnumerable().GetEnumerator())
                 {
                     while (hitsEnu.MoveNext())
                     {
@@ -1409,6 +1485,21 @@ namespace BDArmory.Bullets
         public void KillBullet()
         {
             gameObject.SetActive(false);
+        }
+
+        public void SetTracerPosition()
+        {
+            // visual tracer velocity is relative to the observer (which uses srf_vel when below 100km (f*&king KSP!), not orb_vel)
+            if (tracerLength == 0)
+            {
+                linePositions[0] = transform.position + ((currentVelocity - FlightGlobals.ActiveVessel.Velocity()) * tracerDeltaFactor * 0.45f * Time.fixedDeltaTime);
+            }
+            else
+            {
+                linePositions[0] = transform.position + ((currentVelocity - FlightGlobals.ActiveVessel.Velocity()).normalized * tracerLength);
+            }
+            linePositions[1] = transform.position;
+            bulletTrail.SetPositions(linePositions);
         }
 
         void FadeColor()

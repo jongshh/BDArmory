@@ -1,7 +1,9 @@
-using UnityEngine;
-using System.Reflection;
-
 using BDArmory.Settings;
+using UnityEngine;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 
 namespace BDArmory.Utils
 {
@@ -28,7 +30,20 @@ namespace BDArmory.Utils
             return curve;
         }
 
-        private static int lineOfSightLayerMask = (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.EVA | LayerMasks.Unknown19 | LayerMasks.Unknown23);
+        public static IEnumerable<Type> GetLoadableTypes(this Assembly assembly)
+        {
+            // TODO: Argument validation
+            try
+            {
+                return assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException e)
+            {
+                return e.Types.Where(t => t != null);
+            }
+        }
+
+        private const int lineOfSightLayerMask = (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.EVA | LayerMasks.Unknown19 | LayerMasks.Unknown23 | LayerMasks.Wheels);
         public static bool CheckSightLine(Vector3 origin, Vector3 target, float maxDistance, float threshold,
             float startDistance)
         {

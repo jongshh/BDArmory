@@ -359,7 +359,7 @@ namespace BDArmory.WeaponMounts
             turret.AimToTarget(slavedTargetPosition);
         }
 
-        int mouseAimLayerMask = (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.EVA | LayerMasks.Unknown19 | LayerMasks.Unknown23);
+        const int mouseAimLayerMask = (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.EVA | LayerMasks.Unknown19 | LayerMasks.Unknown23 | LayerMasks.Wheels);
         void MouseAim()
         {
             if (pausingAfterShot) return;

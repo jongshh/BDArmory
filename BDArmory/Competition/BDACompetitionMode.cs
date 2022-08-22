@@ -347,7 +347,7 @@ namespace BDArmory.Competition
             GameEvents.onVesselCreate.Remove(OnVesselModified);
             GameEvents.onCrewOnEva.Remove(OnCrewOnEVA);
             GameEvents.onVesselCreate.Remove(DebrisDelayedCleanUp);
-            GameEvents.onCometSpawned.Remove(RemoveCometVessel);
+            CometCleanup();
             rammingInformation = null; // Reset the ramming information.
             deadOrAlive = "";
             if (BDArmorySettings.TRACE_VESSELS_DURING_COMPETITIONS)
@@ -363,8 +363,7 @@ namespace BDArmory.Competition
             sequencedCompetitionStarting = false;
             GameEvents.onCollision.Add(AnalyseCollision); // Start collision detection
             GameEvents.onVesselCreate.Add(DebrisDelayedCleanUp);
-            DisableCometSpawning();
-            GameEvents.onCometSpawned.Add(RemoveCometVessel);
+            CometCleanup(true);
             competitionStartTime = Planetarium.GetUniversalTime();
             nextUpdateTick = competitionStartTime + 2; // 2 seconds before we start tracking
             decisionTick = BDArmorySettings.COMPETITION_KILLER_GM_FREQUENCY > 60 ? -1 : competitionStartTime + BDArmorySettings.COMPETITION_KILLER_GM_FREQUENCY; // every 60 seconds we do nasty things
@@ -719,7 +718,7 @@ namespace BDArmory.Competition
                         pilot.weaponManager.ToggleGuardMode();
 
                     //foreach (var leader in leaders)
-                        //BDATargetManager.ReportVessel(pilot.vessel, leader.weaponManager);
+                    //BDATargetManager.ReportVessel(pilot.vessel, leader.weaponManager);
 
                     pilot.ReleaseCommand();
                     pilot.CommandAttack(centerGPS);
@@ -1790,6 +1789,30 @@ namespace BDArmory.Competition
             }
         }
 
+        void CometCleanup(bool disableSpawning = false)
+        {
+            if ((Versioning.version_major == 1 && Versioning.version_minor > 9) || Versioning.version_major > 1) // Introduced in 1.10
+            {
+                CometCleanup_1_10(disableSpawning);
+            }
+            else // Nothing, comets didn't exist before
+            {
+            }
+        }
+
+        void CometCleanup_1_10(bool disableSpawning = false) // KSP has issues on older versions if this call is in the parent function.
+        {
+            if (disableSpawning)
+            {
+                DisableCometSpawning();
+                GameEvents.onCometSpawned.Add(RemoveCometVessel);
+            }
+            else
+            {
+                GameEvents.onCometSpawned.Remove(RemoveCometVessel);
+            }
+        }
+
         void RemoveCometVessel(Vessel vessel)
         {
             if (vessel.vesselType == VesselType.SpaceObject)
@@ -2061,11 +2084,13 @@ namespace BDArmory.Competition
                         vData.averageCount++;
                         if (vData.landedState && BDArmorySettings.COMPETITION_KILL_TIMER > 0)
                         {
-                            KillTimer[vesselName] = (int)(now - vData.landedKillTimer);
-                            if (now - vData.landedKillTimer > BDArmorySettings.COMPETITION_KILL_TIMER)
+                            if (VesselModuleRegistry.GetBDModuleSurfaceAI(vessel, true) is null) // Ignore surface AI vessels for the kill timer.
                             {
-                                var srfVee = VesselModuleRegistry.GetBDModuleSurfaceAI(vessel, true);
-                                if (srfVee == null) vesselsToKill.Add(mf.vessel); //don't kill timer remove surface Ai vessels
+                                KillTimer[vesselName] = (int)(now - vData.landedKillTimer);
+                                if (now - vData.landedKillTimer > BDArmorySettings.COMPETITION_KILL_TIMER)
+                                {
+                                    vesselsToKill.Add(mf.vessel);
+                                }
                             }
                         }
                         else if (KillTimer.ContainsKey(vesselName))
@@ -2248,6 +2273,7 @@ namespace BDArmory.Competition
                     }
                     if (BDArmorySettings.DEBUG_COMPETITION) Debug.Log("[BDArmory.BDACompetitionMode:" + CompetitionID.ToString() + "]:No viable competitors, Automatically dumping scores");
                     StopCompetition();
+                    return;
                 }
             }
 
@@ -2305,6 +2331,7 @@ namespace BDArmory.Competition
                 Debug.Log($"[BDArmory.BDACompetitionMode:{CompetitionID.ToString()}]: " + message);
                 LogResults("due to out-of-time");
                 StopCompetition();
+                return;
             }
 
             if ((BDArmorySettings.MUTATOR_MODE && BDArmorySettings.MUTATOR_APPLY_TIMER) && BDArmorySettings.MUTATOR_DURATION > 0 && now - MutatorResetTime >= BDArmorySettings.MUTATOR_DURATION * 60d && BDArmorySettings.MUTATOR_LIST.Count > 0)
@@ -2652,7 +2679,13 @@ namespace BDArmory.Competition
                                     rammingInformation[otherVesselName].targetInformation[vesselName].collisionDetected = true; // The information is symmetric.
                                     rammingInformation[vesselName].targetInformation[otherVesselName].partCountJustPriorToCollision = rammingInformation[otherVesselName].partCount;
                                     rammingInformation[otherVesselName].targetInformation[vesselName].partCountJustPriorToCollision = rammingInformation[vesselName].partCount;
-                                    rammingInformation[vesselName].targetInformation[otherVesselName].sqrDistance = (otherVessel != null) ? Vector3.SqrMagnitude(vessel.CoM - otherVessel.CoM) : (Mathf.Pow(collisionMargin * (rammingInformation[vesselName].radius + rammingInformation[otherVesselName].radius), 2f) + 1f); // FIXME Should destroyed vessels have 0 sqrDistance instead?
+                                    if (otherVessel is not null)
+                                        rammingInformation[vesselName].targetInformation[otherVesselName].sqrDistance = (vessel.CoM - otherVessel.CoM).sqrMagnitude;
+                                    else
+                                    {
+                                        var distance = collisionMargin * (rammingInformation[vesselName].radius + rammingInformation[otherVesselName].radius);
+                                        rammingInformation[vesselName].targetInformation[otherVesselName].sqrDistance = distance * distance + 1f;
+                                    }
                                     rammingInformation[otherVesselName].targetInformation[vesselName].sqrDistance = rammingInformation[vesselName].targetInformation[otherVesselName].sqrDistance;
                                     rammingInformation[vesselName].targetInformation[otherVesselName].collisionDetectedTime = currentTime;
                                     rammingInformation[otherVesselName].targetInformation[vesselName].collisionDetectedTime = currentTime;
@@ -3291,7 +3324,14 @@ namespace BDArmory.Competition
             foreach (var protoVessel in protoVessels)
             {
                 if (protoVessel == null) continue;
-                ShipConstruction.RecoverVesselFromFlight(protoVessel, HighLogic.CurrentGame.flightState, true);
+                try
+                {
+                    ShipConstruction.RecoverVesselFromFlight(protoVessel, HighLogic.CurrentGame.flightState, true);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"[BDArmory.BDACompetitionMode]: Exception thrown while removing vessel: {e.Message}");
+                }
                 if (protoVessel == null) continue;
                 if (protoVessel.protoPartSnapshots != null)
                 {

@@ -76,7 +76,7 @@ namespace BDArmory.Competition.OrchestrationStrategies
             PrepareCompetition();
 
             // Configure the pilots' waypoints.
-            var mappedWaypoints = waypoints.Select(e => e.location).ToList();
+            var mappedWaypoints = BDArmorySettings.WAYPOINTS_ALTITUDE == 0 ? waypoints.Select(e => e.location).ToList() : waypoints.Select(wp => new Vector3(wp.location.x, wp.location.y, BDArmorySettings.WAYPOINTS_ALTITUDE)).ToList();
             BDACompetitionMode.Instance.competitionStatus.Add($"Starting waypoints competition {BDACompetitionMode.Instance.CompetitionID}.");
             if (BDArmorySettings.DEBUG_OTHER) Debug.Log(string.Format("[BDArmory.WaypointFollowingStrategy]: Setting {0} waypoints", mappedWaypoints.Count));
 
@@ -137,11 +137,11 @@ namespace BDArmory.Competition.OrchestrationStrategies
                 for (int i = 0; i < waypoints.Count; i++)
                 {
                     float terrainAltitude = (float)FlightGlobals.currentMainBody.TerrainAltitude(waypoints[i].location.x, waypoints[i].location.y);
-                    Vector3d WorldCoords = VectorUtils.GetWorldSurfacePostion(new Vector3(waypoints[i].location.x, waypoints[i].location.y, waypoints[i].location.z + terrainAltitude), FlightGlobals.currentMainBody);
+                    Vector3d WorldCoords = VectorUtils.GetWorldSurfacePostion(new Vector3(waypoints[i].location.x, waypoints[i].location.y, (BDArmorySettings.WAYPOINTS_ALTITUDE == 0 ? waypoints[i].location.z : BDArmorySettings.WAYPOINTS_ALTITUDE) + terrainAltitude), FlightGlobals.currentMainBody);
                     //FlightGlobals.currentMainBody.GetLatLonAlt(new Vector3(waypoints[i].latitude, waypoints[i].longitude, waypoints[i].altitude), out WorldCoords.x, out WorldCoords.y, out WorldCoords.z);
                     var direction = (WorldCoords - previousLocation).normalized;
                     //WayPointMarker.CreateWaypoint(WorldCoords, direction, ModelPath, BDArmorySettings.WAYPOINTS_SCALE);
-                    WayPointMarker.CreateWaypoint(WorldCoords, direction, ModelPath, BDArmorySettings.WAYPOINTS_SCALE > 0 ? BDArmorySettings.WAYPOINTS_SCALE  :  waypoints[i].scale);
+                    WayPointMarker.CreateWaypoint(WorldCoords, direction, ModelPath, BDArmorySettings.WAYPOINTS_SCALE > 0 ? BDArmorySettings.WAYPOINTS_SCALE : waypoints[i].scale);
 
                     previousLocation = WorldCoords;
                     var location = string.Format("({0:##.###}, {1:##.###}, {2:####}", waypoints[i].location.x, waypoints[i].location.y, waypoints[i].location.z);
@@ -286,7 +286,7 @@ namespace BDArmory.Competition.OrchestrationStrategies
         }
         void Awake()
         {
-            transform.parent = FlightGlobals.ActiveVessel.mainBody.transform; 
+            transform.parent = FlightGlobals.ActiveVessel.mainBody.transform;
         }
         private void OnEnable()
         {

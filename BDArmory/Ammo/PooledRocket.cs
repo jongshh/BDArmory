@@ -83,8 +83,8 @@ namespace BDArmory.Bullets
         public bool hasDetonated = false;
         public int penTicker = 0;
         private Part CurrentPart = null;
-        private int collisionLayerMask = (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.EVA | LayerMasks.Unknown19 | LayerMasks.Unknown23); // Why 19 and 23?
-        private int explosionLayerMask = (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.Unknown19); // Why 19 and not EVA?
+        private const int collisionLayerMask = (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.EVA | LayerMasks.Unknown19 | LayerMasks.Unknown23 | LayerMasks.Wheels); // Why 19 and 23?
+        private const int explosionLayerMask = (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.Unknown19 | LayerMasks.Wheels); // Why 19 and not EVA?
 
         private float distanceFromStart = 0;
 
@@ -450,14 +450,14 @@ namespace BDArmory.Bullets
                             //calculate bullet deformation
                             float newCaliber = ProjectileUtils.CalculateDeformation(armorStrength, bulletEnergy, caliber, impactVelocity, hardness, Density, HERatio, 1, false);
                             //calculate penetration
-                            if (Ductility > 0.05)
-                            {
+                            /*if (Ductility > 0.05)
+                            {*/
                                 penetration = ProjectileUtils.CalculatePenetration(caliber, impactVelocity, rocketMass * 1000f, 1f, Strength, vFactor, muParam1, muParam2, muParam3);
-                            }
+                            /*}
                             else
                             {
                                 penetration = ProjectileUtils.CalculateCeramicPenetration(caliber, newCaliber, rocketMass * 1000, impactVelocity, Ductility, Density, Strength, thickness, 1);
-                            }
+                            }*/
 
                             caliber = newCaliber; //update bullet with new caliber post-deformation(if any)
                             penetrationFactor = ProjectileUtils.CalculateArmorPenetration(hitPart, penetration, thickness);

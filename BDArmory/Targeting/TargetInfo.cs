@@ -27,6 +27,7 @@ namespace BDArmory.Targeting
 
         public float radarBaseSignature = -1;
         public bool radarBaseSignatureNeedsUpdate = true;
+        public float radarRCSReducedSignature;
         public float radarModifiedSignature;
         public float radarLockbreakFactor;
         public float radarJammingDistance;
@@ -483,7 +484,8 @@ namespace BDArmory.Targeting
             if (myMF == null) return 0;
             var relativePosition = vessel.transform.position - myMF.vessel.transform.position;
             float theta = Vector3.Angle(myMF.vessel.srf_vel_direction, relativePosition);
-            return Mathf.Clamp(((Mathf.Pow(Mathf.Cos(theta / 2f), 2f) + 1f) * 100f / Mathf.Max(10f, relativePosition.magnitude)) / 2, 0, 1); // Ranges from 0 to 1, clamped at 1 for distances closer than 100m
+            float cosTheta2 = Mathf.Cos(theta / 2f);
+            return Mathf.Clamp(((cosTheta2 * cosTheta2 + 1f) * 100f / Mathf.Max(10f, relativePosition.magnitude)) / 2, 0, 1); // Ranges from 0 to 1, clamped at 1 for distances closer than 100m
         }
 
         public float TargetPriMass(MissileFire mf, MissileFire myMf) // Relative mass compared to our own mass

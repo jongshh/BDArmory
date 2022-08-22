@@ -84,6 +84,8 @@ namespace BDArmory.Weapons.Missiles
         [KSPField]
         public bool guidanceActive = true;
 
+        public float gpsUpdates = -1f;                              // GPS missiles get updates on target position from source vessel every gpsUpdates >= 0 seconds
+
         [KSPField]
         public float lockedSensorFOV = 2.5f;
 
@@ -99,7 +101,8 @@ namespace BDArmory.Weapons.Missiles
         [KSPField]
         public float chaffEffectivity = 1f;                            // Modifies  how the missile targeting is affected by chaff, 1 is fully affected (normal behavior), lower values mean less affected (0 is ignores chaff), higher values means more affected
 
-        public bool allAspect = false;                                 // DEPRECIATED, replaced by uncagedIRLock. uncagedIRLock is automatically set to this value upon loading (to maintain compatability with old BDA mods)
+        [KSPField]
+        public bool allAspect = false;                                 // DEPRECATED, replaced by uncagedIRLock. uncagedIRLock is automatically set to this value upon loading (to maintain compatability with old BDA mods)
 
         [KSPField]
         public bool uncagedLock = false;                             //if true it simulates a modern IR missile with "uncaged lock" ability. Even if the target is not within boresight fov, it can be radar locked and the target information transfered to the missile. It will then try to lock on with the heat seeker. If false, it is an older missile which requires a direct "in boresight" lock.
@@ -247,6 +250,7 @@ namespace BDArmory.Weapons.Missiles
 
         private double _lastVerticalSpeed;
         private double _lastHorizontalSpeed;
+        private int gpsUpdateCounter = 0;
 
         public double HorizontalAcceleration
         {
@@ -452,6 +456,24 @@ namespace BDArmory.Weapons.Missiles
             else
             {
                 gpsTargetCoords_ = targetGPSCoords;
+                if (targetVessel && HasFired && (gpsUpdates >= 0f) && VesselModuleRegistry.GetMissileFire(SourceVessel).CanSeeTarget(targetVessel.Vessel))
+                {
+                    if (gpsUpdates == 0) // Constant updates
+                    {
+                        gpsTargetCoords_ = VectorUtils.WorldPositionToGeoCoords(targetVessel.Vessel.CoM, targetVessel.Vessel.mainBody);
+                        targetGPSCoords = gpsTargetCoords_;
+                    }
+                    else // Update every gpsUpdates seconds
+                    {
+                        float updateCount = TimeIndex / gpsUpdates;
+                        if (updateCount > gpsUpdateCounter)
+                        {
+                            gpsUpdateCounter++;
+                            gpsTargetCoords_ = VectorUtils.WorldPositionToGeoCoords(targetVessel.Vessel.CoM, targetVessel.Vessel.mainBody);
+                            targetGPSCoords = gpsTargetCoords_;
+                        }
+                    }
+                }
             }
 
             if (TargetAcquired)
@@ -464,7 +486,7 @@ namespace BDArmory.Weapons.Missiles
             {
                 guidanceActive = false;
             }
-
+            
             return gpsTargetCoords_;
         }
 
@@ -625,7 +647,7 @@ namespace BDArmory.Weapons.Missiles
             if (radarTarget.exists)
             {
                 // locked-on before launch, passive radar guidance or waiting till in active radar range:
-                if (!ActiveRadar && ((radarTarget.predictedPosition - transform.position).sqrMagnitude > Mathf.Pow(activeRadarRange, 2) || angleToTarget > maxOffBoresight * 0.75f))
+                if (!ActiveRadar && ((radarTarget.predictedPosition - transform.position).sqrMagnitude > (activeRadarRange * activeRadarRange) || angleToTarget > maxOffBoresight * 0.75f))
                 {
                     if (vrd)
                     {
@@ -724,7 +746,7 @@ namespace BDArmory.Weapons.Missiles
                         //RadarUtils.UpdateRadarLock(ray, lockedSensorFOV, activeRadarMinThresh, ref scannedTargets, 0.4f, pingRWR, RadarWarningReceiver.RWRThreatTypes.MissileLock, radarSnapshot);
                         RadarUtils.RadarUpdateMissileLock(ray, lockedSensorFOV, ref scannedTargets, 0.4f, this);
 
-                        float sqrThresh = radarLOALSearching ? Mathf.Pow(500, 2) : Mathf.Pow(40, 2);
+                        float sqrThresh = radarLOALSearching ? 250000f : 1600; // 500 * 500 : 40 * 40;
 
                         if (radarLOAL && radarLOALSearching && !radarSnapshot)
                         {
@@ -830,7 +852,7 @@ namespace BDArmory.Weapons.Missiles
                 //RadarUtils.UpdateRadarLock(ray, lockedSensorFOV * 3, activeRadarMinThresh * 2, ref scannedTargets, 0.4f, pingRWR, RadarWarningReceiver.RWRThreatTypes.MissileLock, radarSnapshot);
                 RadarUtils.RadarUpdateMissileLock(ray, lockedSensorFOV * 3, ref scannedTargets, 0.4f, this);
 
-                float sqrThresh = Mathf.Pow(300, 2);
+                float sqrThresh = 90000f; // 300 * 300;
 
                 float smallestAngle = 360;
                 TargetSignatureData lockedTarget = TargetSignatureData.noTarget;
@@ -920,7 +942,8 @@ namespace BDArmory.Weapons.Missiles
             if (TargetingMode == TargetingModes.AntiRad && TargetAcquired && v == vessel)
             {
                 // Ping was close to the previous target position and is within the boresight of the missile.
-                if ((source - VectorUtils.GetWorldSurfacePostion(targetGPSCoords, vessel.mainBody)).sqrMagnitude < Mathf.Pow(maxStaticLaunchRange / 4, 2) && Vector3.Angle(source - transform.position, GetForwardTransform()) < maxOffBoresight)
+                var staticLaunchThresholdSqr = maxStaticLaunchRange * maxStaticLaunchRange / 16f;
+                if ((source - VectorUtils.GetWorldSurfacePostion(targetGPSCoords, vessel.mainBody)).sqrMagnitude < staticLaunchThresholdSqr && Vector3.Angle(source - transform.position, GetForwardTransform()) < maxOffBoresight)
                 {
                     if (BDArmorySettings.DEBUG_MISSILES) Debug.Log("[BDArmory.MissileBase]: Radar ping! Adjusting target position by " + (source - VectorUtils.GetWorldSurfacePostion(targetGPSCoords, vessel.mainBody)).magnitude + " to " + TargetPosition);
                     TargetAcquired = true;
@@ -1028,7 +1051,7 @@ namespace BDArmory.Weapons.Missiles
             {
                 case DetonationDistanceStates.NotSafe:
                     //Lets check if we are at a safe distance from the source vessel
-                    using (var hitsEnu = Physics.OverlapSphere(futureMissilePosition, GetBlastRadius() * 3f, (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.Unknown19)).AsEnumerable().GetEnumerator())
+                    using (var hitsEnu = Physics.OverlapSphere(futureMissilePosition, GetBlastRadius() * 3f, (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.Unknown19 | LayerMasks.Wheels)).AsEnumerable().GetEnumerator())
                     {
                         while (hitsEnu.MoveNext())
                         {
@@ -1086,7 +1109,7 @@ namespace BDArmory.Weapons.Missiles
 
                             Ray rayFuturePosition = new Ray(vessel.CoM, futureMissilePosition);
 
-                            var hitsFuture = Physics.RaycastAll(rayFuturePosition, (float)missileDistancePerFrame.magnitude, (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.Unknown19)).AsEnumerable();
+                            var hitsFuture = Physics.RaycastAll(rayFuturePosition, (float)missileDistancePerFrame.magnitude, (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.Unknown19 | LayerMasks.Wheels)).AsEnumerable();
 
                             using (var hitsEnu = hitsFuture.GetEnumerator())
                             {
@@ -1121,7 +1144,7 @@ namespace BDArmory.Weapons.Missiles
                     else
                     {
                         float optimalDistance = (float)(Math.Max(DetonationDistance, relativeSpeed));
-                        using (var hitsEnu = Physics.OverlapSphere(vessel.CoM, optimalDistance, (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.Unknown19)).AsEnumerable().GetEnumerator())
+                        using (var hitsEnu = Physics.OverlapSphere(vessel.CoM, optimalDistance, (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.Unknown19 | LayerMasks.Wheels)).AsEnumerable().GetEnumerator())
                         {
                             while (hitsEnu.MoveNext())
                             {

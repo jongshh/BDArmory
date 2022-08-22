@@ -380,18 +380,22 @@ namespace BDArmory.Competition.VesselSpawning
         /// <returns></returns>
         protected IEnumerator PostSpawnMainSequence(SpawnConfig spawnConfig, bool spawnAirborne)
         {
+            if (BDArmorySettings.DEBUG_SPAWNING) LogMessage("Checking vessel validity", false);
             yield return CheckVesselValidity(spawnedVessels);
             if (spawnFailureReason != SpawnFailureReason.None) yield break;
 
+            if (BDArmorySettings.DEBUG_SPAWNING) LogMessage("Waiting for weapon managers", false);
             yield return WaitForWeaponManagers(spawnedVessels, spawnedVesselPartCounts, spawnConfig.numberOfTeams != 1 && spawnConfig.numberOfTeams != -1);
             if (spawnFailureReason != SpawnFailureReason.None) yield break;
 
             // Reset craft positions and rotations as sometimes KSP packs and unpacks vessels between frames and resets things! (Possibly due to kerbals in command seats?)
+            if (BDArmorySettings.DEBUG_SPAWNING) LogMessage("Resetting final spawn positions", false);
             ResetFinalSpawnPositionsAndRotations(spawnedVessels, finalSpawnPositions, finalSpawnRotations);
 
             // Lower vessels to the ground or activate them in the air.
             if (spawnConfig.altitude >= 0 && !spawnAirborne)
             {
+                if (BDArmorySettings.DEBUG_SPAWNING) LogMessage("Lowering vessels", false);
                 foreach (var vessel in spawnedVessels.Values) // Turn on the brakes.
                 {
                     vessel.ActionGroups.SetGroup(KSPActionGroup.Brakes, false); // Disable them first to make sure they trigger on toggling.
@@ -401,10 +405,15 @@ namespace BDArmory.Competition.VesselSpawning
                 if (BDArmorySettings.VESSEL_SPAWN_EASE_IN_SPEED > 0)
                     yield return LowerVesselsToSurface(spawnedVessels, spawnedVesselPartCounts, spawnConfig.easeInSpeed, spawnConfig.altitude);
             }
-            else AirborneActivation(spawnedVessels);
+            else
+            {
+                if (BDArmorySettings.DEBUG_SPAWNING) LogMessage("Activating vessels in the air", false);
+                AirborneActivation(spawnedVessels);
+            }
             if (spawnFailureReason != SpawnFailureReason.None) yield break;
 
             // One last check for renamed vessels (since we're not entirely sure when this occurs).
+            if (BDArmorySettings.DEBUG_SPAWNING) LogMessage("Checking for renamed vessels", false);
             SpawnUtils.CheckForRenamedVessels(spawnedVessels);
 
             if (BDArmorySettings.RUNWAY_PROJECT)

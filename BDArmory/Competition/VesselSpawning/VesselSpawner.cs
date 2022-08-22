@@ -32,7 +32,7 @@ namespace BDArmory.Competition.VesselSpawning
                 {
                     _spawnProbeLocation = null;
                     var message = "SpawnProbe.craft is missing. Your installation is likely corrupt.";
-                    BDACompetitionMode.Instance.competitionStatus.Add(message);
+                    ScreenMessages.PostScreenMessage(message, 10);
                     Debug.LogError("[BDArmory.SpawnUtils]: " + message);
                 }
                 return _spawnProbeLocation;

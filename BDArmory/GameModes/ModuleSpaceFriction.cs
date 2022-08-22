@@ -58,6 +58,18 @@ namespace BDArmory.GameModes
                 return SAI;
             }
         }
+
+        BDModuleVTOLAI VAI;
+        public BDModuleVTOLAI flier
+        {
+            get
+            {
+                if (VAI) return VAI;
+                VAI = VesselModuleRegistry.GetModule<BDModuleVTOLAI>(vessel);
+
+                return VAI;
+            }
+        }
         ModuleEngines Engine;
         public ModuleEngines foundEngine
         {
@@ -86,9 +98,11 @@ namespace BDArmory.GameModes
                     while (engine.MoveNext())
                     {
                         if (engine.Current == null) continue;
+                        if (engine.Current.independentThrottle) continue; //only grab primary thrust engines
                         frictMult += (engine.Current.maxThrust * (engine.Current.thrustPercentage / 100));
                         //have this called onvesselModified?
                     }
+                frictMult /= 4; //doesn't need to be 100% of thrust at max speed, Ai will already self-limit; this also has the AI throttle down, which allows for slamming the throttle full for braking/coming about, instead of being stuck with lower TwR
             }
         }
 
@@ -110,9 +124,13 @@ namespace BDArmory.GameModes
                         {
                             maxVelocity = SAI.MaxSpeed;
                         }
-                        frictionCoeff = Mathf.Pow(((float)part.vessel.speed / maxVelocity), 3) * frictMult; //at maxSpeed, have friction be 100% of vessel's engines thrust
+                        else if (VAI != null)
+                            maxVelocity = VAI.MaxSpeed;
 
-                        frictionCoeff *= (1 + (Vector3.Angle(this.part.vessel.srf_vel_direction, this.part.vessel.GetTransform().up) / 180) * BDArmorySettings.SF_DRAGMULT); //greater AoA off prograde, greater drag
+                        var speedFraction = (float)part.vessel.speed / maxVelocity;
+                        frictionCoeff = speedFraction * speedFraction * speedFraction * frictMult; //at maxSpeed, have friction be 100% of vessel's engines thrust
+
+                        frictionCoeff *= (1 + (Vector3.Angle(this.part.vessel.srf_vel_direction, this.part.vessel.GetTransform().up) / 180) * BDArmorySettings.SF_DRAGMULT * 4); //greater AoA off prograde, greater drag
 
                         part.vessel.rootPart.rb.AddForceAtPosition((-part.vessel.srf_vel_direction * frictionCoeff), part.vessel.CoM, ForceMode.Acceleration);
                     }
@@ -135,7 +153,7 @@ namespace BDArmory.GameModes
             {
                 if (BDArmorySettings.SF_REPULSOR)
                 {
-                    if ((pilot != null || driver != null) && foundEngine != null)
+                    if ((pilot != null || driver != null || flier != null) && foundEngine != null)
                     {
                         vesselAlt = 10;
                         if (AI != null)
@@ -146,6 +164,9 @@ namespace BDArmory.GameModes
                         {
                             vesselAlt = SAI.MaxSlopeAngle * 2;
                         }
+                        else if (VAI != null)
+                            vesselAlt = VAI.minAltitude;
+
                         float accelMult = 1f;
                         if (vessel.verticalSpeed > 1) //vessel ascending
                         {

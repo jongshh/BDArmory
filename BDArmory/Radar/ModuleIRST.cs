@@ -207,12 +207,27 @@ namespace BDArmory.Radar
             irstEnabled = false;
             UpdateToggleGuiName();
 
+            if (vesselRadarData)
+            {
+                vesselRadarData.RemoveIRST(this);
+            }
             using (var loadedvessels = BDATargetManager.LoadedVessels.GetEnumerator())
                 while (loadedvessels.MoveNext())
                 {
                     BDATargetManager.ClearRadarReport(loadedvessels.Current, weaponManager); //reset radar contact status
                 }
-            vesselRadarData.AddIRST(this);
+        }
+
+        void OnDestroy()
+        {
+            if (HighLogic.LoadedSceneIsFlight)
+            {
+                if (vesselRadarData)
+                {
+                    vesselRadarData.RemoveIRST(this);
+                    vesselRadarData.RemoveDataFromIRST(this);
+                }
+            }
         }
 
         public override void OnStart(StartState state)

@@ -23,6 +23,8 @@ namespace BDArmory.CounterMeasure
         [KSPField(isPersistant = true, guiActive = true, guiName = "#LOC_BDArmory_Enabled")]//Enabled
         public bool jammerEnabled = false;
 
+        public bool manuallyEnabled = false;
+
         VesselECMJInfo vesselJammer;
 
         [KSPAction("Enable")]
