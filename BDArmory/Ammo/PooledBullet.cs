@@ -278,7 +278,7 @@ namespace BDArmory.Bullets
             {
                 sourceVesselName = null;
             }
-            if (caliber > 60)
+            if (caliber >= BDArmorySettings.APS_THRESHOLD) //if (caliber > 60)
             {
                 BDATargetManager.FiredBullets.Add(this);
             }
@@ -291,7 +291,7 @@ namespace BDArmory.Bullets
             CurrentPart = null;
             sabot = false;
             partsHit.Clear();
-            if (caliber > 60)
+            if (caliber >= BDArmorySettings.APS_THRESHOLD)  //if (caliber > 60)
             {
                 BDATargetManager.FiredBullets.Remove(this);
             }
@@ -1318,10 +1318,6 @@ namespace BDArmory.Bullets
         {
             bool detonate = false;
 
-            if (distanceTraveled <= detonationRange * 2.5f && (fuzeType == BulletFuzeTypes.Proximity || fuzeType == BulletFuzeTypes.Timed)) return false; //bullet not past arming distance
-
-            if (!(((HEType != PooledBulletTypes.Slug || nuclear) && tntMass > 0) || beehive)) return false;
-
             if (isAPSprojectile && (tgtShell != null || tgtRocket != null))
             {
                 if (Vector3.Distance(transform.position, tgtShell != null ? tgtShell.transform.position : tgtRocket.transform.position) < detonationRange / 2)
@@ -1331,6 +1327,12 @@ namespace BDArmory.Bullets
                     return detonate = true;
                 }
             }
+
+            if (distanceTraveled <= detonationRange * 2.5f && (fuzeType == BulletFuzeTypes.Proximity || fuzeType == BulletFuzeTypes.Timed)) return false; //bullet not past arming distance
+
+            if (!(((HEType != PooledBulletTypes.Slug || nuclear) && tntMass > 0) || beehive)) return false;
+
+
             if (fuzeType == BulletFuzeTypes.Timed || fuzeType == BulletFuzeTypes.Flak)
             {
                 if (distanceFromStart > (beehive ? maxAirDetonationRange - 100 : maxAirDetonationRange) || distanceFromStart > (beehive ? defaultDetonationRange - 100 : defaultDetonationRange))

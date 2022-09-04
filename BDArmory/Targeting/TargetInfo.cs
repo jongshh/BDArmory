@@ -33,6 +33,7 @@ namespace BDArmory.Targeting
         public float radarJammingDistance;
         public bool alreadyScheduledRCSUpdate = false;
         public float radarMassAtUpdate = 0f;
+        public Vector3 bounds = Vector3.zero;
 
         public List<Part> targetWeaponList = new List<Part>();
         public List<Part> targetEngineList = new List<Part>();
@@ -281,6 +282,9 @@ namespace BDArmory.Targeting
             //power generation? - radiators/generators - if doing CoaDE style fights/need reactors to power weapons
 
             if (vessel == null) return;
+
+            bounds = vessel.GetBounds(); // Update vessel bounds on part changes
+
             using (List<Part>.Enumerator part = vessel.Parts.GetEnumerator())
                 while (part.MoveNext())
                 {

@@ -1837,7 +1837,7 @@ namespace BDArmory.Control
             }
 
             // Adjust some values for asteroids.
-            var targetRadius = v.GetRadius(true);
+            var targetRadius = v.GetRadius();
             var threshold = collisionAvoidanceThreshold + targetRadius; // Add the target's average radius to the threshold.
             if (v.vesselType == VesselType.SpaceObject) // Give asteroids some extra room.
             {

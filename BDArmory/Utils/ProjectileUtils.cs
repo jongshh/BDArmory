@@ -856,6 +856,7 @@ namespace BDArmory.Utils
                             * (BDArmorySettings.DMG_MULTIPLIER / 100) * DmgMult
                             * 1e-4f);
                 damageToBuilding /= 8f;
+                damageToBuilding *= BDArmorySettings.BUILDING_DMG_MULTIPLIER;
                 building.AddDamage(damageToBuilding);
                 if (building.Damage > building.impactMomentumThreshold * 150)
                 {

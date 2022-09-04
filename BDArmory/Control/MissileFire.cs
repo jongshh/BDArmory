@@ -86,7 +86,15 @@ namespace BDArmory.Control
 
         public void incrementRippleIndex(string weaponname)
         {
-            if (!gunRippleIndex.ContainsKey(weaponname)) { Debug.LogError($"[BDArmory.MissileFire]: Weapon {weaponname} on {vessel.vesselName} does not exist in the gunRippleIndex!"); return; }
+            if (!gunRippleIndex.ContainsKey(weaponname)) 
+            {
+                UpdateList();
+                if (!gunRippleIndex.ContainsKey(weaponname))
+                {
+                    Debug.LogError($"[BDArmory.MissileFire]: Weapon {weaponname} on {vessel.vesselName} does not exist in the gunRippleIndex!");
+                    return;
+                }
+            }
             gunRippleIndex[weaponname]++;
             if (gunRippleIndex[weaponname] >= GetRippleGunCount(weaponname))
             {
@@ -1611,6 +1619,15 @@ namespace BDArmory.Control
                             // weaponAimDebugStrings.Add($" - Target pos: {weapon.targetPosition.ToString("G3")}, vel: {weapon.targetVelocity.ToString("G4")}, acc: {weapon.targetAcceleration.ToString("G6")}");
                             // weaponAimDebugStrings.Add($" - Target rel pos: {(weapon.targetPosition - weapon.fireTransforms[0].position).ToString("G3")} ({(weapon.targetPosition - weapon.fireTransforms[0].position).magnitude:F1}), rel vel: {(weapon.targetVelocity - weapon.part.rb.velocity).ToString("G4")}, rel acc: {((Vector3)(weapon.targetAcceleration - weapon.vessel.acceleration)).ToString("G6")}");
                         }
+                        int shots = 0;
+                        int hits = 0;
+                        if (BDACompetitionMode.Instance.Scores.ScoreData.ContainsKey(vessel.vesselName))
+                        {
+                            hits = BDACompetitionMode.Instance.Scores.ScoreData[vessel.vesselName].hits;
+                            shots = BDACompetitionMode.Instance.Scores.ScoreData[vessel.vesselName].shotsFired;
+                        }
+                        weaponHeatDebugStrings.Add(" - Shots Fired: " + shots + ", Shots Hit: " + hits + ", Accuracy: " + (shots > 0 ? hits / shots : 0f));
+
                         if (weaponHeatDebugStrings.Count > 0)
                         {
                             debugString.AppendLine("Weapon Heat:\n" + string.Join("\n", weaponHeatDebugStrings));
@@ -2480,7 +2497,7 @@ namespace BDArmory.Control
                 while (ecm1.MoveNext())
                 {
                     if (ecm1.Current == null) continue;
-                    if (!ecm1.Current.manuallyEnabled) 
+                    if (!ecm1.Current.manuallyEnabled)
                         ecm1.Current.DisableJammer();
                 }
         }
@@ -2812,6 +2829,11 @@ namespace BDArmory.Control
                     {
                         continue;
                     }
+                    if (weapon.Current.GetWeaponClass() == WeaponClasses.Gun || weapon.Current.GetWeaponClass() == WeaponClasses.Rocket || weapon.Current.GetWeaponClass() == WeaponClasses.DefenseLaser)
+                    {
+                        if (!gunRippleIndex.ContainsKey(weapon.Current.GetPart().partInfo.name))
+                            gunRippleIndex.Add(weapon.Current.GetPart().partInfo.name, 0);
+                    }
                     //dont add APS
                     if ((weapon.Current.GetWeaponClass() == WeaponClasses.Gun || weapon.Current.GetWeaponClass() == WeaponClasses.Rocket || weapon.Current.GetWeaponClass() == WeaponClasses.DefenseLaser) &&
                         weapon.Current.GetPart().FindModuleImplementing<ModuleWeapon>().isAPS)
@@ -2821,11 +2843,6 @@ namespace BDArmory.Control
                     if (!alreadyAdded)
                     {
                         weaponTypes.Add(weapon.Current);
-                    }
-                    if (weapon.Current.GetWeaponClass() == WeaponClasses.Gun || weapon.Current.GetWeaponClass() == WeaponClasses.Rocket || weapon.Current.GetWeaponClass() == WeaponClasses.DefenseLaser)
-                    {
-                        if (!gunRippleIndex.ContainsKey(weapon.Current.GetPart().partInfo.name))
-                            gunRippleIndex.Add(weapon.Current.GetPart().partInfo.name, 0);
                     }
 
                     EngageableWeapon engageableWeapon = weapon.Current as EngageableWeapon;
@@ -4420,7 +4437,7 @@ namespace BDArmory.Control
                             float Cannistershot = Gun.ProjectileCount;
                             float candidateMinrange = Gun.engageRangeMin;
                             int candidatePriority = Mathf.RoundToInt(Gun.priority);
-                            float candidateRadius = currentTarget.Vessel.GetRadius();
+                            float candidateRadius = currentTarget.Vessel.GetRadius(Gun.fireTransforms[0].forward, target.bounds);
                             float candidateCaliber = Gun.caliber;
                             if (BDArmorySettings.RUNWAY_PROJECT && BDArmorySettings.RUNWAY_PROJECT_ROUND == 41)
                             {
@@ -4718,7 +4735,7 @@ namespace BDArmory.Control
                             bool candidateGimbal = Gun.turret;
                             float candidateMinrange = Gun.engageRangeMin;
                             float candidateTraverse = Gun.yawRange * Gun.maxPitch;
-                            float candidateRadius = currentTarget.Vessel.GetRadius();
+                            float candidateRadius = currentTarget.Vessel.GetRadius(Gun.fireTransforms[0].forward, target.bounds);
                             float candidateCaliber = Gun.caliber;
                             Transform fireTransform = Gun.fireTransforms[0];
 
@@ -5246,7 +5263,7 @@ namespace BDArmory.Control
                         if (!gun.hasGunner)
                             return false;
                         if (gun.isReloading || gun.isOverheated)
-                            return false; 
+                            return false;
                         if (!gun.CanFireSoon())
                             return false;
                         // check ammo
@@ -5755,6 +5772,7 @@ namespace BDArmory.Control
                     while (weapon.MoveNext())
                     {
                         if (weapon.Current == null) continue;
+                        if (weapon.Current.isAPS) continue;
                         // if (weapon.Current.GetShortName() != selectedWeapon.GetShortName()) continue; 
                         weapon.Current.autoFire = false;
                         weapon.Current.autofireShotCount = 0;
@@ -6189,10 +6207,7 @@ namespace BDArmory.Control
             float closureTime = 3600f; // Default closure time of one hour
             if (threat) // If we weren't passed a null
             {
-                float targetDistance = Vector3.Distance(threat.transform.position, vessel.transform.position);
-                Vector3 currVel = (float)vessel.srfSpeed * vessel.Velocity().normalized;
-                closureTime = Mathf.Clamp((float)(1 / ((threat.Velocity() - currVel).magnitude / targetDistance)), 0f, closureTime);
-                // Debug.Log("[BDArmory.MissileFire]: Threat from " + threat.GetDisplayName() + " is " + closureTime.ToString("0.0") + " seconds away!");
+                closureTime = vessel.ClosestTimeToCPA(threat, closureTime);
             }
             return closureTime;
         }

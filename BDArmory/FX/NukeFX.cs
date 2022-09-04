@@ -308,7 +308,7 @@ namespace BDArmory.FX
                             //scaling calc is roughly SqRt( 400 * (6x))
                             //fireball diameter is 59 * Mathf.Pow(yield, 0.4f), apparently?
                             if (!string.IsNullOrWhiteSpace(flashModelPath))
-                                FXEmitter.CreateFX(transform.position, scale, flashModelPath, "", 0.3f, -1, default, true);
+                                FXEmitter.CreateFX(transform.position, scale, flashModelPath, "", 0.3f, 0.3f, default, true);
                             if (!string.IsNullOrWhiteSpace(shockModelPath))
                                 FXEmitter.CreateFX(transform.position, scale * lastValidAtmDensity, shockModelPath, "", 0.3f, -1, default, true);
                             if (!string.IsNullOrWhiteSpace(blastModelPath))

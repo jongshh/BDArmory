@@ -107,6 +107,7 @@ namespace BDArmory.Settings
         [BDAPersistentSettingsField] public static float COMPETITION_NONCOMPETITOR_REMOVAL_DELAY = 30; // Competition non-competitor removal delay in seconds.
         [BDAPersistentSettingsField] public static float COMPETITION_DISTANCE = 1000;                  // Competition distance.
         [BDAPersistentSettingsField] public static int COMPETITION_START_NOW_AFTER = 11;               // Competition auto-start now.
+        [BDAPersistentSettingsField] public static bool COMPETITION_START_DESPITE_FAILURES = false;    // Start competition despite failures.
         [BDAPersistentSettingsField] public static float DEBRIS_CLEANUP_DELAY = 15f;                   // Clean up debris after 30s.
         [BDAPersistentSettingsField] public static int MAX_NUM_BULLET_DECALS = 200;
         [BDAPersistentSettingsField] public static int TERRAIN_ALERT_FREQUENCY = 1;                    // Controls how often terrain avoidance checks are made (gets scaled by 1+(radarAltitude/500)^2)
@@ -128,7 +129,8 @@ namespace BDArmory.Settings
         [BDAPersistentSettingsField] public static float FIRE_RATE_OVERRIDE_SPREAD = 5f;
         [BDAPersistentSettingsField] public static float FIRE_RATE_OVERRIDE_BIAS = 0.16f;
         [BDAPersistentSettingsField] public static float FIRE_RATE_OVERRIDE_HIT_MULTIPLIER = 2f;
-        [BDAPersistentSettingsField] public static float MAX_PWING_HP = 2500f;
+        [BDAPersistentSettingsField] public static float HP_THRESHOLD = 2000f;                  //HP above this value will be scaled to a logarithmic value
+        [BDAPersistentSettingsField] public static bool PWING_EDGE_LIFT = true;                  //Toggle lift on PWing edges for balance with stock wings/remove edge abuse
         // Physics constants
         [BDAPersistentSettingsField] public static float GLOBAL_LIFT_MULTIPLIER = 0.25f;
         [BDAPersistentSettingsField] public static float GLOBAL_DRAG_MULTIPLIER = 6f;
@@ -141,6 +143,7 @@ namespace BDArmory.Settings
         [BDAPersistentSettingsField] public static float EXP_DMG_MOD_ROCKET = 1f;               // Rocket explosion damage multiplier (FIXME needs tuning; Note: rockets used Ballistic mod before, but probably ought to be more like missiles)
         [BDAPersistentSettingsField] public static float EXP_DMG_MOD_BATTLE_DAMAGE = 1f;        // Battle damage explosion damage multiplier (FIXME needs tuning; Note: CASE-0 explosions used Missile mod, while CASE-1, CASE-2 and fuel explosions used Ballistic mod)
         [BDAPersistentSettingsField] public static float EXP_IMP_MOD = 0.25f;
+        [BDAPersistentSettingsField] public static float BUILDING_DMG_MULTIPLIER = 1f;
         [BDAPersistentSettingsField] public static bool EXTRA_DAMAGE_SLIDERS = false;
         [BDAPersistentSettingsField] public static float WEAPON_FX_DURATION = 15;               //how long do weapon secondary effects(EMP/choker/gravitic/etc) last
         [BDAPersistentSettingsField] public static float ZOMBIE_DMG_MULT = 0.1f;
@@ -342,5 +345,6 @@ namespace BDArmory.Settings
         // Countermeasure constants
         [BDAPersistentSettingsField] public static float FLARE_FACTOR = 1.6f;                       // Change this to make flares more or less effective, values close to or below 1.0 will cause flares to fail to decoy often
         [BDAPersistentSettingsField] public static float CHAFF_FACTOR = 0.65f;                       // Change this to make chaff more or less effective. Higher values will make chaff batter, lower values will make chaff worse.
+        [BDAPersistentSettingsField] public static int APS_THRESHOLD = 60;                           // Threshold caliber that APS will register for intercepting hostile shells/rockets
     }
 }

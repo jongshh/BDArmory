@@ -205,7 +205,7 @@ namespace BDArmory.Competition.VesselSpawning
 
                     // Start the competition once we have enough craft.
                     if (currentlyActive > 1 && !(BDACompetitionMode.Instance.competitionIsActive || BDACompetitionMode.Instance.competitionStarting))
-                    { BDACompetitionMode.Instance.StartCompetitionMode(BDArmorySettings.COMPETITION_DISTANCE); }
+                    { BDACompetitionMode.Instance.StartCompetitionMode(BDArmorySettings.COMPETITION_DISTANCE, BDArmorySettings.COMPETITION_START_DESPITE_FAILURES); }
                 }
 
                 // Kill off vessels that are out of ammo for too long if we're in continuous spawning mode and a competition is active.

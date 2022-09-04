@@ -525,7 +525,7 @@ namespace BDArmory.Evolution
                 }
                 yield return wait;
 
-                BDACompetitionMode.Instance.StartCompetitionMode(BDArmorySettings.COMPETITION_DISTANCE);
+                BDACompetitionMode.Instance.StartCompetitionMode(BDArmorySettings.COMPETITION_DISTANCE, BDArmorySettings.COMPETITION_START_DESPITE_FAILURES);
                 yield return new WaitForSeconds(5); // wait 5sec for stability
 
                 while (BDACompetitionMode.Instance.competitionStarting || BDACompetitionMode.Instance.competitionIsActive)

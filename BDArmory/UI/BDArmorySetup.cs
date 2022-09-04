@@ -360,7 +360,7 @@ namespace BDArmory.UI
 
         public static bool GameIsPaused
         {
-            get { return PauseMenu.isOpen || Time.timeScale == 0; }
+            get { return HighLogic.LoadedSceneIsFlight && (PauseMenu.isOpen || Time.timeScale == 0); }
         }
 
         void Awake()
@@ -404,7 +404,7 @@ namespace BDArmory.UI
 
             // Check for Apple Processor
             AppleSilicon = CultureInfo.InvariantCulture.CompareInfo.IndexOf(SystemInfo.processorType, "Apple", CompareOptions.IgnoreCase) >= 0;
-            
+
             // Ensure AutoSpawn folder exists.
             if (!Directory.Exists(Path.Combine(KSPUtil.ApplicationRootPath, "AutoSpawn")))
             { Directory.CreateDirectory(Path.Combine(KSPUtil.ApplicationRootPath, "AutoSpawn")); }
@@ -2467,14 +2467,15 @@ namespace BDArmory.UI
                         {
                             BDArmorySettings.DEBUG_AI = false;
                             BDArmorySettings.DEBUG_ARMOR = false;
+                            BDArmorySettings.DEBUG_COMPETITION = false;
                             BDArmorySettings.DEBUG_DAMAGE = false;
-                            BDArmorySettings.DEBUG_OTHER = false;
                             BDArmorySettings.DEBUG_LINES = false;
                             BDArmorySettings.DEBUG_MISSILES = false;
+                            BDArmorySettings.DEBUG_OTHER = false;
                             BDArmorySettings.DEBUG_RADAR = false;
+                            BDArmorySettings.DEBUG_SPAWNING = false;
                             BDArmorySettings.DEBUG_TELEMETRY = false;
                             BDArmorySettings.DEBUG_WEAPONS = false;
-                            BDArmorySettings.DEBUG_SPAWNING = false;
                         }
                     }
                     if (BDArmorySettings.DEBUG_SETTINGS_TOGGLE)
@@ -2649,7 +2650,7 @@ namespace BDArmory.UI
                         }
                         GUI.Label(SLeftSliderRect(++line), $"{Localizer.Format("#LOC_BDArmory_Settings_KerbalSafetyInventory")}:  ({inventory})", leftLabel); // Kerbal Safety inventory
                         if (BDArmorySettings.KERBAL_SAFETY_INVENTORY != (BDArmorySettings.KERBAL_SAFETY_INVENTORY = Mathf.RoundToInt(GUI.HorizontalSlider(SRightSliderRect(line), BDArmorySettings.KERBAL_SAFETY_INVENTORY, 0f, 2f))))
-                        { KerbalSafetyManager.Instance.ReconfigureInventories(); }
+                        { if (KerbalSafetyManager.Instance is not null) KerbalSafetyManager.Instance.ReconfigureInventories(); }
                     }
                 }
                 if (BDArmorySettings.HACK_INTAKES != (BDArmorySettings.HACK_INTAKES = GUI.Toggle(SLeftRect(++line), BDArmorySettings.HACK_INTAKES, Localizer.Format("#LOC_BDArmory_Settings_IntakeHack"))))// Hack Intakes
@@ -2678,6 +2679,10 @@ namespace BDArmory.UI
 
                 if (BDArmorySettings.ADVANDED_USER_SETTINGS)
                 {
+                    if (BDArmorySettings.PWING_EDGE_LIFT != (BDArmorySettings.PWING_EDGE_LIFT = GUI.Toggle(SRightRect(line), BDArmorySettings.PWING_EDGE_LIFT, Localizer.Format("#LOC_BDArmory_Settings_PWingsHack")))) //Toggle Pwing Edge Lift
+                    {
+                        if (HighLogic.LoadedSceneIsEditor && EditorLogic.fetch.ship is not null) GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
+                    }
                     BDArmorySettings.DEFAULT_FFA_TARGETING = GUI.Toggle(SLeftRect(++line), BDArmorySettings.DEFAULT_FFA_TARGETING, Localizer.Format("#LOC_BDArmory_Settings_DefaultFFATargeting"));// Free-for-all combat style
                     BDArmorySettings.DISABLE_RAMMING = GUI.Toggle(SRightRect(line), BDArmorySettings.DISABLE_RAMMING, Localizer.Format("#LOC_BDArmory_Settings_DisableRamming"));// Disable Ramming
                     BDArmorySettings.AUTONOMOUS_COMBAT_SEATS = GUI.Toggle(SLeftRect(++line), BDArmorySettings.AUTONOMOUS_COMBAT_SEATS, Localizer.Format("#LOC_BDArmory_Settings_AutonomousCombatSeats"));
@@ -2756,6 +2761,9 @@ namespace BDArmory.UI
                         GUI.Label(SLeftSliderRect(++line), $"{Localizer.Format("#LOC_BDArmory_Settings_ExplosiveBattleDamageMultiplier")}:  ({BDArmorySettings.EXP_DMG_MOD_BATTLE_DAMAGE})", leftLabel);
                         BDArmorySettings.EXP_DMG_MOD_BATTLE_DAMAGE = Mathf.Round((GUI.HorizontalSlider(SRightSliderRect(line), BDArmorySettings.EXP_DMG_MOD_BATTLE_DAMAGE * 10f, 0f, 20f))) / 10f;
 
+                        GUI.Label(SLeftSliderRect(++line), $"{Localizer.Format("#LOC_BDArmory_Settings_BuildingDamageMultiplier")}:  ({BDArmorySettings.BUILDING_DMG_MULTIPLIER})", leftLabel);
+                        BDArmorySettings.BUILDING_DMG_MULTIPLIER = BDAMath.RoundToUnit((GUI.HorizontalSlider(SRightSliderRect(line), BDArmorySettings.BUILDING_DMG_MULTIPLIER, 0f, 10f)), 0.1f);
+
                         GUI.Label(SLeftSliderRect(++line), $"{Localizer.Format("#LOC_BDArmory_Settings_SecondaryEffectDuration")}:  ({BDArmorySettings.WEAPON_FX_DURATION})", leftLabel);
                         BDArmorySettings.WEAPON_FX_DURATION = Mathf.Round(GUI.HorizontalSlider(SRightSliderRect(line), BDArmorySettings.WEAPON_FX_DURATION, 5f, 20f));
 
@@ -2784,9 +2792,11 @@ namespace BDArmory.UI
                     GUI.Label(SLeftSliderRect(++line), $"{Localizer.Format("#LOC_BDArmory_Settings_DeathCameraInhibitPeriod")}:  ({(BDArmorySettings.DEATH_CAMERA_SWITCH_INHIBIT_PERIOD == 0 ? BDArmorySettings.CAMERA_SWITCH_FREQUENCY / 2f : BDArmorySettings.DEATH_CAMERA_SWITCH_INHIBIT_PERIOD)}s)", leftLabel); // Camera switch inhibit period after the active vessel dies.
                     BDArmorySettings.DEATH_CAMERA_SWITCH_INHIBIT_PERIOD = Mathf.RoundToInt(GUI.HorizontalSlider(SRightSliderRect(line), BDArmorySettings.DEATH_CAMERA_SWITCH_INHIBIT_PERIOD, 0f, 10f));
                 }
-                GUI.Label(SLeftSliderRect(++line), $"{Localizer.Format("#LOC_BDArmory_Settings_Max_PWing_HP")}:  {(BDArmorySettings.MAX_PWING_HP >= 100 ? (BDArmorySettings.MAX_PWING_HP.ToString()) : "Unclamped")}", leftLabel); // Max PWing HP
-                BDArmorySettings.MAX_PWING_HP = GUI.HorizontalSlider(SRightSliderRect(line), BDArmorySettings.MAX_PWING_HP, 0, 10000);
-                BDArmorySettings.MAX_PWING_HP = Mathf.Round(BDArmorySettings.MAX_PWING_HP / 100) * 100;
+                GUI.Label(SLeftSliderRect(++line), $"{Localizer.Format("#LOC_BDArmory_Settings_Max_PWing_HP")}:  {(BDArmorySettings.HP_THRESHOLD >= 100 ? (BDArmorySettings.HP_THRESHOLD.ToString()) : "Unclamped")}", leftLabel); // HP Scaling Threshold
+                if (BDArmorySettings.HP_THRESHOLD != (BDArmorySettings.HP_THRESHOLD = BDAMath.RoundToUnit(GUI.HorizontalSlider(SRightSliderRect(line), BDArmorySettings.HP_THRESHOLD, 0, 10000), 100)))
+                {
+                    if (EditorLogic.fetch is not null && EditorLogic.fetch.ship is not null) GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
+                }
 
                 line += 0.5f;
             }
@@ -2995,8 +3005,8 @@ namespace BDArmory.UI
                     BDArmorySettings.SF_FRICTION = false;
                     BDArmorySettings.SF_GRAVITY = false;
                     BDArmorySettings.SF_REPULSOR = false;
-                }            
-                
+                }
+
                 // Asteroids
                 if (BDArmorySettings.ASTEROID_FIELD != (BDArmorySettings.ASTEROID_FIELD = GUI.Toggle(SLeftRect(++line), BDArmorySettings.ASTEROID_FIELD, Localizer.Format("#LOC_BDArmory_Settings_AsteroidField")))) // Asteroid Field
                 {
@@ -3355,6 +3365,8 @@ namespace BDArmory.UI
 
                 BDArmorySettings.COMPETITION_CLOSE_SETTINGS_ON_COMPETITION_START = GUI.Toggle(SLineRect(++line), BDArmorySettings.COMPETITION_CLOSE_SETTINGS_ON_COMPETITION_START, Localizer.Format("#LOC_BDArmory_Settings_CompetitionCloseSettingsOnCompetitionStart"));
 
+                BDArmorySettings.COMPETITION_START_DESPITE_FAILURES = GUI.Toggle(SLineRect(++line), BDArmorySettings.COMPETITION_START_DESPITE_FAILURES, Localizer.Format("#LOC_BDArmory_Settings_CompetitionStartDespiteFailures"));
+
                 if (BDArmorySettings.ADVANDED_USER_SETTINGS)
                 {
                     GUI.Label(SLeftSliderRect(++line), $"{Localizer.Format("#LOC_BDArmory_Settings_DebrisCleanUpDelay")}:  ({BDArmorySettings.DEBRIS_CLEANUP_DELAY}s)", leftLabel); // Debris Clean-up delay
@@ -3543,12 +3555,12 @@ namespace BDArmory.UI
                                         BDACompetitionMode.Instance.StartRapidDeployment(0);
                                         break;
                                     default:
-                                        BDACompetitionMode.Instance.StartCompetitionMode(BDArmorySettings.COMPETITION_DISTANCE);
+                                        BDACompetitionMode.Instance.StartCompetitionMode(BDArmorySettings.COMPETITION_DISTANCE, BDArmorySettings.COMPETITION_START_DESPITE_FAILURES);
                                         break;
                                 }
                             }
                             else
-                                BDACompetitionMode.Instance.StartCompetitionMode(BDArmorySettings.COMPETITION_DISTANCE);
+                                BDACompetitionMode.Instance.StartCompetitionMode(BDArmorySettings.COMPETITION_DISTANCE, BDArmorySettings.COMPETITION_START_DESPITE_FAILURES);
                             if (BDArmorySettings.COMPETITION_CLOSE_SETTINGS_ON_COMPETITION_START) CloseSettingsWindow();
                         }
                     }

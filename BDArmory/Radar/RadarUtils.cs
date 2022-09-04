@@ -232,7 +232,7 @@ namespace BDArmory.Radar
                 //4) lockbreaking strength relative to jammer's lockbreak strength in relation to vessel rcs signature:
                 // lockbreak_factor = baseSig/modifiedSig x (1 � lopckBreakStrength/baseSig/100)
                 // Use clamp to prevent RCS reduction resulting in increased lockbreak factor, which negates value of RCS reduction)
-                ti.radarLockbreakFactor = (ti.radarRCSReducedSignature == 0) ? 0f : 
+                ti.radarLockbreakFactor = (ti.radarRCSReducedSignature == 0) ? 0f :
                     Mathf.Max(Mathf.Clamp01(ti.radarRCSReducedSignature / ti.radarModifiedSignature) * (1 - (vesseljammer.lockBreakStrength / ti.radarRCSReducedSignature / 100)), 0); // 0 is minimum lockbreak factor
 
             }
@@ -832,7 +832,7 @@ namespace BDArmory.Radar
             using (var loadedvessels = BDATargetManager.LoadedVessels.GetEnumerator())
                 while (loadedvessels.MoveNext())
                 {
-                    
+
                     // ignore null, unloaded, self, teammates, the target and vessels without ECM
                     if (loadedvessels.Current == null || !loadedvessels.Current.loaded) continue;
                     if ((loadedvessels.Current == v) || (loadedvessels.Current == targetV)) continue;
@@ -855,7 +855,7 @@ namespace BDArmory.Radar
                         float sojLBS = Mathf.Clamp01(angleModifier * angleModifier * angleModifier);
 
                         // Modify lockbreak strength by relative sqr distance
-                        sojLBS *= Mathf.Clamp(1-Mathf.Log10(relPositionJammer.sqrMagnitude / relPositionTarget.sqrMagnitude), 0f, 3f);
+                        sojLBS *= Mathf.Clamp(1 - Mathf.Log10(relPositionJammer.sqrMagnitude / relPositionTarget.sqrMagnitude), 0f, 3f);
 
                         // Add up all stand up jammer lockbreaks
                         standOffJammingMod += sojLBS * standOffJammer.lockBreakStrength;
@@ -1209,7 +1209,7 @@ namespace BDArmory.Radar
                 float signature = ti.radarModifiedSignature;
                 signature *= GetRadarGroundClutterModifier(radar.radarGroundClutterFactor, radar.referenceTransform, ray.origin, lockedVessel.CoM, ti);
                 signature *= ti.radarLockbreakFactor;    //multiply lockbreak factor from active ecm
-                signature *= GetStandoffJammingModifier(radar.vessel, radar.weaponManager.Team, ray.origin, lockedVessel, signature);
+                if (radar.weaponManager is not null) signature *= GetStandoffJammingModifier(radar.vessel, radar.weaponManager.Team, ray.origin, lockedVessel, signature);
                 //do not multiply chaff factor here
 
                 // evaluate range
@@ -1288,7 +1288,7 @@ namespace BDArmory.Radar
                         //signature *= (1400 * 1400) / Mathf.Clamp((loadedvessels.Current.CoM - referenceTransform.position).sqrMagnitude, 90000, 36000000); //300 to 6000m - clamping sig past 6km; Commenting out as it makes tuning detection curves much easier
 
                         signature *= Mathf.Clamp(Vector3.Angle(loadedvessels.Current.transform.position - referenceTransform.position, -VectorUtils.GetUpDirection(referenceTransform.position)) / 90, 0.5f, 1.5f);
-                         //ground will mask thermal sig                        
+                        //ground will mask thermal sig                        
                         signature *= (GetRadarGroundClutterModifier(irst.GroundClutterFactor, irst.referenceTransform, position, loadedvessels.Current.CoM, tInfo) * (tInfo.isSplashed ? 12 : 1));
                         //cold ocean on the other hand...
 

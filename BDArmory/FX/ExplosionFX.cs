@@ -45,7 +45,7 @@ namespace BDArmory.FX
         private bool disabled = true;
 
         float blastRange;
-        const int explosionLayerMask = (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.EVA | LayerMasks.Unknown19 | LayerMasks.Unknown23| LayerMasks.Wheels); // Why 19 and 23?
+        const int explosionLayerMask = (int)(LayerMasks.Parts | LayerMasks.Scenery | LayerMasks.EVA | LayerMasks.Unknown19 | LayerMasks.Unknown23 | LayerMasks.Wheels); // Why 19 and 23?
 
         Queue<BlastHitEvent> explosionEvents = new Queue<BlastHitEvent>();
         List<BlastHitEvent> explosionEventsPreProcessing = new List<BlastHitEvent>();
@@ -105,6 +105,8 @@ namespace BDArmory.FX
 
             LightFx = gameObject.GetComponent<Light>();
             LightFx.range = Range * 3f;
+            LightFx.intensity = 8f; // Reset light intensity.
+
             audioSource = gameObject.GetComponent<AudioSource>();
             if (ExSound == null)
             {
@@ -271,7 +273,6 @@ namespace BDArmory.FX
                     if (hitCollidersEnu.Current == null) continue;
 
                     Part partHit = hitCollidersEnu.Current.GetComponentInParent<Part>();
-                    if (partHit == null) continue;
 
                     if (partHit != null)
                     {
@@ -484,7 +485,7 @@ namespace BDArmory.FX
                         }
                         if (FlightGlobals.currentMainBody != null && hit.collider.gameObject == FlightGlobals.currentMainBody.gameObject) return false; // Terrain hit. Full absorption. Should avoid NREs in the following.
                         var partHP = partHit.Damage();
-						if (ProjectileUtils.IsArmorPart(partHit)) partHP = 100;
+                        if (ProjectileUtils.IsArmorPart(partHit)) partHP = 100;
                         var partArmour = partHit.GetArmorThickness();
                         var RA = partHit.FindModuleImplementing<ModuleReactiveArmor>();
                         if (RA != null)
@@ -512,7 +513,7 @@ namespace BDArmory.FX
             return false;
         }
 
-        public void Update()
+        void Update()
         {
             if (!gameObject.activeInHierarchy) return;
 
@@ -546,6 +547,7 @@ namespace BDArmory.FX
             if (!FloatingOrigin.Offset.IsZero() || !Krakensbane.GetFrameVelocity().IsZero())
             {
                 transform.position -= FloatingOrigin.OffsetNonKrakensbane;
+                Position -= FloatingOrigin.OffsetNonKrakensbane;
             }
             if (!isFX)
             {
@@ -634,6 +636,7 @@ namespace BDArmory.FX
                 float damageToBuilding = (BDArmorySettings.DMG_MULTIPLIER / 100) * BDArmorySettings.EXP_DMG_MOD_BALLISTIC_NEW * Power * distanceFactor;
 
                 damageToBuilding *= 2f;
+                damageToBuilding *= BDArmorySettings.BUILDING_DMG_MULTIPLIER;
 
                 building.AddDamage(damageToBuilding);
 
@@ -645,7 +648,8 @@ namespace BDArmory.FX
                 {
                     Debug.Log("[BDArmory.ExplosionFX]: Explosion hit destructible building! Hitpoints Applied: " + Mathf.Round(damageToBuilding) +
                              ", Building Damage : " + Mathf.Round(building.Damage) +
-                             " Building Threshold : " + building.impactMomentumThreshold);
+                             " Building Threshold : " + building.impactMomentumThreshold +
+                             $", (Range: {Range}, Distance: {eventToExecute.Distance}, Factor: {distanceFactor}, Power: {Power})");
                 }
             }
         }
@@ -803,7 +807,7 @@ namespace BDArmory.FX
                         }
                         else
                         {
-                            if ((part == hitpart && ProjectileUtils.IsArmorPart(part)) || !ProjectileUtils.CalculateExplosiveArmorDamage(part, blastInfo.TotalPressure, SourceVesselName, eventToExecute.Hit, ExplosionSource, Range-realDistance)) //false = armor blowthrough or bullet detonating inside part
+                            if ((part == hitpart && ProjectileUtils.IsArmorPart(part)) || !ProjectileUtils.CalculateExplosiveArmorDamage(part, blastInfo.TotalPressure, SourceVesselName, eventToExecute.Hit, ExplosionSource, Range - realDistance)) //false = armor blowthrough or bullet detonating inside part
                             {
                                 if (RA != null && !RA.NXRA) //blast wave triggers RA; detonate all remaining RA sections
                                 {
@@ -817,7 +821,7 @@ namespace BDArmory.FX
                                     damage = part.AddExplosiveDamage(blastInfo.Damage, Caliber, ExplosionSource, dmgMult);
                                     if (part == hitpart && ProjectileUtils.IsArmorPart(part)) //deal armor damage to armor panel, since we didn't do that earlier
                                     {
-                                        ProjectileUtils.CalculateExplosiveArmorDamage(part, blastInfo.TotalPressure, SourceVesselName, eventToExecute.Hit, ExplosionSource, Range - realDistance); 
+                                        ProjectileUtils.CalculateExplosiveArmorDamage(part, blastInfo.TotalPressure, SourceVesselName, eventToExecute.Hit, ExplosionSource, Range - realDistance);
                                     }
                                     penetrationFactor = damage / 10; //closer to the explosion/greater magnitude of the explosion at point blank, the greater the blowthrough
                                     if (float.IsNaN(damage)) Debug.LogError("DEBUG NaN damage!");
@@ -951,7 +955,7 @@ namespace BDArmory.FX
                 case "shapedcharge":
                     eFx.warheadType = WarheadTypes.ShapedCharge;
                     eFx.AngleOfEffect = 10f;
-                    eFx.Caliber = caliber > 0 ? caliber *  0.05f : 6f;
+                    eFx.Caliber = caliber > 0 ? caliber * 0.05f : 6f;
                     break;
                 default:
                     eFx.warheadType = WarheadTypes.Standard;

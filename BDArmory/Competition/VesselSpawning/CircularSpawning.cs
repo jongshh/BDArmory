@@ -328,7 +328,7 @@ namespace BDArmory.Competition.VesselSpawning
                 yield return waitForFixedUpdate;
 
                 // NOTE: runs in separate coroutine
-                BDACompetitionMode.Instance.StartCompetitionMode(BDArmorySettings.COMPETITION_DISTANCE);
+                BDACompetitionMode.Instance.StartCompetitionMode(BDArmorySettings.COMPETITION_DISTANCE, BDArmorySettings.COMPETITION_START_DESPITE_FAILURES);
                 yield return waitForFixedUpdate; // Give the competition start a frame to get going.
 
                 // start timer coroutine for the duration specified in settings UI
@@ -411,7 +411,7 @@ namespace BDArmory.Competition.VesselSpawning
                         LogMessage("Competition starting in T-" + timeLeft.ToString("0") + "s", true, false);
                     yield return waitForFixedUpdate;
                 }
-                BDACompetitionMode.Instance.StartCompetitionMode(BDArmorySettings.COMPETITION_DISTANCE);
+                BDACompetitionMode.Instance.StartCompetitionMode(BDArmorySettings.COMPETITION_DISTANCE, BDArmorySettings.COMPETITION_START_DESPITE_FAILURES);
                 if (startCompetitionNow)
                 {
                     yield return waitForFixedUpdate;

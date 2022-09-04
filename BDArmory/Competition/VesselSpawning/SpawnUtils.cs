@@ -1,11 +1,11 @@
 using UnityEngine;
 using System;
-using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
 using BDArmory.Control;
+using BDArmory.Extensions;
 using BDArmory.GameModes;
 using BDArmory.Modules;
 using BDArmory.Settings;
@@ -60,7 +60,7 @@ namespace BDArmory.Competition.VesselSpawning
                 while (part.MoveNext())
                 {
                     if (part.Current == null) continue;
-                    if (ignoreEVA && part.Current.isKerbalEVA()) continue; // Ignore EVA kerbals, which get added at some point after spawning.
+                    if (ignoreEVA && part.Current.IsKerbalEVA()) continue; // Ignore EVA kerbals, which get added at some point after spawning.
                     ++count;
                 }
             return count;
@@ -177,12 +177,13 @@ namespace BDArmory.Competition.VesselSpawning
             if (AI != null || WM != null)
             {
                 int count = 0;
-                if (AI != null && (AI.part.parent == null || AI.part.vessel.rootPart != AI.part.parent))
+
+                if (AI != null && !(AI.part == AI.part.vessel.rootPart || AI.part.parent == AI.part.vessel.rootPart))
                 {
                     message += (WM == null ? " and its AI" : "'s AI");
                     ++count;
                 }
-                if (WM != null && (WM.part.parent == null || WM.part.vessel.rootPart != WM.part.parent))
+                if (WM != null && !(WM.part == WM.part.vessel.rootPart || WM.part.parent == WM.part.vessel.rootPart))
                 {
                     message += (AI == null ? " and its WM" : (count > 0 ? " and WM" : "'s WM"));
                     ++count;
@@ -269,7 +270,10 @@ namespace BDArmory.Competition.VesselSpawning
                     if (KerbalSafetyManager.Instance.safetyLevel != KerbalSafetyLevel.Off)
                         KerbalSafetyManager.Instance.RecoverVesselNow(vessel);
                     else
+                    {
+                        foreach (var part in vessel.Parts) part.OnJustAboutToBeDestroyed?.Invoke(); // Invoke any OnJustAboutToBeDestroyed events since RecoverVesselFromFlight calls DestroyImmediate, skipping the FX detachment triggers.
                         ShipConstruction.RecoverVesselFromFlight(vessel.protoVessel, HighLogic.CurrentGame.flightState, true);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -282,8 +286,8 @@ namespace BDArmory.Competition.VesselSpawning
                 {
                     if (BDArmorySettings.ASTEROID_RAIN && AsteroidRain.IsManagedAsteroid(vessel)) yield break; // Don't remove asteroids when we're using them.
                     if (BDArmorySettings.ASTEROID_FIELD && AsteroidField.IsManagedAsteroid(vessel)) yield break; // Don't remove asteroids when we're using them.
-                    var cometVessel = vessel.FindVesselModuleImplementing<CometVessel>();
-                    if (cometVessel) { Destroy(cometVessel); }
+                    if ((Versioning.version_major == 1 && Versioning.version_minor > 10) || Versioning.version_major > 1) // Comets introduced in 1.11
+                        RemoveComet_1_11(vessel);
                 }
                 vessel.Die(); // Kill the vessel
                 yield return waitForFixedUpdate;
@@ -296,6 +300,12 @@ namespace BDArmory.Competition.VesselSpawning
                 yield return waitForFixedUpdate;
             }
             --removeVesselsPending;
+        }
+
+        void RemoveComet_1_11(Vessel vessel)
+        {
+            var cometVessel = vessel.FindVesselModuleImplementing<CometVessel>();
+            if (cometVessel) { Destroy(cometVessel); }
         }
 
         /// <summary>

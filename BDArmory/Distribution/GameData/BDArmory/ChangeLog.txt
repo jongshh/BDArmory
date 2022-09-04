@@ -1,4 +1,10 @@
-﻿IMPROVEMENTS / FIXES
+﻿v1.5.2.1
+IMPROVEMENTS / FIXES
+- Fix a variety of exceptions in pre-1.11.1 KSP due to missing API functions.
+- Allow deploying to multiple KSP instances when compiling in Linux (add the extra KSP locations as lines in the ksp_dir.txt file).
+
+v1.5.2.0
+IMPROVEMENTS / FIXES
 - General:
 	- Fix packaging issue in recent releases that contain incorrect capitalisation of certain files and folders.
 	- Adjust capitalization of "sounds" folders for parts to be consistent.
@@ -6,16 +12,30 @@
 	- Make wheels susceptible to bullets and explosions too.
 	- Fix off-centered arrow on inline radome texture  Git Issue #409
 	- Re-fix lead issue on Apple Silicon.
+	- Adds optional adjustable Logarithmic HP clamp, replacing the Proc Part Max HP slider.
+	- Adds optional toggle to disable lift from colliderless PWing edges for better balance with stock wings/prevent pwing abuse.
+	- Apply the gapless particle emitter option to 'DecalGaplessParticleEmitter's too.
+	- Add Attachnode to the Ordinance bay to fix issues with Breaking Ground Robotics.
+	- Adds debugging messages to assist with making custom weapons.
+	- Adds MM patch to add liftless Proc Structural Panel if B9 Pwings installed.
+	- Reduce frequency (hopefully to none) of null FX object pool entries by catching unloading events too and triggering OnJustAboutToBeDestroyed before recovering vessels.
+	- Allow use of the combat seat as the root part.
 - UI:
 	- Fix exception when resetting colours in Team Icons.
 	- Prevent the kill timer from showing in the Loaded Vessel Switcher window for surface vessels.
 	- Updated German localization by EzBro.
+	- Adds Accuracy readout to the Weapon Debugging telemetry.
+	- Setting the Armor Type to 'None' now disables the armor thickness slider; fixes PAW issue in KSP 1.9.1 installs.
 - Competition:
 	- Fix exception in auto-resuming tournaments when SpawnProbe.craft isn't found.
 	- Fix incorrect Kill Steal attribution from 1v1 fights.
+	- Abort competition if a team leader still isn't ready to engage (airborne for pilot AI) by the time the start-competition-now timer runs out.
+	- Fixes AI/WM not attached to Root Part warning messages on competition start when using combat seats as the root part in RWP.
+	- Add option to start competitions despite failures occuring. For tournaments, this only applies after the third attempt fails.
 - Spawning:
 	- Wait until after vessels are unpacked before reverting the spawn camera - fixes an exception with EVA kerbals and KSPCF.
 	- Fix freezing when vessel removal throws an exception.
+	- Account for wheels protruding into the ground during instant lowering of vessels.
 - GameModes:
 	- Space Combat Tools:
 		- Better implement SpaceFriction initialization at round start.
@@ -44,7 +64,7 @@
 	- Radar missile position distortion due to chaff now relies on the ratio of ECM jammer strength to craft signature with RCS reduction to bias the position distortion from chaff to further behind the craft. Net effect is craft with jammers, and especially low RCS craft with jammers, will have an easier time evading radar missiles.
 	- Lockbreak from jammers now affects RCS with RCS reduction instead of base RCS. Craft can now mix RCS reduction parts and jammers to break locks without worrying about them conflicting.
 	- Incorporate stand-off jamming effects. Friendly craft with jammers now result in your craft being harder to detect and lock. Strength of this effect is determined by the lockBreakerStrength of the friendly jammers, relative distance of friendly jammers (friendly jammers closer to enemy will have a stronger effect), and if the jammers are close in field of view for the enemy (friendly jammers in same field of view will have a stronger effect). Debug readout is available by enabling the Detectors debug option.
-	-  AI no longer will turn off jammers automatically if they were manually enabled prior to being turned on by the AI
+	- AI no longer will turn off jammers automatically if they were manually enabled prior to being turned on by the AI.
 - Weapons:
 	- Fix FXLookAtConstraint modules on various turrets.
 	- Fix incorrect charge sound path for lasers.
@@ -63,6 +83,10 @@
 	- Penetrating rounds now register damage to all parts they hit, not just first.
 	- Fix 'Weapon requires EC' message spam if active vessel is not the one with the weapon in question.
 	- Weapons using ECPerShot now only drain ElectricCharge if the vessel has sufficient EC to fire the weapon.
+	- Use the explosion models and sounds given in MissileLauncher if none are specified in BDAExplosivePart.
+	- Adds Active Protection System implementation.
+		- Adds new fields: 'isAPS = T/F', 'APSType = [ballistic, missile,omni]'.
+		- Adds new Settings.cfg field 'APS_THRESHOLD = n' to set threshold bullet/rocket size for interception.
 - Armor:
 	- Adjusted post-penetration behavior of high velocity rounds, rounds now erode instead of slowing down at high velocities.
 		- Multi-plate armor schemes now behave more realistically and will require more careful material selection and configuration.

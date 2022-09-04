@@ -895,10 +895,12 @@
       echo packaging new build...
       7za  a -tzip -r  "$(ProjectDir)Distribution/${ModName}.@(VersionNumber)_`date -u -Iseconds`.zip" "$(ProjectDir)Distribution/*.*"
 
-      export KSP_DIR="`cat $(ProjectDir)../../_LocalDev/ksp_dir.txt`"
-      echo Deploy $(ProjectDir) Distribution files to test env:  "${KSP_DIR}/GameData"...
-      echo copying:"$(ProjectDir)Distribution/GameData" to "${KSP_DIR}/GameData" 
-      cp -a "$(ProjectDir)Distribution/GameData/${ModName}" "${KSP_DIR}/GameData"
+      <!-- Deploy to all KSP folders in ksp_dir.txt -->
+      bash -c 'cat $(ProjectDir)../../_LocalDev/ksp_dir.txt | while read KSP_DIR; do
+        echo Deploy $(ProjectDir) Distribution files to test env:  "${KSP_DIR}/GameData"...
+        echo copying:"$(ProjectDir)Distribution/GameData" to "${KSP_DIR}/GameData" 
+        cp -a "$(ProjectDir)Distribution/GameData/${ModName}" "${KSP_DIR}/GameData"
+      done'
 
       echo Build/deploy complete!
     </PostBuildEvent>

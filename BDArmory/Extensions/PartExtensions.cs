@@ -490,7 +490,12 @@ namespace BDArmory.Extensions
             }
             else return false;
         }
-
+        public static bool IsMotor(this Part part)
+        {
+            if (part.GetComponent<ModuleEngines>() != null || part.GetComponent<ModuleEnginesFX>() != null)
+                return true;
+            else return false;
+        }
         public static string GetExplodeMode(this Part part)
         {
             return Dependencies.Get<DamageService>().GetExplodeMode_svc(part);
@@ -650,6 +655,34 @@ namespace BDArmory.Extensions
         private static bool IsKerbalEVA_1_10(this Part part)
         {
             return part.FindModuleImplementing<KerbalEVA>() != null;
+        }
+
+        /// <summary>
+        /// KSP version dependent query of whether the part is a kerbal seat.
+        /// </summary>
+        /// <param name="part">Part to check.</param>
+        /// <returns>true if the part is a kerbal seat.</returns>
+        public static bool IsKerbalSeat(this Part part)
+        {
+            if (part == null) return false;
+            if ((Versioning.version_major == 1 && Versioning.version_minor > 10) || Versioning.version_major > 1) // Introduced in 1.11
+            {
+                return part.IsKerbalSeat_1_11();
+            }
+            else
+            {
+                return part.IsKerbalSeat_1_10();
+            }
+        }
+
+        private static bool IsKerbalSeat_1_11(this Part part) // KSP has issues on older versions if this call is in the parent function.
+        {
+            return part.isKerbalSeat();
+        }
+
+        private static bool IsKerbalSeat_1_10(this Part part)
+        {
+            return part.FindModuleImplementing<KerbalSeat>() != null;
         }
     }
 }

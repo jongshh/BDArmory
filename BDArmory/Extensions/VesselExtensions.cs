@@ -66,16 +66,32 @@ namespace BDArmory.Extensions
         }
 
         // Get a vessel's "radius".
-        public static float GetRadius(this Vessel vessel, bool average = false)
+        public static float GetRadius(this Vessel vessel, Vector3 fireTransform = default(Vector3), Vector3 bounds = default(Vector3))
         {
-            // Get vessel size.
-            Vector3 size = vessel.vesselSize;
+            
 
-            if (average) // Get the average of the dimensions.
-                return (size.x + size.y + size.z) / 6f;
+            if (fireTransform == Vector3.zero || bounds == Vector3.zero)
+            {
+                // Get vessel size.
+                Vector3 size = vessel.vesselSize;
 
-            // Get largest dimension.
-            return Mathf.Max(Mathf.Max(size.x, size.y), size.z) / 2f;
+                // Get largest dimension.
+                return Mathf.Max(Mathf.Max(size.x, size.y), size.z) / 2f;
+            }
+            else
+            {
+                return Vector3.ProjectOnPlane(vessel.vesselTransform.up * bounds.y + vessel.vesselTransform.right * bounds.x + vessel.vesselTransform.forward * bounds.z, fireTransform).magnitude / 2f;
+            }
+        }
+
+        // Get a vessel's bounds.
+        public static Vector3 GetBounds(this Vessel vessel)
+        {
+            var vesselRot = vessel.transform.rotation;
+            vessel.SetRotation(Quaternion.identity);
+            Vector3 size = ShipConstruction.CalculateCraftSize(vessel.Parts, vessel.rootPart); //x: Width, y: Length, z: Height
+            vessel.SetRotation(vesselRot);
+            return size;
         }
     }
 }

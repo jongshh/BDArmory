@@ -38,7 +38,7 @@ namespace BDArmory.Competition.OrchestrationStrategies
             service.ClearScores();
 
             service.status = StatusType.RunningHeat;
-            BDACompetitionMode.Instance.StartCompetitionMode(BDArmorySettings.COMPETITION_DISTANCE);
+            BDACompetitionMode.Instance.StartCompetitionMode(BDArmorySettings.COMPETITION_DISTANCE, BDArmorySettings.COMPETITION_START_DESPITE_FAILURES);
             yield return new WaitForFixedUpdate(); // Give the competition start a frame to get going.
 
             // start timer coroutine for the duration specified in settings UI

@@ -276,7 +276,7 @@ namespace BDArmory.Competition
             }
         }
 
-        public void StartCompetitionMode(float distance)
+        public void StartCompetitionMode(float distance, bool startDespiteFailures = false)
         {
             if (!competitionStarting)
             {
@@ -297,7 +297,7 @@ namespace BDArmory.Competition
                 if (BDArmorySettings.AUTO_ENABLE_VESSEL_SWITCHING)
                     LoadedVesselSwitcher.Instance.EnableAutoVesselSwitching(true);
                 competitionStartFailureReason = CompetitionStartFailureReason.None;
-                competitionRoutine = StartCoroutine(DogfightCompetitionModeRoutine(distance));
+                competitionRoutine = StartCoroutine(DogfightCompetitionModeRoutine(distance, startDespiteFailures));
                 if (BDArmorySettings.COMPETITION_START_NOW_AFTER < 11)
                 {
                     if (BDArmorySettings.COMPETITION_START_NOW_AFTER > 5)
@@ -395,7 +395,7 @@ namespace BDArmory.Competition
             if (SpawnUtils.originalTeams.Count == 0) SpawnUtils.SaveTeams(); // If the vessels weren't spawned in with Vessel Spawner, save the current teams.
         }
 
-        IEnumerator DogfightCompetitionModeRoutine(float distance)
+        IEnumerator DogfightCompetitionModeRoutine(float distance, bool startDespiteFailures = false)
         {
             competitionStarting = true;
             competitionType = CompetitionType.FFA;
@@ -512,7 +512,7 @@ namespace BDArmory.Competition
 
             if (pilots.Count < 2)
             {
-                Debug.Log("[BDArmory.BDACompetitionMode" + CompetitionID.ToString() + "]: Unable to start competition mode - one or more teams is empty");
+                Debug.LogWarning("[BDArmory.BDACompetitionMode" + CompetitionID.ToString() + "]: Unable to start competition mode - one or more teams is empty");
                 competitionStatus.Set("Competition: Failed!  One or more teams is empty.");
                 competitionStartFailureReason = CompetitionStartFailureReason.OnlyOneTeam;
                 StopCompetition();
@@ -520,21 +520,7 @@ namespace BDArmory.Competition
             }
 
             var leaders = new List<IBDAIControl>();
-            using (var pilotList = pilots.GetEnumerator())
-                while (pilotList.MoveNext())
-                {
-                    if (pilotList.Current.Value == null)
-                    {
-                        var message = "Teams got adjusted during competition start-up, aborting.";
-                        competitionStatus.Set("Competition: " + message);
-                        Debug.Log("[BDArmory.BDACompetitionMode]: " + message);
-                        competitionStartFailureReason = CompetitionStartFailureReason.OnlyOneTeam;
-                        StopCompetition();
-                        yield break;
-                    }
-                    leaders.Add(pilotList.Current.Value[0]);
-                }
-            var leaderNames = leaders.Select(l => l.vessel.vesselName).ToList();
+            var leaderNames = RefreshPilots(out pilots, out leaders, false);
             while (leaders.Any(leader => leader == null || leader.weaponManager == null || leader.weaponManager.wingCommander == null || leader.weaponManager.wingCommander.weaponManager == null))
             {
                 yield return new WaitForFixedUpdate();
@@ -542,12 +528,20 @@ namespace BDArmory.Competition
                 {
                     var survivingLeaders = leaders.Where(l => l != null && l.weaponManager != null).Select(l => l.vessel.vesselName).ToList();
                     var missingLeaders = leaderNames.Where(l => !survivingLeaders.Contains(l)).ToList();
-                    var message = "A team leader disappeared during competition start-up, aborting: " + string.Join(", ", missingLeaders);
-                    competitionStatus.Set("Competition: " + message);
-                    Debug.Log("[BDArmory.BDACompetitionMode]: 1. " + message);
-                    competitionStartFailureReason = CompetitionStartFailureReason.TeamLeaderDisappeared;
-                    StopCompetition();
-                    yield break;
+                    var message = "A team leader disappeared during competition start-up, " + (startDespiteFailures ? "continuing anyway" : "aborting") + ": " + string.Join(", ", missingLeaders);
+                    Debug.LogWarning("[BDArmory.BDACompetitionMode]: " + message);
+                    if (startDespiteFailures)
+                    {
+                        competitionStatus.Add("Competition: " + message);
+                        leaderNames = RefreshPilots(out pilots, out leaders, false);
+                    }
+                    else
+                    {
+                        competitionStatus.Set("Competition: " + message);
+                        competitionStartFailureReason = CompetitionStartFailureReason.TeamLeaderDisappeared;
+                        StopCompetition();
+                        yield break;
+                    }
                 }
             }
             foreach (var leader in leaders)
@@ -560,16 +554,42 @@ namespace BDArmory.Competition
                 {
                     var survivingLeaders = leaders.Where(l => l != null && l.weaponManager != null).Select(l => l.vessel.vesselName).ToList();
                     var missingLeaders = leaderNames.Where(l => !survivingLeaders.Contains(l)).ToList();
-                    var message = "A team leader disappeared during competition start-up, aborting: " + string.Join(", ", missingLeaders);
-                    competitionStatus.Set("Competition: " + message);
-                    Debug.Log("[BDArmory.BDACompetitionMode]: 2. " + message);
-                    competitionStartFailureReason = CompetitionStartFailureReason.TeamLeaderDisappeared;
-                    StopCompetition();
-                    yield break;
+                    var message = "A team leader disappeared during competition start-up, " + (startDespiteFailures ? "continuing anyway" : "aborting") + ": " + string.Join(", ", missingLeaders);
+                    Debug.LogWarning("[BDArmory.BDACompetitionMode]: " + message);
+                    if (startDespiteFailures)
+                    {
+                        competitionStatus.Add("Competition: " + message);
+                        leaderNames = RefreshPilots(out pilots, out leaders, true);
+                    }
+                    else
+                    {
+                        competitionStatus.Set("Competition: " + message);
+                        competitionStartFailureReason = CompetitionStartFailureReason.TeamLeaderDisappeared;
+                        StopCompetition();
+                        yield break;
+                    }
                 }
                 if (leaders.All(leader => leader.CanEngage()))
                 {
                     break;
+                }
+                if (startCompetitionNow)
+                {
+                    var readyLeaders = leaders.Where(leader => leader.CanEngage()).Select(leader => leader.vessel.vesselName).ToList();
+                    var message = "A team leader still isn't ready to engage and the start-now timer has run out: " + string.Join(", ", leaderNames.Where(leader => !readyLeaders.Contains(leader)));
+                    Debug.LogWarning("[BDArmory.BDACompetitionMode]: " + message);
+                    if (startDespiteFailures)
+                    {
+                        competitionStatus.Add("Competition: " + message);
+                        break;
+                    }
+                    else
+                    {
+                        competitionStatus.Set("Competition: " + message);
+                        competitionStartFailureReason = CompetitionStartFailureReason.Other;
+                        StopCompetition();
+                        yield break;
+                    }
                 }
                 yield return new WaitForSeconds(1);
             }
@@ -605,66 +625,84 @@ namespace BDArmory.Competition
             {
                 waiting = false;
 
-                if (leaders.Any(leader => leader == null || leader.weaponManager == null))
+                if (leaders.Any(leader => leader is null || leader.weaponManager is null))
                 {
                     var survivingLeaders = leaders.Where(l => l != null && l.weaponManager != null).Select(l => l.vessel.vesselName).ToList();
                     var missingLeaders = leaderNames.Where(l => !survivingLeaders.Contains(l)).ToList();
-                    var message = "A team leader disappeared during competition start-up, aborting: " + string.Join(", ", missingLeaders);
-                    competitionStatus.Set("Competition: " + message);
-                    Debug.Log("[BDArmory.BDACompetitionMode]: 3. " + message);
-                    competitionStartFailureReason = CompetitionStartFailureReason.TeamLeaderDisappeared;
-                    StopCompetition();
-                    yield break;
-                }
-
-                foreach (var leader in leaders)
-                {
-                    foreach (var otherLeader in leaders)
+                    var message = "A team leader disappeared during competition start-up, " + (startDespiteFailures ? "continuing anyway" : "aborting") + ": " + string.Join(", ", missingLeaders);
+                    Debug.LogWarning("[BDArmory.BDACompetitionMode]: " + message);
+                    if (startDespiteFailures)
                     {
-                        if (leader == otherLeader)
-                            continue;
-                        try // Somehow, if a vessel gets destroyed during competition start, the following can throw a null reference exception despite checking for nulls! This is due to the IBDAIControl.transform getter. How to fix this?
-                        {
-                            if ((leader.transform.position - otherLeader.transform.position).sqrMagnitude < sqrDistance)
-                                waiting = true;
-                        }
-                        catch (Exception e)
-                        {
-                            var message = "A team leader has disappeared during competition start-up, aborting.";
-                            Debug.LogWarning("[BDArmory.BDACompetitionMode]: Exception thrown in DogfightCompetitionModeRoutine: " + e.Message + "\n" + e.StackTrace);
-                            try
-                            {
-                                var survivingLeaders = leaders.Where(l => l != null && l.weaponManager != null).Select(l => l.vessel.vesselName).ToList();
-                                var missingLeaders = leaderNames.Where(l => !survivingLeaders.Contains(l)).ToList();
-                                message = "A team leader disappeared during competition start-up, aborting: " + string.Join(", ", missingLeaders);
-                            }
-                            catch (Exception e2) { Debug.LogWarning($"[BDArmory.BDACompetitionMode]: Exception gathering missing leader names:" + e2.Message); }
-                            competitionStatus.Set(message);
-                            Debug.Log("[BDArmory.BDACompetitionMode]: 4. " + message);
-                            competitionStartFailureReason = CompetitionStartFailureReason.TeamLeaderDisappeared;
-                            StopCompetition();
-                            yield break;
-                        }
+                        competitionStatus.Add("Competition: " + message);
+                        leaderNames = RefreshPilots(out pilots, out leaders, true);
                     }
-
-                    // Increase the distance for large teams
-                    if (!pilots.ContainsKey(leader.weaponManager.Team))
+                    else
                     {
-                        var message = "The teams were changed during competition start-up, aborting.";
                         competitionStatus.Set("Competition: " + message);
-                        Debug.Log("[BDArmory.BDACompetitionMode]: " + message);
-                        competitionStartFailureReason = CompetitionStartFailureReason.TeamsChanged;
+                        competitionStartFailureReason = CompetitionStartFailureReason.TeamLeaderDisappeared;
                         StopCompetition();
                         yield break;
                     }
-                    var teamDistance = 800f + 100f * pilots[leader.weaponManager.Team].Count;
-                    foreach (var pilot in pilots[leader.weaponManager.Team])
-                        if (pilot != null
-                                && pilot.currentCommand == PilotCommands.Follow
-                                && (pilot.vessel.CoM - pilot.commandLeader.vessel.CoM).sqrMagnitude > teamDistance * teamDistance)
-                            waiting = true;
+                }
 
-                    if (waiting) break;
+                try // Somehow, if a vessel gets destroyed during competition start, the following can throw a null reference exception despite checking for nulls! This is due to the IBDAIControl.transform getter.
+                {
+                    if (startDespiteFailures && pilots.Values.SelectMany(p => p).Any(p => p is null || p.weaponManager is null)) leaderNames = RefreshPilots(out pilots, out leaders, true);
+                    foreach (var leader in leaders)
+                    {
+                        foreach (var otherLeader in leaders)
+                        {
+                            if (leader == otherLeader)
+                                continue;
+                            if ((leader.transform.position - otherLeader.transform.position).sqrMagnitude < sqrDistance)
+                                waiting = true;
+                        }
+
+                        // Increase the distance for large teams
+                        if (!pilots.ContainsKey(leader.weaponManager.Team))
+                        {
+                            var message = "The teams were changed during competition start-up, aborting";
+                            competitionStatus.Set("Competition: " + message);
+                            Debug.LogWarning("[BDArmory.BDACompetitionMode]: " + message);
+                            competitionStartFailureReason = CompetitionStartFailureReason.TeamsChanged;
+                            StopCompetition();
+                            yield break;
+                        }
+                        var teamDistance = 800f + 100f * pilots[leader.weaponManager.Team].Count;
+                        foreach (var pilot in pilots[leader.weaponManager.Team])
+                            if (pilot != null
+                                    && pilot.currentCommand == PilotCommands.Follow
+                                    && (pilot.vessel.CoM - pilot.commandLeader.vessel.CoM).sqrMagnitude > teamDistance * teamDistance)
+                                waiting = true;
+
+                        if (waiting) break;
+                    }
+                }
+                catch (Exception e)
+                {
+                    var message = "A team leader has disappeared during competition start-up, " + (startDespiteFailures ? "continuing anyway" : "aborting");
+                    Debug.LogWarning("[BDArmory.BDACompetitionMode]: Exception thrown in DogfightCompetitionModeRoutine: " + e.Message + "\n" + e.StackTrace);
+                    try
+                    {
+                        var survivingLeaders = leaders.Where(l => l != null && l.weaponManager != null).Select(l => l.vessel.vesselName).ToList();
+                        var missingLeaders = leaderNames.Where(l => !survivingLeaders.Contains(l)).ToList();
+                        message = "A team leader disappeared during competition start-up, " + (startDespiteFailures ? "continuing anyway" : "aborting") + ": " + string.Join(", ", missingLeaders);
+                    }
+                    catch (Exception e2) { Debug.LogWarning($"[BDArmory.BDACompetitionMode]: Exception gathering missing leader names:" + e2.Message); }
+                    Debug.LogWarning("[BDArmory.BDACompetitionMode]: " + message);
+                    if (startDespiteFailures)
+                    {
+                        competitionStatus.Add(message);
+                        leaderNames = RefreshPilots(out pilots, out leaders, true);
+                        waiting = true;
+                    }
+                    else
+                    {
+                        competitionStatus.Set(message);
+                        competitionStartFailureReason = CompetitionStartFailureReason.TeamLeaderDisappeared;
+                        StopCompetition();
+                        yield break;
+                    }
                 }
 
                 yield return null;
@@ -672,13 +710,14 @@ namespace BDArmory.Competition
             previousNumberCompetitive = 2; // For entering into tag mode
 
             //start the match
+            if (startDespiteFailures && pilots.Values.SelectMany(p => p).Any(p => p is null || p.weaponManager is null)) leaderNames = RefreshPilots(out pilots, out leaders, true);
             foreach (var teamPilots in pilots.Values)
             {
                 if (teamPilots == null)
                 {
-                    var message = "Teams have been changed during competition start-up, aborting.";
+                    var message = "Teams have been changed during competition start-up, aborting";
                     competitionStatus.Set("Competition: " + message);
-                    Debug.Log("[BDArmory.BDACompetitionMode]: " + message);
+                    Debug.LogWarning("[BDArmory.BDACompetitionMode]: " + message);
                     competitionStartFailureReason = CompetitionStartFailureReason.TeamsChanged;
                     StopCompetition();
                     yield break;
@@ -686,9 +725,9 @@ namespace BDArmory.Competition
                 foreach (var pilot in teamPilots)
                     if (pilot == null)
                     {
-                        var message = "A pilot has disappeared from team during competition start-up, aborting.";
+                        var message = "A pilot has disappeared from team during competition start-up, aborting";
                         competitionStatus.Set("Competition: " + message);
-                        Debug.Log("[BDArmory.BDACompetitionMode]: " + message);
+                        Debug.LogWarning("[BDArmory.BDACompetitionMode]: " + message);
                         competitionStartFailureReason = CompetitionStartFailureReason.PilotDisappeared;
                         StopCompetition(); // Check that the team pilots haven't been changed during the competition startup.
                         yield break;
@@ -703,10 +742,17 @@ namespace BDArmory.Competition
                 catch (Exception e)
                 {
                     Debug.LogError($"[BDArmory.BDACompetitionMode]: Exception thrown in DogfightCompetitionModeRoutine: " + e.Message);
-                    competitionStatus.Set("Failed to update radar cross sections, aborting.");
-                    competitionStartFailureReason = CompetitionStartFailureReason.Other;
-                    StopCompetition();
-                    yield break;
+                    if (startDespiteFailures)
+                    {
+                        competitionStatus.Add("Failed to update radar cross sections, continuing anyway");
+                    }
+                    else
+                    {
+                        competitionStatus.Set("Failed to update radar cross sections, aborting");
+                        competitionStartFailureReason = CompetitionStartFailureReason.Other;
+                        StopCompetition();
+                        yield break;
+                    }
                 }
             }
             foreach (var teamPilots in pilots)
@@ -759,6 +805,29 @@ namespace BDArmory.Competition
                 uniqueVesselNames.Add(vessel.vesselName);
             }
             return pilots;
+        }
+
+        /// <summary>
+        /// Refresh the pilots and leaders after a team change or vessel breaks or disappears.
+        /// Note: team changes don't always seem to trigger this, but vessel loss does.
+        /// </summary>
+        /// <param name="pilots"></param>
+        /// <param name="leaders"></param>
+        /// <param name="followLeaders"></param>
+        /// <returns></returns>
+        List<string> RefreshPilots(out Dictionary<BDTeam, List<IBDAIControl>> pilots, out List<IBDAIControl> leaders, bool followLeaders)
+        {
+            var allPilots = GetAllPilots();
+            var teams = allPilots.Select(p => p.weaponManager.Team).ToHashSet(); // Unique list
+            pilots = teams.ToDictionary(t => t, t => allPilots.Where(p => p.weaponManager.Team == t).ToList());
+            leaders = pilots.Select(kvp => kvp.Value.First()).ToList();
+            if (followLeaders)
+            {
+                foreach (var leader in leaders)
+                    if (leader.currentCommand != PilotCommands.Free)
+                        leader.weaponManager.wingCommander.CommandAllFollow();
+            }
+            return leaders.Select(l => l.vessel.vesselName).ToList();
         }
 
         public string currentMutator;

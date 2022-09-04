@@ -149,7 +149,7 @@ namespace BDArmory.Targeting
                     VesselECMJInfo vesseljammer = vessel.gameObject.GetComponent<VesselECMJInfo>();
 
                     // Jamming biases position distortion further to rear, depending on ratio of jamming strength and radarModifiedSignature
-                    float jammingFactor = decoyFactor * Mathf.Clamp01(vesseljammer.jammerStrength / 100f / Mathf.Max(targetInfo.radarModifiedSignature, 0.1f));
+                    float jammingFactor = vesseljammer is null ? 0 : decoyFactor * Mathf.Clamp01(vesseljammer.jammerStrength / 100f / Mathf.Max(targetInfo.radarModifiedSignature, 0.1f));
 
                     // Higher signature (with or without jamming) increases radius of distortion, effect capped for signatures below 16 m^2
                     float signatureFactor = decoyFactor;

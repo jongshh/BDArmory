@@ -704,7 +704,7 @@ namespace BDArmory.Targeting
                     GUI.Label(new Rect(600, 1000, 100, 100), "Slew rate: " + finalSlewSpeed);
                 }
 
-                if (BDArmorySettings.DEBUG_LINES)
+                if (BDArmorySettings.DEBUG_LINES && cameraEnabled && cameraParentTransform is not null)
                 {
                     if (groundStabilized)
                     {
