@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -68,8 +69,6 @@ namespace BDArmory.Extensions
         // Get a vessel's "radius".
         public static float GetRadius(this Vessel vessel, Vector3 fireTransform = default(Vector3), Vector3 bounds = default(Vector3))
         {
-            
-
             if (fireTransform == Vector3.zero || bounds == Vector3.zero)
             {
                 // Get vessel size.
@@ -80,16 +79,51 @@ namespace BDArmory.Extensions
             }
             else
             {
-                return Vector3.ProjectOnPlane(vessel.vesselTransform.up * bounds.y + vessel.vesselTransform.right * bounds.x + vessel.vesselTransform.forward * bounds.z, fireTransform).magnitude / 2f;
+                var radius = Vector3.ProjectOnPlane(vessel.vesselTransform.up * bounds.y + vessel.vesselTransform.right * bounds.x + vessel.vesselTransform.forward * bounds.z, fireTransform).magnitude / 2f;
+#if DEBUG
+                if (radius < bounds.x / 2f && radius < bounds.y / 2f && radius < bounds.z / 2f) Debug.LogWarning($"DEBUG Radius {radius} of {vessel.vesselName} is less than half its minimum bounds {bounds}");
+#endif
+                return radius;
             }
         }
 
-        // Get a vessel's bounds.
-        public static Vector3 GetBounds(this Vessel vessel)
+        /// <summary>
+        /// Get a vessel's bounds.
+        /// </summary>
+        /// <param name="vessel">The vessel to get the bounds of.</param>
+        /// <param name="useBounds">Use the renderer bounds and calculate min/max manually instead of using KSP's internal functions.</param>
+        /// <returns></returns>
+        public static Vector3 GetBounds(this Vessel vessel, bool useBounds = true)
         {
+            if (vessel is null || vessel.packed || !vessel.loaded) return Vector3.zero;
             var vesselRot = vessel.transform.rotation;
             vessel.SetRotation(Quaternion.identity);
-            Vector3 size = ShipConstruction.CalculateCraftSize(vessel.Parts, vessel.rootPart); //x: Width, y: Length, z: Height
+
+            Vector3 size = Vector3.zero;
+            if (!useBounds)
+            {
+                size = ShipConstruction.CalculateCraftSize(vessel.Parts, vessel.rootPart); //x: Width, y: Length, z: Height
+            }
+            else
+            {
+                var rootBound = vessel.rootPart.gameObject.GetRendererBoundsWithoutParticles();
+                Vector3 min = rootBound.min, max = rootBound.max;
+                using (var part = vessel.Parts.GetEnumerator())
+                    while (part.MoveNext())
+                    {
+                        var partBound = part.Current.gameObject.GetRendererBoundsWithoutParticles();
+                        min.x = Mathf.Min(min.x, partBound.min.x);
+                        min.y = Mathf.Min(min.y, partBound.min.y);
+                        min.z = Mathf.Min(min.z, partBound.min.z);
+                        max.x = Mathf.Max(max.x, partBound.max.x);
+                        max.y = Mathf.Max(max.y, partBound.max.y);
+                        max.z = Mathf.Max(max.z, partBound.max.z);
+                    }
+                size = max - min; //x: Width, y: Length, z: Height
+            }
+#if DEBUG
+            if (size.x > 1000 || size.y > 1000 || size.z > 1000) Debug.LogWarning($"DEBUG Bounds on {vessel.vesselName} are bad: {size}. Parts: {string.Join("; ", vessel.Parts.Select(p => $"{p.name}, bounds: {string.Join(", ", p.GetColliderBounds().Select(b => $"{b.size}@{b.center}"))}"))}. Root: {vessel.rootPart.name}, bounds {string.Join(", ", vessel.rootPart.GetColliderBounds().Select(b => $"{b.size}@{b.center}"))}.");
+#endif
             vessel.SetRotation(vesselRot);
             return size;
         }

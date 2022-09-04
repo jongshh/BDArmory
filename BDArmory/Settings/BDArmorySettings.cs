@@ -129,7 +129,7 @@ namespace BDArmory.Settings
         [BDAPersistentSettingsField] public static float FIRE_RATE_OVERRIDE_SPREAD = 5f;
         [BDAPersistentSettingsField] public static float FIRE_RATE_OVERRIDE_BIAS = 0.16f;
         [BDAPersistentSettingsField] public static float FIRE_RATE_OVERRIDE_HIT_MULTIPLIER = 2f;
-        [BDAPersistentSettingsField] public static float HP_THRESHOLD = 2000f;                  //HP above this value will be scaled to a logarithmic value
+        [BDAPersistentSettingsField] public static float HP_THRESHOLD = 0;                  //HP above this value will be scaled to a logarithmic value
         [BDAPersistentSettingsField] public static bool PWING_EDGE_LIFT = true;                  //Toggle lift on PWing edges for balance with stock wings/remove edge abuse
         // Physics constants
         [BDAPersistentSettingsField] public static float GLOBAL_LIFT_MULTIPLIER = 0.25f;

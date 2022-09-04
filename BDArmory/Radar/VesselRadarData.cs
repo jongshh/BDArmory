@@ -714,7 +714,7 @@ namespace BDArmory.Radar
             }
 
             UpdateLockedTargets();
-            if (this != null) // Don't trigger if the gameObject was just destroyed.
+            if (isActiveAndEnabled) // Don't trigger if the gameObject was just destroyed.
                 StartCoroutine(UpdateLocksAfterFrame());
             return false;
         }

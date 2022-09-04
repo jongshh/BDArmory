@@ -1,4 +1,10 @@
-﻿v1.5.2.1
+﻿
+IMPROVEMENTS / FIXES
+- Use an alternative method of calculating vessel bounds to get the vessel radius. — Fixes some weird results with parasite fighters from KSP's internal function for this.
+- Add a building damage multiplier.
+- Fix the bug preventing explosive damage applying to buildings.
+
+v1.5.2.1
 IMPROVEMENTS / FIXES
 - Fix a variety of exceptions in pre-1.11.1 KSP due to missing API functions.
 - Allow deploying to multiple KSP instances when compiling in Linux (add the extra KSP locations as lines in the ksp_dir.txt file).

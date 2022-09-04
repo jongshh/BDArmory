@@ -591,7 +591,7 @@ namespace BDArmory.Targeting
 
         public void VesselModified(Vessel v)
         {
-            if (v && v == this.vessel)
+            if (v && v == this.vessel && isActiveAndEnabled)
             {
                 if (!alreadyScheduledRCSUpdate)
                     StartCoroutine(UpdateRCSDelayed());

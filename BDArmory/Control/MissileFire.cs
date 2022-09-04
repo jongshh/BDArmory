@@ -86,7 +86,7 @@ namespace BDArmory.Control
 
         public void incrementRippleIndex(string weaponname)
         {
-            if (!gunRippleIndex.ContainsKey(weaponname)) 
+            if (!gunRippleIndex.ContainsKey(weaponname))
             {
                 UpdateList();
                 if (!gunRippleIndex.ContainsKey(weaponname))
@@ -1618,6 +1618,9 @@ namespace BDArmory.Control
                             weaponAimDebugStrings.Add($" - Lead Offset: {weapon.GetLeadOffset()}, FinalAimTgt: {weapon.finalAimTarget}, tgt Position: {weapon.targetPosition}, pointingAtSelf: {weapon.pointingAtSelf}, safeToFire: {weapon.safeToFire}, tgt CosAngle {weapon.targetCosAngle}, wpn CosAngle {weapon.targetAdjustedMaxCosAngle}, Wpn Autofire {weapon.autoFire}, RoF {weapon.roundsPerMinute}, MaxRoF {weapon.baseRPM}");
                             // weaponAimDebugStrings.Add($" - Target pos: {weapon.targetPosition.ToString("G3")}, vel: {weapon.targetVelocity.ToString("G4")}, acc: {weapon.targetAcceleration.ToString("G6")}");
                             // weaponAimDebugStrings.Add($" - Target rel pos: {(weapon.targetPosition - weapon.fireTransforms[0].position).ToString("G3")} ({(weapon.targetPosition - weapon.fireTransforms[0].position).magnitude:F1}), rel vel: {(weapon.targetVelocity - weapon.part.rb.velocity).ToString("G4")}, rel acc: {((Vector3)(weapon.targetAcceleration - weapon.vessel.acceleration)).ToString("G6")}");
+#if DEBUG
+                            if (weapon.visualTargetVessel != null && weapon.visualTargetVessel.loaded) weaponAimDebugStrings.Add($" - Visual target {(weapon.visualTargetPart is not null ? weapon.visualTargetPart.name : "CoM")} on {weapon.visualTargetVessel.vesselName}, distance: {(weapon.finalAimTarget - weapon.fireTransforms[0].position).magnitude:F1}, radius: {weapon.targetRadius:F1} ({weapon.visualTargetVessel.GetBounds()}), max deviation: {weapon.maxDeviation}, firing tolerance: {weapon.FiringTolerance}");
+#endif
                         }
                         int shots = 0;
                         int hits = 0;

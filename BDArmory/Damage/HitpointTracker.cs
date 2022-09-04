@@ -163,6 +163,7 @@ namespace BDArmory.Damage
         private readonly float hitpointMultiplier = BDArmorySettings.HITPOINT_MULTIPLIER;
 
         private float previousHitpoints = -1;
+        private bool previousEdgeLift = false;
         private bool _updateHitpoints = false;
         private bool _forceUpdateHitpointsUI = false;
         private const int HpRounding = 25;
@@ -492,7 +493,12 @@ namespace BDArmory.Damage
             if (isProcWing || isProcPart)
             {
                 if (!_delayedShipModifiedRunning)
+                {
                     StartCoroutine(DelayedShipModified());
+                    if (!part.name.Contains("B9.Aero.Wing.Procedural.Panel") && !previousEdgeLift) ProceduralWing.ResetPWing(part);
+                    previousEdgeLift = true;
+                }
+
             }
             else
             {
@@ -851,11 +857,10 @@ namespace BDArmory.Damage
                                 else
                                 {
                                     hitpoints = (float)Math.Round(part.Modules.GetModule<ModuleControlSurface>() ? part.Modules.GetModule<ModuleLiftingSurface>().deflectionLiftCoeff : partMass * 10, 2) * 700 * hitpointMultiplier * 0.333f; //use mass*10 for wings (since they may have lift toggled off), use lift area for control surfaces
-                                    armorVolume = (float)Math.Round(hitpoints / hitpointMultiplier / 0.333 / 350, 1); //stock is 0.25 lift/m2, so...
-                                                                                                                      //edges contribute to HP when they shouldn't; suggestion was to use tank volume instead (which would also allow thickness to play a role in HP), try ProceduralWing.aeroStatVolume * 700 
+                                    armorVolume = (float)Math.Round(hitpoints / hitpointMultiplier / 0.333 / 350, 1); //stock is 0.25 lift/m2, so...                                                                                                               //edges contribute to HP when they shouldn't; suggestion was to use tank volume instead (which would also allow thickness to play a role in HP), try ProceduralWing.aeroStatVolume * 700 
                                 }
                             }
-                            if ((!BDArmorySettings.PWING_EDGE_LIFT || BDArmorySettings.RUNWAY_PROJECT) || part.name.Contains("B9_Aero_Wing_Procedural_Panel")) //method to make pwings balanced with stock. 
+                            if (!BDArmorySettings.PWING_EDGE_LIFT || BDArmorySettings.RUNWAY_PROJECT || part.name.Contains("B9.Aero.Wing.Procedural.Panel")) //method to make pwings balanced with stock. 
                             {
                                 hitpoints = -1;
                                 armorVolume = -1;
@@ -871,6 +876,7 @@ namespace BDArmory.Damage
                                         hitpoints *= FerramAerospace.GetFARMassMult(part); //PWing HP no longer mass dependant, so lets have FAR's structural strengthening/weakening have an effect on HP. you want light wings? they're going to be fragile, and vice versa
                                     }
                                     armorVolume = ProceduralWing.GetPWingArea(part);
+                                    if (!part.name.Contains("B9.Aero.Wing.Procedural.Panel")) previousEdgeLift = false;
                                 }
                             }
                             if (hitpoints < 0) //sanity checks
@@ -885,10 +891,10 @@ namespace BDArmory.Damage
                             }
                             ArmorModified(null, null);
                         }
-                        if (BDArmorySettings.HP_THRESHOLD >= 100 && hitpoints > BDArmorySettings.HP_THRESHOLD)
+                        if ((BDArmorySettings.RUNWAY_PROJECT || BDArmorySettings.HP_THRESHOLD >= 100) && hitpoints > BDArmorySettings.HP_THRESHOLD) //If RunwayProject or Clamped HP setting, clamp HP
                         {
-                            var scale = BDArmorySettings.HP_THRESHOLD / (Mathf.Exp(1) - 1);
-                            hitpoints = Mathf.Min(hitpoints, BDArmorySettings.HP_THRESHOLD * Mathf.Log(hitpoints / scale + 1));
+                            var scale = (BDArmorySettings.HP_THRESHOLD >= 100 ? BDArmorySettings.HP_THRESHOLD : 2000f) / (Mathf.Exp(1) - 1);
+                            hitpoints = Mathf.Min(hitpoints, (BDArmorySettings.HP_THRESHOLD >= 100 ? BDArmorySettings.HP_THRESHOLD : 2000f) * Mathf.Log(hitpoints / scale + 1)); //use default of 2K for RP if slider set to unclamped
                         }
 
                         switch (HullTypeNum)

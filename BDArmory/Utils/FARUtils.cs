@@ -202,24 +202,24 @@ namespace BDArmory.Utils
                         else thickness = 0.36f;
                         */
                         float thickness = 0.36f;
-                        float aeroVolume = (0.786f * length * width * thickness) / 4; //original .7 was based on errorneous 2x4 wingboard dimensions; stock reference wing area is 1.875x3.75m
+                        float aeroVolume = (0.786f * length * width * thickness) / 4f; //original .7 was based on errorneous 2x4 wingboard dimensions; stock reference wing area is 1.875x3.75m
                         if (BDArmorySettings.DEBUG_OTHER) Debug.Log($"[BDArmory.FARUtils]: Found volume of {aeroVolume} for {part.name}.");
-						if (BDArmorySettings.RUNWAY_PROJECT && !ctrlSrf) //if RunwayProject and part !controlsurface, remove lift/mass from edges to bring inline with stock boards
-						{
-                            bool isLiftingSurface = (float)PWType.GetField("stockLiftCoefficient", BindingFlags.Public | BindingFlags.Instance).GetValue(module) > 0f;
-                            float liftCoeff = (length * (width / 2)) / 3.52f;
-                            PWType.GetField("stockLiftCoefficient", BindingFlags.Public | BindingFlags.Instance).SetValue(module, isLiftingSurface ? liftCoeff : 0f); //adjust PWing GUI lift readout
-                            part.Modules.GetModule<ModuleLiftingSurface>().deflectionLiftCoeff = (length * (width / 2) / 3.52f); //adjust lift to be inline with stock wings
-                            if (!WingctrlSrf)
-                                PWType.GetField("aeroUIMass", BindingFlags.Public | BindingFlags.Instance).SetValue(module, liftCoeff / 10); //Adjust PWing GUI mass readout
-                            else
-                                PWType.GetField("aeroUIMass", BindingFlags.Public | BindingFlags.Instance).SetValue(module, liftCoeff / 5); //this modifies the IPartMassModifier, so the mass will also change along with the GUI                          
-                        }
-                        if (part.name.Contains("B9_Aero_Wing_Procedural_Panel")) //if Josue's noLift PWings PR never gets folded in, here's an alternative using an MM'ed PWing structural panel part
+                        if ((BDArmorySettings.RUNWAY_PROJECT || !BDArmorySettings.PWING_EDGE_LIFT) && !ctrlSrf) //if RunwayProject and part !controlsurface, remove lift/mass from edges to bring inline with stock boards
                         {
-                            PWType.GetField("stockLiftCoefficient", BindingFlags.Public | BindingFlags.Instance).SetValue(module, 0); //adjust PWing GUI lift readout
-                            PWType.GetField("aeroUIMass", BindingFlags.Public | BindingFlags.Instance).SetValue(module, ((length * (width / 2)) / 3.52f) / 12.5); //Struct panels lighter than wings      
-                            //PWType.GetField("aeroUIMass", BindingFlags.Public | BindingFlags.Instance).SetValue(module, (((length * (width / 2)) / 3.52f) / 12.5) * (thickness / 0.18f)); //version that has mass based on panel thickness
+                            bool isLiftingSurface = (float)PWType.GetField("stockLiftCoefficient", BindingFlags.Public | BindingFlags.Instance).GetValue(module) > 0f;
+                            float liftCoeff = (length * (width / 2f)) / 3.52f;
+                            PWType.GetField("stockLiftCoefficient", BindingFlags.Public | BindingFlags.Instance).SetValue(module, isLiftingSurface ? liftCoeff : 0f); //adjust PWing GUI lift readout
+                            part.Modules.GetModule<ModuleLiftingSurface>().deflectionLiftCoeff = (length * (width / 2f) / 3.52f); //adjust lift to be inline with stock wings
+                            if (!WingctrlSrf)
+                                PWType.GetField("aeroUIMass", BindingFlags.Public | BindingFlags.Instance).SetValue(module, liftCoeff / 10f); //Adjust PWing GUI mass readout
+                            else
+                                PWType.GetField("aeroUIMass", BindingFlags.Public | BindingFlags.Instance).SetValue(module, liftCoeff / 5f); //this modifies the IPartMassModifier, so the mass will also change along with the GUI
+                        }
+                        if (part.name.Contains("B9.Aero.Wing.Procedural.Panel")) //if Josue's noLift PWings PR never gets folded in, here's an alternative using an MM'ed PWing structural panel part
+                        {
+                            PWType.GetField("stockLiftCoefficient", BindingFlags.Public | BindingFlags.Instance).SetValue(module, 0f); //adjust PWing GUI lift readout
+                            PWType.GetField("aeroUIMass", BindingFlags.Public | BindingFlags.Instance).SetValue(module, ((length * (width / 2f)) / 3.52f) / 12.5f); //Struct panels lighter than wings
+                            //PWType.GetField("aeroUIMass", BindingFlags.Public | BindingFlags.Instance).SetValue(module, (((length * (width / 2f)) / 3.52f) / 12.5f) * (thickness / 0.18f)); //version that has mass based on panel thickness
                         }
                         //Pcontrol surfaces are more difficult; can easily be just an edge with span thickness = 0, so removing lift from these would render them essentially decorative and nothing else
                         //...add a child boxCollider...? Again, a change that really should be done in Pwings, not here
@@ -229,6 +229,43 @@ namespace BDArmory.Utils
             }
             if (BDArmorySettings.DEBUG_OTHER) Debug.Log($"[BDArmory.FARUtils]: Pwing module not found!");
             return -1;
+        }
+
+        public static float ResetPWing(Part part)
+        {
+            if (!hasPwingModule)
+            {
+                if (BDArmorySettings.DEBUG_OTHER) Debug.Log($"[BDArmory.FARUtils]: hasPwing check failed!");
+                return 0;
+            }
+
+            foreach (var module in part.Modules)
+            {
+                if (module.GetType() == PWType || module.GetType().IsSubclassOf(PWType))
+                {
+                    if (module.GetType() == PWType)
+                    {
+                        bool ctrlSrf = (bool)PWType.GetField("isCtrlSrf", BindingFlags.Public | BindingFlags.Instance).GetValue(module);
+                        bool WingctrlSrf = (bool)PWType.GetField("isWingAsCtrlSrf", BindingFlags.Public | BindingFlags.Instance).GetValue(module);
+
+                        if (ctrlSrf) return 0; //control surfaces don't have any lift modification to begin with
+                        double originalLift = (double)PWType.GetField("aeroStatSurfaceArea", BindingFlags.Public | BindingFlags.Instance).GetValue(module);
+                        originalLift /= 3.52f;
+
+                        bool isLiftingSurface = (float)PWType.GetField("stockLiftCoefficient", BindingFlags.Public | BindingFlags.Instance).GetValue(module) > 0f;
+
+                        PWType.GetField("stockLiftCoefficient", BindingFlags.Public | BindingFlags.Instance).SetValue(module, isLiftingSurface ? (float)originalLift : 0f); //restore lift value/ correct GUI readout
+                        part.Modules.GetModule<ModuleLiftingSurface>().deflectionLiftCoeff = (float)Math.Round((float)originalLift, 2);
+                        if (!WingctrlSrf)
+                            PWType.GetField("aeroUIMass", BindingFlags.Public | BindingFlags.Instance).SetValue(module, (float)originalLift / 10f);
+                        else
+                            PWType.GetField("aeroUIMass", BindingFlags.Public | BindingFlags.Instance).SetValue(module, (float)originalLift / 5f);
+                    }
+                }
+            }
+
+            if (BDArmorySettings.DEBUG_OTHER) Debug.Log($"[BDArmory.FARUtils]: Pwing module not found!");
+            return 0;
         }
 
         public static float GetPWingArea(Part part)
