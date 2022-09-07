@@ -79,7 +79,13 @@ namespace BDArmory.Extensions
             }
             else
             {
-                var radius = Vector3.ProjectOnPlane(vessel.vesselTransform.up * bounds.y + vessel.vesselTransform.right * bounds.x + vessel.vesselTransform.forward * bounds.z, fireTransform).magnitude / 2f;
+                // Check the 4 diagonals of the box and take the max.
+                var radius = BDAMath.Sqrt(Mathf.Max(
+                    Vector3.ProjectOnPlane(vessel.vesselTransform.up * bounds.y + vessel.vesselTransform.right * bounds.x + vessel.vesselTransform.forward * bounds.z, fireTransform).sqrMagnitude,
+                    Vector3.ProjectOnPlane(-vessel.vesselTransform.up * bounds.y + vessel.vesselTransform.right * bounds.x + vessel.vesselTransform.forward * bounds.z, fireTransform).sqrMagnitude,
+                    Vector3.ProjectOnPlane(vessel.vesselTransform.up * bounds.y - vessel.vesselTransform.right * bounds.x + vessel.vesselTransform.forward * bounds.z, fireTransform).sqrMagnitude,
+                    Vector3.ProjectOnPlane(vessel.vesselTransform.up * bounds.y + vessel.vesselTransform.right * bounds.x - vessel.vesselTransform.forward * bounds.z, fireTransform).sqrMagnitude
+                )) / 2f;
 #if DEBUG
                 if (radius < bounds.x / 2f && radius < bounds.y / 2f && radius < bounds.z / 2f) Debug.LogWarning($"DEBUG Radius {radius} of {vessel.vesselName} is less than half its minimum bounds {bounds}");
 #endif
