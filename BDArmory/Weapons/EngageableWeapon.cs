@@ -42,11 +42,11 @@ namespace BDArmory.Weapons
 
             if (engageEnabled == false)
             {
-                Events["ToggleEngageOptions"].guiName = Localizer.Format("#LOC_BDArmory_EnableEngageOptions");//"Enable Engage Options"
+                Events["ToggleEngageOptions"].guiName = StringUtils.Localize("#LOC_BDArmory_EnableEngageOptions");//"Enable Engage Options"
             }
             else
             {
-                Events["ToggleEngageOptions"].guiName = Localizer.Format("#LOC_BDArmory_DisableEngageOptions");//"Disable Engage Options"
+                Events["ToggleEngageOptions"].guiName = StringUtils.Localize("#LOC_BDArmory_DisableEngageOptions");//"Disable Engage Options"
             }
 
             Fields["engageRangeMin"].guiActive = engageEnabled;

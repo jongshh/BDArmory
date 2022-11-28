@@ -10,6 +10,8 @@ namespace BDArmory.Weapons
 
         string GetMissileType();
 
+        string GetPartName();
+
         Part GetPart();
 
         // extensions for feature_engagementenvelope

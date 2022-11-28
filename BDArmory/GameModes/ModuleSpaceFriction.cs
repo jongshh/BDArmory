@@ -33,7 +33,9 @@ namespace BDArmory.GameModes
 
         float vesselAlt = 25;
         //public float driftMult = 2; //additional drag multipler for cornering/decellerating so things don't take the same amount of time to decelerate as they do to accelerate
+        float landedTime = 0;
 
+        int repulsors = 1;
         public static bool GameIsPaused
         {
             get { return PauseMenu.isOpen || Time.timeScale == 0; }
@@ -103,12 +105,13 @@ namespace BDArmory.GameModes
                         //have this called onvesselModified?
                     }
                 frictMult /= 4; //doesn't need to be 100% of thrust at max speed, Ai will already self-limit; this also has the AI throttle down, which allows for slamming the throttle full for braking/coming about, instead of being stuck with lower TwR
+                repulsors = VesselModuleRegistry.GetRepulsorModules(vessel).Count;
             }
         }
 
         public void FixedUpdate()
         {
-            if (!BDArmorySettings.SPACE_HACKS || !HighLogic.LoadedSceneIsFlight || !FlightGlobals.ready || this.vessel.packed || GameIsPaused) return;
+            if ((!BDArmorySettings.SPACE_HACKS && !AntiGravOverride) || !HighLogic.LoadedSceneIsFlight || !FlightGlobals.ready || this.vessel.packed || GameIsPaused) return;
 
             if (this.part.vessel.situation == Vessel.Situations.FLYING || this.part.vessel.situation == Vessel.Situations.SUB_ORBITAL)
             {
@@ -151,7 +154,7 @@ namespace BDArmory.GameModes
             }
             if (this.part.vessel.situation != Vessel.Situations.ORBITING || this.part.vessel.situation != Vessel.Situations.DOCKED || this.part.vessel.situation != Vessel.Situations.ESCAPING || this.part.vessel.situation != Vessel.Situations.PRELAUNCH)
             {
-                if (BDArmorySettings.SF_REPULSOR)
+                if (BDArmorySettings.SF_REPULSOR || AntiGravOverride)
                 {
                     if ((pilot != null || driver != null || flier != null) && foundEngine != null)
                     {
@@ -168,23 +171,41 @@ namespace BDArmory.GameModes
                             vesselAlt = VAI.minAltitude;
 
                         float accelMult = 1f;
-                        if (vessel.verticalSpeed > 1) //vessel ascending
+                        if (vessel.radarAltitude < vesselAlt) 
                         {
-                            accelMult = Mathf.Clamp(Mathf.Abs((float)vessel.verticalSpeed), 1f, 100);
-                        }
-                        if (vessel.radarAltitude < Mathf.Max((vesselAlt / 10), 5))
-                        {
-                            accelMult = Mathf.Clamp((float)vessel.radarAltitude / vesselAlt, 0.3f, 1);
-                        }
-                        if (vessel.radarAltitude < vesselAlt)
-                        {
-                            for (int i = 0; i < part.vessel.Parts.Count; i++)
+                            if (vessel.radarAltitude < Mathf.Max((vesselAlt / 10), 5))
                             {
-                                if (part.vessel.parts[i].PhysicsSignificance != 1) //attempting to apply rigidbody force to non-significant parts will NRE
+                                if ((vessel.situation != Vessel.Situations.LANDED && vessel.situation != Vessel.Situations.SPLASHED && vessel.situation != Vessel.Situations.PRELAUNCH) && Time.time - 5 > landedTime)
                                 {
-                                    part.vessel.Parts[i].Rigidbody.AddForce((-FlightGlobals.getGeeForceAtPosition(part.vessel.Parts[i].transform.position) * ((vesselAlt / part.vessel.radarAltitude)) / accelMult), ForceMode.Acceleration);
+                                    accelMult = Mathf.Clamp(Mathf.Abs((float)vessel.verticalSpeed), 1f, 100);
+                                }
+                                else
+                                {
+                                    accelMult = 10;
+                                    landedTime = Time.time;
                                 }
                             }
+
+                            var repulsorModules = VesselModuleRegistry.GetRepulsorModules(vessel);
+                            using (var craftPart = repulsorModules.GetEnumerator())
+                                while (craftPart.MoveNext())
+                                {
+                                    if (craftPart.Current is null) continue;
+                                    if (craftPart.Current.part.PhysicsSignificance != 1) //attempting to apply rigidbody force to non-significant parts will NRE
+                                    {
+                                        craftPart.Current.part.Rigidbody.AddForce(((-FlightGlobals.getGeeForceAtPosition(craftPart.Current.part.transform.position) * ((part.vessel.GetTotalMass() * 10) / repulsors)) * ((vesselAlt / Mathf.Max(BodyUtils.GetRadarAltitudeAtPos(craftPart.Current.part.transform.position), 1))) / accelMult), ForceMode.Acceleration);
+                                    }
+                                }
+                            /*else
+                            {
+                                for (int i = 0; i < part.vessel.Parts.Count; i++)
+                                {
+                                    if (part.vessel.parts[i].PhysicsSignificance != 1) //attempting to apply rigidbody force to non-significant parts will NRE
+                                    {
+                                        part.vessel.Parts[i].Rigidbody.AddForce((-FlightGlobals.getGeeForceAtPosition(part.vessel.Parts[i].transform.position) * ((vesselAlt / Mathf.Max((float)part.vessel.radarAltitude, 1))) / accelMult), ForceMode.Acceleration);
+                                    }
+                                }
+                            }*/
                         }
                     }
                 }

@@ -30,6 +30,9 @@ namespace BDArmory.Armor
         public float muParam1S { get; private set; }
         public float muParam2S { get; private set; }
         public float muParam3S { get; private set; }
+        public float HEEquiv { get; private set; }
+        public float HEATEquiv { get; private set; }
+
 
         //public bool Reactive {get; private set; } have a reactive armor bool?
 
@@ -37,7 +40,7 @@ namespace BDArmory.Armor
         public static List<string> armorNames;
         public static ArmorInfo defaultArmor;
 
-        public ArmorInfo(string name, float Density, float Strength, float Hardness, float yield, float youngModulus, float Ductility, float Diffusivity, float SafeUseTemp, float Cost)
+        public ArmorInfo(string name, float Density, float Strength, float Hardness, float yield, float youngModulus, float Ductility, float Diffusivity, float SafeUseTemp, float Cost, float defaultPenShrapnel, float defaultPenHEAT)
         {
             this.name = name;
             this.Density = Density;
@@ -91,6 +94,9 @@ namespace BDArmory.Armor
             this.muParam1S = muInverse / (1.0f + mu);
             this.muParam2S = muInverse;
             this.muParam3S = (muInverseSquared + 1.0f / 3.0f);
+
+            this.HEEquiv = defaultPenShrapnel / ProjectileUtils.CalculatePenetration(15, 430, 0.02f, 1, Strength, this.vFactor, this.muParam1, this.muParam2, this.muParam3);
+            this.HEATEquiv = defaultPenHEAT / ProjectileUtils.CalculatePenetration(6, 5000, 0.13098f, 1, Strength, this.vFactor, this.muParam1, this.muParam2, this.muParam3);
         }
 
         public static void Load()
@@ -100,6 +106,11 @@ namespace BDArmory.Armor
             if (armorNames == null) armorNames = new List<string>();
             UrlDir.UrlConfig[] nodes = GameDatabase.Instance.GetConfigs("ARMOR");
             ConfigNode node;
+
+            // Based on average piece of shrapnel
+            float defaultPenShrapnel = ProjectileUtils.CalculatePenetration(15, 430, 0.02f, 1, 940, 0.00000094776185184f, 0.6560606203f, 1.201909309f, 1.777919321f);
+            // Based on 120x570 mm NATO HEAT shell
+            float defaultPenHEAT = ProjectileUtils.CalculatePenetration(6, 5000, 0.13098f, 1, 940, 0.00000094776185184f, 0.6560606203f, 1.201909309f, 1.777919321f);
 
             // First locate BDA's default armor definition so we can fill in missing fields.
             if (defaultArmor == null)
@@ -119,7 +130,9 @@ namespace BDArmory.Armor
                         (float)ParseField(node, "Ductility", typeof(float)),
                         (float)ParseField(node, "Diffusivity", typeof(float)),
                         (float)ParseField(node, "SafeUseTemp", typeof(float)),
-                        (float)ParseField(node, "Cost", typeof(float))
+                        (float)ParseField(node, "Cost", typeof(float)),
+                        defaultPenShrapnel,
+                        defaultPenHEAT
                     );
                     armors.Add(defaultArmor);
                     armorNames.Add("def");
@@ -153,7 +166,9 @@ namespace BDArmory.Armor
                         (float)ParseField(node, "Ductility", typeof(float)),
                         (float)ParseField(node, "Diffusivity", typeof(float)),
                         (float)ParseField(node, "SafeUseTemp", typeof(float)),
-                        (float)ParseField(node, "Cost", typeof(float))
+                        (float)ParseField(node, "Cost", typeof(float)),
+                        defaultPenShrapnel,
+                        defaultPenHEAT
                         )
                     );
                     armorNames.Add(name_);

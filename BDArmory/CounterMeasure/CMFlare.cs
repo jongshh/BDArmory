@@ -84,7 +84,7 @@ namespace BDArmory.CounterMeasure
 
             EnableEmitters();
 
-            BDArmorySetup.numberOfParticleEmitters++;
+            ++BDArmorySetup.numberOfParticleEmitters;
 
             if (lights == null)
             {
@@ -117,14 +117,14 @@ namespace BDArmory.CounterMeasure
             }
 
             //floating origin and velocity offloading corrections
-            if (!FloatingOrigin.Offset.IsZero() || !Krakensbane.GetFrameVelocity().IsZero())
+            if (BDKrakensbane.IsActive)
             {
-                transform.position -= FloatingOrigin.OffsetNonKrakensbane;
+                transform.localPosition -= BDKrakensbane.FloatingOriginOffsetNonKrakensbane;
             }
 
             if (velocity != Vector3.zero)
             {
-                transform.rotation = Quaternion.LookRotation(velocity, upDirection);
+                transform.localRotation = Quaternion.LookRotation(velocity, upDirection);
             }
 
             //Particle effects
@@ -132,7 +132,7 @@ namespace BDArmory.CounterMeasure
             Vector3 downForce = (Mathf.Clamp(velocity.magnitude, 0.1f, 150) / 150) * 20 * -upDirection;
 
             //turbulence
-            using (List<KSPParticleEmitter>.Enumerator pEmitter = pEmitters.GetEnumerator())
+            using (var pEmitter = pEmitters.GetEnumerator())
                 while (pEmitter.MoveNext())
                 {
                     if (pEmitter.Current == null) continue;
@@ -167,14 +167,14 @@ namespace BDArmory.CounterMeasure
             {
                 alive = false;
                 BDArmorySetup.Flares.Remove(this);
-                this.transform.localScale = Vector3.zero;
-                using (List<KSPParticleEmitter>.Enumerator pe = pEmitters.GetEnumerator())
+                transform.localScale = Vector3.zero;
+                using (var pe = pEmitters.GetEnumerator())
                     while (pe.MoveNext())
                     {
                         if (pe.Current == null) continue;
                         pe.Current.emit = false;
                     }
-                using (IEnumerator<Light> lgt = lights.AsEnumerable().GetEnumerator())
+                using (var lgt = lights.AsEnumerable().GetEnumerator())
                     while (lgt.MoveNext())
                     {
                         if (lgt.Current == null) continue;
@@ -184,7 +184,7 @@ namespace BDArmory.CounterMeasure
 
             if (Time.time - startTime > lifeTime + 11) //disable object after x seconds
             {
-                BDArmorySetup.numberOfParticleEmitters--;
+                --BDArmorySetup.numberOfParticleEmitters;
                 gameObject.SetActive(false);
                 return;
             }
@@ -206,9 +206,9 @@ namespace BDArmory.CounterMeasure
 
             //gravity
             if (FlightGlobals.RefFrameIsRotating)
-                velocity += FlightGlobals.getGeeForceAtPosition(transform.position) * Time.fixedDeltaTime;
+                velocity += FlightGlobals.getGeeForceAtPosition(currPos) * Time.fixedDeltaTime;
 
-            transform.position += velocity * Time.fixedDeltaTime;
+            transform.localPosition += velocity * Time.fixedDeltaTime;
         }
 
         public void EnableEmitters()

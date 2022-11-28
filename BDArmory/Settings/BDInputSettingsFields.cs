@@ -8,6 +8,9 @@ namespace BDArmory.Settings
     { // Note: order here determines order in input settings GUI within each section (based on prefix).
         //MAIN
         public static BDInputInfo WEAP_FIRE_KEY = new BDInputInfo("mouse 0", "Fire");
+        public static BDInputInfo WEAP_FIRE_MISSILE_KEY = new BDInputInfo("Fire Missile");
+        public static BDInputInfo WEAP_NEXT_KEY = new BDInputInfo("Next Weapon");
+        public static BDInputInfo WEAP_PREV_KEY = new BDInputInfo("Prev Weapon");
 
         //TGP
         public static BDInputInfo TGP_SLEW_RIGHT = new BDInputInfo("[6]", "Slew Right");

@@ -32,10 +32,11 @@ namespace BDArmory.Radar
             Detection = 5,
             Sonar = 6,
             Torpedo = 7,
-            TorpedoLock = 8
+            TorpedoLock = 8,
+            Jamming = 9
         }
 
-        string[] iconLabels = new string[] { "S", "F", "A", "M", "M", "D", "So", "T", "T" };
+        string[] iconLabels = new string[] { "S", "F", "A", "M", "M", "D", "So", "T", "T", "J" };
 
         public MissileFire weaponManager;
 
@@ -107,11 +108,11 @@ namespace BDArmory.Radar
 
         public override void OnAwake()
         {
-            radarPingSound = GameDatabase.Instance.GetAudioClip("BDArmory/Sounds/rwrPing");
-            missileLockSound = GameDatabase.Instance.GetAudioClip("BDArmory/Sounds/rwrMissileLock");
-            missileLaunchSound = GameDatabase.Instance.GetAudioClip("BDArmory/Sounds/mLaunchWarning");
-            sonarPing = GameDatabase.Instance.GetAudioClip("BDArmory/Sounds/rwr_sonarping");
-            torpedoPing = GameDatabase.Instance.GetAudioClip("BDArmory/Sounds/rwr_torpedoping");
+            radarPingSound = SoundUtils.GetAudioClip("BDArmory/Sounds/rwrPing");
+            missileLockSound = SoundUtils.GetAudioClip("BDArmory/Sounds/rwrMissileLock");
+            missileLaunchSound = SoundUtils.GetAudioClip("BDArmory/Sounds/mLaunchWarning");
+            sonarPing = SoundUtils.GetAudioClip("BDArmory/Sounds/rwr_sonarping");
+            torpedoPing = SoundUtils.GetAudioClip("BDArmory/Sounds/rwr_torpedoping");
         }
 
         public override void OnStart(StartState state)
@@ -175,7 +176,7 @@ namespace BDArmory.Radar
         public void EnableRWR()
         {
             OnRadarPing += ReceivePing;
-            OnMissileLaunch += ReceiveLaunchWarning;
+            OnMissileLaunch += ReceiveLaunchWarning; //should the radar warning reciever be pinging for non-radar missiles? @JOSUE
             rwrEnabled = true;
         }
 
@@ -195,14 +196,14 @@ namespace BDArmory.Radar
 
         IEnumerator PingLifeRoutine(int index, float lifeTime)
         {
-            yield return new WaitForSeconds(Mathf.Clamp(lifeTime - 0.04f, minPingInterval, lifeTime));
+            yield return new WaitForSecondsFixed(Mathf.Clamp(lifeTime - 0.04f, minPingInterval, lifeTime));
             pingsData[index] = TargetSignatureData.noTarget;
         }
 
         IEnumerator LaunchWarningRoutine(TargetSignatureData data)
         {
             launchWarnings.Add(data);
-            yield return new WaitForSeconds(2);
+            yield return new WaitForSecondsFixed(2);
             launchWarnings.Remove(data);
         }
 
@@ -232,7 +233,7 @@ namespace BDArmory.Radar
 
         void ReceivePing(Vessel v, Vector3 source, RWRThreatTypes type, float persistTime)
         {
-            if (v == null) return;
+            if (v == null || v.packed || !v.loaded || !v.isActiveAndEnabled) return;
             if (referenceTransform == null) return;
             if (weaponManager == null) return;
 

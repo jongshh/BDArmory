@@ -177,7 +177,7 @@ namespace BDArmory.CounterMeasure
             {
                 case "flare":
                     cmType = CountermeasureTypes.Flare;
-                    cmSound = GameDatabase.Instance.GetAudioClip("BDArmory/Sounds/flareSound");
+                    cmSound = SoundUtils.GetAudioClip("BDArmory/Sounds/flareSound");
                     if (!flarePool)
                     {
                         SetupFlarePool();
@@ -187,7 +187,7 @@ namespace BDArmory.CounterMeasure
 
                 case "chaff":
                     cmType = CountermeasureTypes.Chaff;
-                    cmSound = GameDatabase.Instance.GetAudioClip("BDArmory/Sounds/smokeEject");
+                    cmSound = SoundUtils.GetAudioClip("BDArmory/Sounds/smokeEject");
                     resourceName = "CMChaff";
                     vci = vessel.gameObject.GetComponent<VesselChaffInfo>();
                     if (!vci)
@@ -202,8 +202,8 @@ namespace BDArmory.CounterMeasure
 
                 case "smoke":
                     cmType = CountermeasureTypes.Smoke;
-                    cmSound = GameDatabase.Instance.GetAudioClip("BDArmory/Sounds/smokeEject");
-                    smokePoofSound = GameDatabase.Instance.GetAudioClip("BDArmory/Sounds/smokePoof");
+                    cmSound = SoundUtils.GetAudioClip("BDArmory/Sounds/smokeEject");
+                    smokePoofSound = SoundUtils.GetAudioClip("BDArmory/Sounds/smokePoof");
                     resourceName = "CMSmoke";
                     if (smokePool == null)
                     {
@@ -225,7 +225,7 @@ namespace BDArmory.CounterMeasure
             cm.transform.position = transform.position;
             CMFlare cmf = cm.GetComponent<CMFlare>();
             cmf.velocity = part.rb.velocity
-                + Krakensbane.GetFrameVelocityV3f()
+                + BDKrakensbane.FrameVelocityV3f
                 + (ejectVelocity * transform.up)
                 + (UnityEngine.Random.Range(-3f, 3f) * transform.forward)
                 + (UnityEngine.Random.Range(-3f, 3f) * transform.right);
@@ -274,7 +274,7 @@ namespace BDArmory.CounterMeasure
 
         IEnumerator SmokeRoutine()
         {
-            yield return new WaitForSeconds(0.2f);
+            yield return new WaitForSecondsFixed(0.2f);
             GameObject smokeCMObject = smokePool.GetPooledObject();
             CMSmoke smoke = smokeCMObject.GetComponent<CMSmoke>();
             smoke.velocity = part.rb.velocity + (ejectVelocity * transform.up) +
@@ -293,7 +293,7 @@ namespace BDArmory.CounterMeasure
                 }
 
             audioSource.PlayOneShot(smokePoofSound);
-            yield return new WaitForSeconds(longestLife);
+            yield return new WaitForSecondsFixed(longestLife);
             smokeCMObject.SetActive(false);
         }
 

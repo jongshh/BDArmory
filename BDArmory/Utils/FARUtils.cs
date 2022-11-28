@@ -219,6 +219,7 @@ namespace BDArmory.Utils
                         {
                             PWType.GetField("stockLiftCoefficient", BindingFlags.Public | BindingFlags.Instance).SetValue(module, 0f); //adjust PWing GUI lift readout
                             PWType.GetField("aeroUIMass", BindingFlags.Public | BindingFlags.Instance).SetValue(module, ((length * (width / 2f)) / 3.52f) / 12.5f); //Struct panels lighter than wings
+                            part.FindModuleImplementing<ModuleLiftingSurface>().deflectionLiftCoeff = 0;
                             //PWType.GetField("aeroUIMass", BindingFlags.Public | BindingFlags.Instance).SetValue(module, (((length * (width / 2f)) / 3.52f) / 12.5f) * (thickness / 0.18f)); //version that has mass based on panel thickness
                         }
                         //Pcontrol surfaces are more difficult; can easily be just an edge with span thickness = 0, so removing lift from these would render them essentially decorative and nothing else

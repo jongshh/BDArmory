@@ -83,7 +83,7 @@ namespace BDArmory.WeaponMounts
 
             if (!string.IsNullOrEmpty(audioPath) && (yawSpeedDPS != 0 || pitchSpeedDPS != 0))
             {
-                soundClip = GameDatabase.Instance.GetAudioClip(audioPath);
+                soundClip = SoundUtils.GetAudioClip(audioPath);
 
                 audioSource = gameObject.AddComponent<AudioSource>();
                 audioSource.clip = soundClip;

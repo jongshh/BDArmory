@@ -133,6 +133,7 @@
     <Compile Include="Ammo\PooledBullet.cs" />
     <Compile Include="Ammo\PooledRocket.cs" />
     <Compile Include="Ammo\RocketInfo.cs" />
+    <Compile Include="Armor\HullInfo.cs" />
     <Compile Include="Armor\ArmorInfo.cs" />
     <Compile Include="Armor\BDAdjustableArmor.cs" />
     <Compile Include="Armor\ModuleReactiveArmor.cs" />
@@ -151,6 +152,7 @@
     <Compile Include="Competition\TournamentCoordinator.cs" />
     <Compile Include="Competition\VesselSpawning\CircularSpawning.cs" />
     <Compile Include="Competition\VesselSpawning\ContinuousSpawning.cs" />
+    <Compile Include="Competition\VesselSpawning\CustomSpawnTemplate.cs" />
     <Compile Include="Competition\VesselSpawning\SingleVesselSpawning.cs" />
     <Compile Include="Competition\VesselSpawning\SpawnConfig.cs" />
     <Compile Include="Competition\VesselSpawning\SpawnLocations.cs" />
@@ -297,14 +299,19 @@
     <Compile Include="Utils\FARUtils.cs" />
     <Compile Include="Utils\FireSpitterUtils.cs" />
     <Compile Include="Utils\GUIUtils.cs" />
+    <Compile Include="Utils\KrakensbaneUtils.cs" />
     <Compile Include="Utils\KSPForceApplier.cs" />
     <Compile Include="Utils\LayerMask.cs" />
     <Compile Include="Utils\ObjectPool.cs" />
+    <Compile Include="Utils\ObjectPoolNonUnity.cs" />
     <Compile Include="Utils\OtherUtils.cs" />
     <Compile Include="Utils\PartExploderSystem.cs" />
     <Compile Include="Utils\ProjectileUtils.cs" />
     <Compile Include="Utils\ResourceUtils.cs" />
+    <Compile Include="Utils\SmoothingUtils.cs" />
     <Compile Include="Utils\SplineUtils.cs" />
+    <Compile Include="Utils\StringUtils.cs" />
+    <Compile Include="Utils\SoundUtils.cs" />
     <Compile Include="Utils\UIControlUtils.cs" />
     <Compile Include="Utils\VectorUtils.cs" />
     <Compile Include="Utils\VesselModuleRegistry.cs" />
@@ -323,9 +330,11 @@
     <Compile Include="Weapons\Missiles\BDMMLauncher.cs" />
     <Compile Include="Weapons\Missiles\BDModularGuidance.cs" />
     <Compile Include="Weapons\Missiles\MissileBase.cs" />
+    <Compile Include="Weapons\Missiles\MissileDummy.cs" />
     <Compile Include="Weapons\Missiles\MissileLaunchParams.cs" />
     <Compile Include="Weapons\Missiles\MissileLauncher.cs" />
     <Compile Include="Weapons\Missiles\ModuleMissileRearm.cs" />
+    <Compile Include="Weapons\Missiles\MultiMissileLauncher.cs" />
     <Compile Include="Weapons\ModuleEMP.cs" />
     <Compile Include="Weapons\ModuleWeapon.cs" />
     <Compile Include="Weapons\RippleOption.cs" />
@@ -346,6 +355,7 @@
     <None Include="Distribution\GameData\BDArmory\BDArmory.version" />
     <None Include="Distribution\GameData\BDArmory\BulletDefs\BD_Armors.cfg" />
     <None Include="Distribution\GameData\BDArmory\BulletDefs\BD_Bullets.cfg" />
+    <None Include="Distribution\GameData\BDArmory\BulletDefs\BD_Materials.cfg" />
     <None Include="Distribution\GameData\BDArmory\BulletDefs\BD_Mutators.cfg" />
     <None Include="Distribution\GameData\BDArmory\BulletDefs\BD_Rockets.cfg" />
     <None Include="Distribution\GameData\BDArmory\craft\BDA - Test Plane - AA.craft" />
@@ -378,10 +388,12 @@
     <None Include="Distribution\GameData\BDArmory\MMPatches\000000_HitpointModule_PartFixes.cfg" />
     <None Include="Distribution\GameData\BDArmory\MMPatches\10_bdac_stealth.cfg" />
     <None Include="Distribution\GameData\BDArmory\MMPatches\Armor_CVE.cfg" />
+    <None Include="Distribution\GameData\BDArmory\MMPatches\BDA_battledamage.cfg" />
     <None Include="Distribution\GameData\BDArmory\MMPatches\BDA_GroundRadar.cfg" />
     <None Include="Distribution\GameData\BDArmory\MMPatches\BDA_TweakScale.cfg" />
     <None Include="Distribution\GameData\BDArmory\MMPatches\bdmk22_cockpit.cfg" />
     <None Include="Distribution\GameData\BDArmory\MMPatches\Explode_Mode_Squad_Tanks.cfg" />
+    <None Include="Distribution\GameData\BDArmory\MMPatches\StructPWing.cfg" />
     <None Include="Distribution\GameData\BDArmory\Models\bulletDecal\BulletDecal1.mu" />
     <None Include="Distribution\GameData\BDArmory\Models\bulletDecal\BulletDecal2.mu" />
     <None Include="Distribution\GameData\BDArmory\Models\bulletDecal\BulletDecal2b.mu" />
@@ -897,6 +909,7 @@
 
       <!-- Deploy to all KSP folders in ksp_dir.txt -->
       bash -c 'cat $(ProjectDir)../../_LocalDev/ksp_dir.txt | while read KSP_DIR; do
+        if [[ "${KSP_DIR:0:1}" == "#" ]]; then continue; fi
         echo Deploy $(ProjectDir) Distribution files to test env:  "${KSP_DIR}/GameData"...
         echo copying:"$(ProjectDir)Distribution/GameData" to "${KSP_DIR}/GameData" 
         cp -a "$(ProjectDir)Distribution/GameData/${ModName}" "${KSP_DIR}/GameData"

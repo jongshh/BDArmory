@@ -11,6 +11,9 @@ namespace BDArmory.Weapons
          UI_Label(affectSymCounterparts = UI_Scene.All, controlEnabled = true, scene = UI_Scene.All)]
         public float proximity = 5000;
 
+        [KSPField]
+        public bool AllowReboot = false;
+
         public override void OnStart(StartState state)
         {
             if (HighLogic.LoadedSceneIsFlight)
@@ -38,7 +41,7 @@ namespace BDArmory.Weapons
                             emp = (ModuleDrainEC)v.rootPart.AddModule("ModuleDrainEC");
                         }
                         emp.incomingDamage += ((proximity - (float)targetDistance) * 10); //this way craft at edge of blast might only get disabled instead of bricked
-                        emp.softEMP = false; //can bypass DMP damage cap
+                        emp.softEMP = AllowReboot; //can bypass DMP damage cap
                     }
                 }
             }

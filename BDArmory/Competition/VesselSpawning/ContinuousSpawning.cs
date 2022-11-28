@@ -35,7 +35,12 @@ namespace BDArmory.Competition.VesselSpawning
 
         void LogMessage(string message, bool toScreen = true, bool toLog = true) => LogMessageFrom("ContinuousSpawning", message, toScreen, toLog);
 
-        public override IEnumerator Spawn(SpawnConfig spawnConfig) => SpawnVesselsContinuouslyAsCoroutine(spawnConfig);
+        public override IEnumerator Spawn(SpawnConfig spawnConfig)
+        {
+            var circularSpawnConfig = spawnConfig as CircularSpawnConfig;
+            if (circularSpawnConfig == null) yield break;
+            yield return SpawnVesselsContinuouslyAsCoroutine(circularSpawnConfig);
+        }
 
         public void CancelSpawning()
         {
@@ -68,7 +73,7 @@ namespace BDArmory.Competition.VesselSpawning
             BDACompetitionMode.Instance.ResetCompetitionStuff(); // Reset competition scores.
         }
 
-        public void SpawnVesselsContinuously(SpawnConfig spawnConfig)
+        public void SpawnVesselsContinuously(CircularSpawnConfig spawnConfig)
         {
             PreSpawnInitialisation(spawnConfig);
             LogMessage("[BDArmory.VesselSpawner]: Triggering continuous vessel spawning at " + spawnConfig.latitude.ToString("G6") + ", " + spawnConfig.longitude.ToString("G6") + ", with altitude " + spawnConfig.altitude + "m.", false);
@@ -79,7 +84,7 @@ namespace BDArmory.Competition.VesselSpawning
         /// A coroutine version of the SpawnAllVesselsContinuously function that performs the required prespawn initialisation.
         /// </summary>
         /// <param name="spawnConfig">The spawn config to use.</param>
-        public IEnumerator SpawnVesselsContinuouslyAsCoroutine(SpawnConfig spawnConfig)
+        public IEnumerator SpawnVesselsContinuouslyAsCoroutine(CircularSpawnConfig spawnConfig)
         {
             PreSpawnInitialisation(spawnConfig);
             LogMessage("[BDArmory.VesselSpawner]: Triggering continuous vessel spawning at " + spawnConfig.latitude.ToString("G6") + ", " + spawnConfig.longitude.ToString("G6") + ", with altitude " + spawnConfig.altitude + "m.", false);
@@ -90,7 +95,7 @@ namespace BDArmory.Competition.VesselSpawning
         // HashSet<Vessel> vesselsToActivate = new HashSet<Vessel>();
         // Spawns all vessels in a downward facing ring and activates them (autopilot and AG10, then stage if no engines are firing), then respawns any that die. An altitude of 1000m should be plenty.
         // Note: initial vessel separation tends towards 2*pi*spawnDistanceFactor from above for >3 vessels.
-        private IEnumerator SpawnVesselsContinuouslyCoroutine(SpawnConfig spawnConfig)
+        private IEnumerator SpawnVesselsContinuouslyCoroutine(CircularSpawnConfig spawnConfig)
         {
             #region Initialisation and sanity checks
             // Tally up the craft to spawn.

@@ -42,13 +42,13 @@ namespace BDArmory.Armor
 
             if (scaleneTri)
             {
-                Fields["Width"].guiName = Localizer.Format("#LOC_BDArmory_ArmorWidthL");
-                Events["ToggleTriTypeOption"].guiName = Localizer.Format("#LOC_BDArmory_ArmorTriSca");
+                Fields["Width"].guiName = StringUtils.Localize("#LOC_BDArmory_ArmorWidthL");
+                Events["ToggleTriTypeOption"].guiName = StringUtils.Localize("#LOC_BDArmory_ArmorTriSca");
             }
             else
             {
-                Fields["Width"].guiName = Localizer.Format("#LOC_BDArmory_ArmorWidth");
-                Events["ToggleTriTypeOption"].guiName = Localizer.Format("#LOC_BDArmory_ArmorTriIso");
+                Fields["Width"].guiName = StringUtils.Localize("#LOC_BDArmory_ArmorWidth");
+                Events["ToggleTriTypeOption"].guiName = StringUtils.Localize("#LOC_BDArmory_ArmorTriIso");
             }
             GUIUtils.RefreshAssociatedWindows(part);
             if (applySym)
@@ -63,7 +63,7 @@ namespace BDArmory.Armor
         }
 
         [KSPEvent(guiActive = false, guiActiveEditor = true, guiName = "#LOC_BDArmory_UnclampTuning_disabledText", active = true)]//Toggle scale limit
-        public void ToggleScaleClamp()
+        public void ToggleScaleClamp(bool applySym = true)
         {
             clamped = !clamped;
             UI_FloatRange AWidth = (UI_FloatRange)Fields["Width"].uiControlEditor;
@@ -75,20 +75,22 @@ namespace BDArmory.Armor
 
             if (!clamped)
             {
-                Events["ToggleScaleClamp"].guiName = Localizer.Format("#LOC_BDArmory_UnclampTuning_enabledText");
+                Events["ToggleScaleClamp"].guiName = StringUtils.Localize("#LOC_BDArmory_UnclampTuning_enabledText");
             }
             else
             {
-                Events["ToggleScaleClamp"].guiName = Localizer.Format("#LOC_BDArmory_UnclampTuning_disabledText");
+                Events["ToggleScaleClamp"].guiName = StringUtils.Localize("#LOC_BDArmory_UnclampTuning_disabledText");
             }
             GUIUtils.RefreshAssociatedWindows(part);
-            using (List<Part>.Enumerator sym = part.symmetryCounterparts.GetEnumerator())
-                while (sym.MoveNext())
-                {
-                    if (sym.Current == null) continue;
-                    sym.Current.FindModuleImplementing<BDAdjustableArmor>().ToggleScaleClamp();
-                }
-            GUIUtils.RefreshAssociatedWindows(part);
+            if (applySym)
+            {
+                using (List<Part>.Enumerator sym = part.symmetryCounterparts.GetEnumerator())
+                    while (sym.MoveNext())
+                    {
+                        if (sym.Current == null) continue;
+                        sym.Current.FindModuleImplementing<BDAdjustableArmor>().ToggleScaleClamp(false);
+                    }
+            }
         }
         bool clamped = true;
 

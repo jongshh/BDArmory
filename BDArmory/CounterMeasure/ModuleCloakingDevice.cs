@@ -19,6 +19,8 @@ namespace BDArmory.CounterMeasure
 
         [KSPField] public double resourceDrain = 5;
 
+        [KSPField] public string resourceName = "ElectricCharge";
+
         [KSPField] public float CloakTime = 1;
 
         [KSPField] public bool alwaysOn = false;
@@ -31,6 +33,8 @@ namespace BDArmory.CounterMeasure
         bool disabling = false;
 
         float cloakTimer = 0;
+
+        private int resourceID;
 
         //part anim support?
 
@@ -72,7 +76,10 @@ namespace BDArmory.CounterMeasure
                 EnableCloak();
             }
         }
-
+        void Start()
+        {
+            resourceID = PartResourceLibrary.Instance.GetDefinition(resourceName).id;
+        }
         public override void OnStart(StartState state)
         {
             base.OnStart(state);
@@ -180,7 +187,7 @@ namespace BDArmory.CounterMeasure
             }
 
             double drainAmount = resourceDrain * TimeWarp.fixedDeltaTime;
-            double chargeAvailable = part.RequestResource("ElectricCharge", drainAmount, ResourceFlowMode.ALL_VESSEL);
+            double chargeAvailable = part.RequestResource(resourceID, drainAmount, ResourceFlowMode.ALL_VESSEL);
             if (chargeAvailable < drainAmount * 0.95f)
             {
                 DisableCloak();
@@ -190,25 +197,27 @@ namespace BDArmory.CounterMeasure
 
         IEnumerator CloakRoutine()
         {
+            var wait = new WaitForFixedUpdate();
             enabling = true;
             while (cloakTimer < CloakTime)
             {
-                yield return null;
+                yield return wait;
             }
             enabling = false;
         }
 
         IEnumerator DecloakRoutine()
         {
+            var wait = new WaitForFixedUpdate();
             disabling = true;
             while (cloakTimer > 0)
             {
-                yield return null;
+                yield return wait;
             }
             disabling = false;
         }
 
-        void Update()
+        void FixedUpdate()
         {
             if (!HighLogic.LoadedSceneIsFlight) return;
             if (enabling || disabling)

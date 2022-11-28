@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -121,6 +122,8 @@ namespace BDArmory.Radar
         };
         private static int numAspects = rcsAspects.GetLength(0); // Number of aspects
         public static float[,] worstRCSAspects = new float[3, 3]; // Worst three aspects
+        static double[] rcsValues;
+        static Color32[] pixels;
 
         /// <summary>
         /// Force radar signature update
@@ -206,13 +209,14 @@ namespace BDArmory.Radar
         /// <summary>
         /// Internal method: get a vessels siganture modifiers (ecm, stealth, ...)
         /// </summary>
-        private static float GetVesselModifiedSignature(Vessel v, TargetInfo ti)
+        public static float GetVesselModifiedSignature(Vessel v, TargetInfo ti)
         {
             ti.radarRCSReducedSignature = ti.radarBaseSignature;
             ti.radarModifiedSignature = ti.radarBaseSignature;
             ti.radarLockbreakFactor = 1;
 
-            //
+            //Wouldn't this make more sense to calculate once when ECM (de)activated, instead of re-calcing every fixedUpdate tick? @JOSUE
+            /*
             // read vessel ecminfo for active jammers and calculate effects:
             VesselECMJInfo vesseljammer = v.gameObject.GetComponent<VesselECMJInfo>();
             if (vesseljammer)
@@ -234,9 +238,8 @@ namespace BDArmory.Radar
                 // Use clamp to prevent RCS reduction resulting in increased lockbreak factor, which negates value of RCS reduction)
                 ti.radarLockbreakFactor = (ti.radarRCSReducedSignature == 0) ? 0f :
                     Mathf.Max(Mathf.Clamp01(ti.radarRCSReducedSignature / ti.radarModifiedSignature) * (1 - (vesseljammer.lockBreakStrength / ti.radarRCSReducedSignature / 100)), 0); // 0 is minimum lockbreak factor
-
             }
-
+            */
             return ti.radarModifiedSignature;
         }
 
@@ -271,7 +274,6 @@ namespace BDArmory.Radar
                 return jammingDistance;
 
             jammingDistance = GetVesselRadarCrossSection(v).radarJammingDistance;
-
             return jammingDistance;
         }
 
@@ -324,8 +326,8 @@ namespace BDArmory.Radar
                     Debug.Log($"[BDArmory.RadarUtils]: Rendering radar snapshot of vessel {v.name}, type {v.vesselType}");
                 else
                     Debug.Log("[BDArmory.RadarUtils]: Rendering radar snapshot of vessel");
-                Debug.Log("[BDArmory.RadarUtils]: - bounds: " + vesselbounds.ToString());
-                Debug.Log("[BDArmory.RadarUtils]: - rotation: " + t.rotation.ToString());
+                Debug.Log($"[BDArmory.RadarUtils]: - bounds: {vesselbounds}");
+                Debug.Log($"[BDArmory.RadarUtils]: - rotation: {t.rotation}");
                 //Debug.Log("[BDArmory.RadarUtils]: - size: " + vesselbounds.size + ", magnitude: " + vesselbounds.size.magnitude);
             }
 
@@ -345,11 +347,12 @@ namespace BDArmory.Radar
             }
 
             float rcsVariable = 0f;
-            worstRCSAspects = new float[3, 3];
-            double[] rcsValues = new double[numAspects];
+            if (worstRCSAspects is null) worstRCSAspects = new float[3, 3];
+            Array.Clear(worstRCSAspects, 0, 9);
+            if (rcsValues is null) rcsValues = new double[numAspects];
+            Array.Clear(rcsValues, 0, numAspects);
             rcsTotal = 0;
             Vector3 aspect;
-            Color32[] pixels;
 
             // Loop through all aspects
             for (int i = 0; i < numAspects; i++)
@@ -963,7 +966,7 @@ namespace BDArmory.Radar
                 while (loadedvessels.MoveNext())
                 {
                     // ignore null, unloaded and ignored types
-                    if (loadedvessels.Current == null || !loadedvessels.Current.loaded) continue;
+                    if (loadedvessels.Current == null || loadedvessels.Current.packed || !loadedvessels.Current.loaded) continue;
 
                     // IFF code check to prevent friendly lock-on (neutral vessel without a weaponmanager WILL be lockable!)
                     MissileFire wm = VesselModuleRegistry.GetModule<MissileFire>(loadedvessels.Current);
@@ -1063,7 +1066,7 @@ namespace BDArmory.Radar
                 while (loadedvessels.MoveNext())
                 {
                     // ignore null, unloaded and self
-                    if (loadedvessels.Current == null || !loadedvessels.Current.loaded) continue;
+                    if (loadedvessels.Current == null || loadedvessels.Current.packed || !loadedvessels.Current.loaded) continue;
                     if (loadedvessels.Current == myWpnManager.vessel) continue;
 
                     // ignore too close ones
@@ -1434,8 +1437,8 @@ namespace BDArmory.Radar
                                             case MissileBase.TargetingModes.Laser:
                                                 results.foundAGM = true;
                                                 break;
-                                            case MissileBase.TargetingModes.AntiRad:
-                                                results.foundAntiRadiationMissile = true;
+                                            case MissileBase.TargetingModes.AntiRad: //How does one differentiate between a passive IR sensor and a passive AR sensor?
+                                                results.foundAntiRadiationMissile = true; //admittedly, combining the two would result in launching flares at ARMs and turning off radar when having incoming heaters...
                                                 break;
                                         }
                                     }

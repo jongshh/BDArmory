@@ -15,7 +15,7 @@ using BDArmory.Weapons.Missiles;
 
 namespace BDArmory.Competition.VesselSpawning
 {
-    public enum SpawnFailureReason { None, NoCraft, NoTerrain, InvalidVessel, VesselLostParts, VesselFailedToSpawn, TimedOut, Cancelled };
+    public enum SpawnFailureReason { None, NoCraft, NoTerrain, InvalidVessel, VesselLostParts, VesselFailedToSpawn, TimedOut, Cancelled, DependencyIssues };
 
     public static class SpawnUtils
     {
@@ -68,7 +68,7 @@ namespace BDArmory.Competition.VesselSpawning
 
         #region Camera
         public static void ShowSpawnPoint(int worldIndex, double latitude, double longitude, double altitude = 0, float distance = 100, bool spawning = false) => SpawnUtilsInstance.Instance.ShowSpawnPoint(worldIndex, latitude, longitude, altitude, distance, spawning); // Note: this may launch a coroutine when not spawning and there's no active vessel!
-        public static void RevertSpawnLocationCamera(bool keepTransformValues = true) => SpawnUtilsInstance.Instance.RevertSpawnLocationCamera(keepTransformValues);
+        public static void RevertSpawnLocationCamera(bool keepTransformValues = true, bool revertIfDead = false) => SpawnUtilsInstance.Instance.RevertSpawnLocationCamera(keepTransformValues, revertIfDead);
         #endregion
 
         #region Teams
@@ -255,6 +255,7 @@ namespace BDArmory.Competition.VesselSpawning
         public void RemoveVessel(Vessel vessel)
         {
             if (vessel == null) return;
+            if (VesselSpawnerWindow.Instance.Observers.Contains(vessel)) return; // Don't remove observers.
             if (BDArmorySettings.ASTEROID_RAIN && vessel.vesselType == VesselType.SpaceObject) return; // Don't remove asteroids we're using.
             if (BDArmorySettings.ASTEROID_FIELD && vessel.vesselType == VesselType.SpaceObject) return; // Don't remove asteroids we're using.
             StartCoroutine(RemoveVesselCoroutine(vessel));
@@ -430,7 +431,7 @@ namespace BDArmory.Competition.VesselSpawning
             ShowSpawnPoint(worldIndex, latitude, longitude, altitude, distance, spawning, false);
         }
 
-        public void RevertSpawnLocationCamera(bool keepTransformValues = true)
+        public void RevertSpawnLocationCamera(bool keepTransformValues = true, bool revertIfDead = false)
         {
             if (spawnLocationCamera == null || !spawnLocationCamera.activeSelf) return;
             if (BDArmorySettings.DEBUG_SPAWNING) Debug.Log($"[BDArmory.SpawnUtils]: Reverting spawn location camera.");
@@ -449,6 +450,15 @@ namespace BDArmory.Competition.VesselSpawning
             }
             if (FlightGlobals.ActiveVessel != null && FlightGlobals.ActiveVessel.state != Vessel.State.DEAD)
                 LoadedVesselSwitcher.Instance.ForceSwitchVessel(FlightGlobals.ActiveVessel); // Update the camera.
+            else if (revertIfDead) // Spawn a spawn probe to avoid KSP breaking the camera.
+            {
+                var spawnProbe = VesselSpawner.SpawnSpawnProbe(flightCamera.Distance * flightCamera.mainCamera.transform.forward);
+                if (spawnProbe != null)
+                {
+                    spawnProbe.Landed = false;
+                    StartCoroutine(LoadedVesselSwitcher.Instance.SwitchToVesselWhenPossible(spawnProbe, 10));
+                }
+            }
             spawnLocationCamera.SetActive(false);
         }
         #endregion

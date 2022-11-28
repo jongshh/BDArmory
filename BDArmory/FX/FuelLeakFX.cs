@@ -86,7 +86,7 @@ namespace BDArmory.FX
             drainRate = 1;
         }
 
-        void Update()
+        void FixedUpdate()
         {
             if (!gameObject.activeInHierarchy || !HighLogic.LoadedSceneIsFlight || BDArmorySetup.GameIsPaused)
             {
@@ -104,7 +104,7 @@ namespace BDArmory.FX
                         {
                             if (fuel.amount > 0)
                             {
-                                parentPart.RequestResource("LiquidFuel", (double)(drainRate * Time.deltaTime));
+                                parentPart.RequestResource("LiquidFuel", (double)(drainRate * Time.fixedDeltaTime));
                                 fuelLeft++;
                             }
                         }
@@ -118,7 +118,7 @@ namespace BDArmory.FX
                         {
                             //part.RequestResource("LiquidFuel", ((double)drainRate * Mathf.Clamp((float)fuel.amount, 40, 400) / Mathf.Clamp((float)fuel.maxAmount, 400, (float)fuel.maxAmount)) * Time.deltaTime);
                             //This draining from across vessel?  Trying alt method
-                            fuel.amount -= ((double)drainRate * Mathf.Clamp((float)fuel.amount, 40, 400) / Mathf.Clamp((float)fuel.maxAmount, 400, (float)fuel.maxAmount)) * Time.deltaTime;
+                            fuel.amount -= ((double)drainRate * Mathf.Clamp((float)fuel.amount, 40, 400) / Mathf.Clamp((float)fuel.maxAmount, 400, (float)fuel.maxAmount)) * Time.fixedDeltaTime;
                             fuel.amount = Mathf.Clamp((float)fuel.amount, 0, (float)fuel.maxAmount);
                             fuelLeft++;
                         }
@@ -130,7 +130,7 @@ namespace BDArmory.FX
                         {
                             //part.RequestResource("Oxidizer", ((double)drainRate * Mathf.Clamp((float)ox.amount, 40, 400) / Mathf.Clamp((float)ox.maxAmount, 400, (float)ox.maxAmount) ) *  Time.deltaTime);
                             //more fuel = higher pressure, clamped at 400 since flow rate is constrained by outlet aperture, not fluid pressure
-                            ox.amount -= ((double)drainRate * Mathf.Clamp((float)fuel.amount, 40, 400) / Mathf.Clamp((float)fuel.maxAmount, 400, (float)fuel.maxAmount)) * Time.deltaTime;
+                            ox.amount -= ((double)drainRate * Mathf.Clamp((float)fuel.amount, 40, 400) / Mathf.Clamp((float)fuel.maxAmount, 400, (float)fuel.maxAmount)) * Time.fixedDeltaTime;
                             ox.amount = Mathf.Clamp((float)ox.amount, 0, (float)ox.maxAmount);
                             fuelLeft++;
                         }
@@ -141,7 +141,7 @@ namespace BDArmory.FX
                         if (mp.amount >= 0)
                         {
                             //part.RequestResource("MonoPropellant", ((double)drainRate * Mathf.Clamp((float)mp.amount, 40, 400) / Mathf.Clamp((float)mp.maxAmount, 400, (float)mp.maxAmount)) * Time.deltaTime);
-                            mp.amount -= ((double)drainRate * Mathf.Clamp((float)mp.amount, 40, 400) / Mathf.Clamp((float)mp.maxAmount, 400, (float)mp.maxAmount)) * Time.deltaTime;
+                            mp.amount -= ((double)drainRate * Mathf.Clamp((float)mp.amount, 40, 400) / Mathf.Clamp((float)mp.maxAmount, 400, (float)mp.maxAmount)) * Time.fixedDeltaTime;
                             mp.amount = Mathf.Clamp((float)mp.amount, 0, (float)mp.maxAmount);
                             fuelLeft++;
                         }

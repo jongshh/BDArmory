@@ -73,22 +73,30 @@ namespace BDArmory.UI
 
         private void OnEditorShipModifiedEvent(ShipConstruct data)
         {
+            if (data is null) return;
             delayedTakeSnapShot = true;
             if (!delayedTakeSnapShotInProgress)
-                StartCoroutine(DelayedTakeSnapShot());
+                StartCoroutine(DelayedTakeSnapShot(data));
         }
 
         private bool delayedTakeSnapShot = false;
         private bool delayedTakeSnapShotInProgress = false;
-        IEnumerator DelayedTakeSnapShot()
+        IEnumerator DelayedTakeSnapShot(ShipConstruct ship)
         {
             delayedTakeSnapShotInProgress = true;
+            var wait = new WaitForFixedUpdate();
             while (delayedTakeSnapShot) // Wait until ship modified events stop coming.
             {
                 delayedTakeSnapShot = false;
-                yield return null;
-                yield return null; // Two yield nulls to wait for HP changes to delayed ship modified events in HitpointTracker
+                yield return wait;
             }
+            yield return new WaitUntilFixed(() =>
+                ship == null || ship.Parts == null || ship.Parts.TrueForAll(p =>
+                {
+                    if (p == null) return true;
+                    var hp = p.GetComponent<Damage.HitpointTracker>();
+                    return hp == null || hp.Ready;
+                })); // Wait for HP changes to delayed ship modified events in HitpointTracker
             delayedTakeSnapShotInProgress = false;
             takeSnapshot = true;
             previous_index = -1;
@@ -109,11 +117,7 @@ namespace BDArmory.UI
         IEnumerator ToolbarButtonRoutine()
         {
             if (toolbarButton || (!HighLogic.LoadedSceneIsEditor)) yield break;
-            while (!ApplicationLauncher.Ready)
-            {
-                yield return null;
-            }
-
+            yield return new WaitUntil(() => ApplicationLauncher.Ready);
             AddToolbarButton();
         }
 
@@ -148,7 +152,7 @@ namespace BDArmory.UI
         {
             if (showRcsWindow)
             {
-                windowRect = GUI.Window(this.GetInstanceID(), windowRect, WindowRcs, windowTitle, BDArmorySetup.BDGuiSkin.window);
+                windowRect = GUI.Window(GUIUtility.GetControlID(FocusType.Passive), windowRect, WindowRcs, windowTitle, BDArmorySetup.BDGuiSkin.window);
             }
 
             PreventClickThrough();

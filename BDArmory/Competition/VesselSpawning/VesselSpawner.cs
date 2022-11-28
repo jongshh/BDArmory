@@ -90,6 +90,11 @@ namespace BDArmory.Competition.VesselSpawning
             return SpawnVessel(newData, out shipFacility, crewData);
         }
 
+        // Crew reserved for spawning in specific craft.
+        // Make sure to reserve any crew you don't want randomly spawned!
+        // Then after spawning all the craft, clear ReservedCrew again to avoid reserving them for the next batch spawn.
+        public static HashSet<string> ReservedCrew = new HashSet<string>();
+
         static Vessel SpawnVessel(VesselData vesselData, out EditorFacility shipFacility, List<ProtoCrewMember> crewData = null)
         {
             shipFacility = EditorFacility.None;
@@ -188,20 +193,53 @@ namespace BDArmory.Competition.VesselSpawning
                 }
                 if (BDArmorySettings.RUNWAY_PROJECT && BDArmorySettings.RUNWAY_PROJECT_ROUND == 42) // Fly the Unfriendly Skies
                 { crewParts = shipConstruct.parts.FindAll(p => p.protoModuleCrew.Count < p.CrewCapacity).ToList(); }
+                List<ProtoCrewMember> reservedCrew = new List<ProtoCrewMember>();
+                if (crewData != null) // Sanity checks to avoid assigning duplicate or otherwise unavailable crew.
+                {
+                    if (crewData.Any(crew => !string.IsNullOrEmpty(crew.name) && !ReservedCrew.Contains(crew.name))) // Remove non-reserved crew.
+                    {
+                        Debug.LogWarning($"[BDArmory.VesselSpawner]: Removing specified, but not reserved crew to avoid potential collisions: {string.Join(", ", crewData.Where(crew => !ReservedCrew.Contains(crew.name)).Select(crew => crew.name))}");
+                        crewData = crewData.Where(crew => !string.IsNullOrEmpty(crew.name) && ReservedCrew.Contains(crew.name)).ToList();
+                    }
+                    if (crewData.Any(crew => crew.rosterStatus == ProtoCrewMember.RosterStatus.Assigned)) // Remove already assigned crew.
+                    {
+                        Debug.LogWarning($"[BDArmory.VesselSpawner]: Removing already assigned crew: {string.Join(", ", crewData.Where(crew => crew.rosterStatus == ProtoCrewMember.RosterStatus.Assigned).Select(crew => crew.name))}");
+                        crewData = crewData.Where(crew => crew.rosterStatus != ProtoCrewMember.RosterStatus.Assigned).ToList();
+                    }
+                    foreach (var crew in crewData) crew.rosterStatus = ProtoCrewMember.RosterStatus.Available; // Make sure the rest are available.
+                }
                 foreach (var part in crewParts)
                 {
                     int crewToAdd = (BDArmorySettings.VESSEL_SPAWN_FILL_SEATS > 0 || (BDArmorySettings.RUNWAY_PROJECT && BDArmorySettings.RUNWAY_PROJECT_ROUND == 42)) ? part.CrewCapacity - part.protoModuleCrew.Count : 1;
                     for (int crewCount = 0; crewCount < crewToAdd; ++crewCount)
                     {
-                        // Create the ProtoCrewMember
-                        ProtoCrewMember crewMember = HighLogic.CurrentGame.CrewRoster.GetNextOrNewKerbal(ProtoCrewMember.KerbalType.Crew);
+                        ProtoCrewMember crewMember = null;
+                        if (crewData != null && crewCount < crewData.Count) // Crew specified. Add them in order and fill the rest with non-reserved kerbals.
+                        {
+                            crewMember = crewData[crewCount];
+                        }
+                        if (crewMember == null) // Create the ProtoCrewMember
+                        {
+                            crewMember = HighLogic.CurrentGame.CrewRoster.GetNextOrNewKerbal(ProtoCrewMember.KerbalType.Crew);
+                            while (ReservedCrew.Contains(crewMember.name))
+                            {
+                                crewMember.rosterStatus = ProtoCrewMember.RosterStatus.Assigned; // Mark them as assigned so they don't get chosen again.
+                                reservedCrew.Add(crewMember);
+                                crewMember = HighLogic.CurrentGame.CrewRoster.GetNextOrNewKerbal(ProtoCrewMember.KerbalType.Crew);
+                            }
+                        }
                         KerbalRoster.SetExperienceTrait(crewMember, KerbalRoster.pilotTrait); // Make the kerbal a pilot (so they can use SAS properly).
                         KerbalRoster.SetExperienceLevel(crewMember, KerbalRoster.GetExperienceMaxLevel()); // Make them experienced.
                         crewMember.isBadass = true; // Make them bad-ass (likes nearby explosions).
 
                         // Add them to the part
                         part.AddCrewmemberAt(crewMember, part.protoModuleCrew.Count);
+                        if (BDArmorySettings.DEBUG_SPAWNING) Debug.Log($"[BDArmory.VesselSpawner]: Adding {crewMember.name} to {part.name} on {vesselData.name}");
                     }
+                }
+                foreach (var reservedCrewMember in reservedCrew)
+                {
+                    reservedCrewMember.rosterStatus = ProtoCrewMember.RosterStatus.Available; // Make the reserved crew avaiable again for the next vessel.
                 }
 
                 // Create a dummy ProtoVessel, we will use this to dump the parts to a config node.

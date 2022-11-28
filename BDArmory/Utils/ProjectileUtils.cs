@@ -9,12 +9,46 @@ using BDArmory.Extensions;
 using BDArmory.FX;
 using BDArmory.GameModes;
 using BDArmory.Settings;
+using System.IO;
 
 namespace BDArmory.Utils
 {
     class ProjectileUtils
     {
-        static HashSet<string> IgnoredPartNames;
+        public static string settingsConfigURL = Path.Combine(KSPUtil.ApplicationRootPath, "GameData/BDArmory/PluginData/PartsBlacklists.cfg");
+        public static void SetUpPartsHashSets()
+        {
+            var fileNode = ConfigNode.Load(settingsConfigURL);
+            if (fileNode == null)
+            {
+                fileNode = new ConfigNode();
+                if (!Directory.GetParent(settingsConfigURL).Exists)
+                { Directory.GetParent(settingsConfigURL).Create(); }
+                if (!fileNode.HasNode("IgnoredParts"))
+                {
+                    fileNode.AddNode("IgnoredParts");
+                }
+                ConfigNode Iparts = fileNode.GetNode("IgnoredParts");
+                Iparts.SetValue("Part1", "ladder1", true);
+                Iparts.SetValue("Part2", "telescopicLadder", true);
+                Iparts.SetValue("Part3", "telescopicLadderBay", true);
+
+                if (!fileNode.HasNode("MaterialsBlacklist"))
+                {
+                    fileNode.AddNode("MaterialsBlacklist");
+                }
+                ConfigNode BLparts = fileNode.GetNode("MaterialsBlacklist");
+                BLparts.SetValue("Part1", "InflatableHeatShield", true);
+                BLparts.SetValue("Part2", "foldingRad*", true);
+                BLparts.SetValue("Part3", "radPanel*", true);
+                BLparts.SetValue("Part4", "ISRU*", true);
+                BLparts.SetValue("Part5", "Scanner*", true);
+                BLparts.SetValue("Part5", "Drill*", true);
+
+                fileNode.Save(settingsConfigURL);
+            }
+        }
+            static HashSet<string> IgnoredPartNames;
         public static bool IsIgnoredPart(Part part)
         {
             if (IgnoredPartNames == null)
@@ -22,6 +56,23 @@ namespace BDArmory.Utils
                 IgnoredPartNames = new HashSet<string> { "bdPilotAI", "bdShipAI", "missileController", "bdammGuidanceModule" };
                 IgnoredPartNames.UnionWith(PartLoader.LoadedPartsList.Select(p => p.partPrefab.partInfo.name).Where(name => name.Contains("flagPart")));
                 IgnoredPartNames.UnionWith(PartLoader.LoadedPartsList.Select(p => p.partPrefab.partInfo.name).Where(name => name.Contains("conformaldecals")));
+
+                var fileNode = ConfigNode.Load(settingsConfigURL);
+                if (fileNode.HasNode("IgnoredParts"))
+                {
+                    ConfigNode parts = fileNode.GetNode("IgnoredParts");
+                    //Debug.Log($"[BDArmory.ProjectileUtils]: partsBlacklist.cfg IgnoredParts count: " + parts.CountValues);
+                    for (int i = 0; i < parts.CountValues; i++)
+                    {
+                        if (parts.values[i].value.Contains("*"))
+                        {
+                            string partsName = parts.values[i].value.Trim('*');
+                            IgnoredPartNames.UnionWith(PartLoader.LoadedPartsList.Select(p => p.partPrefab.partInfo.name).Where(name => name.Contains(partsName)));
+                        }
+                        else
+                            IgnoredPartNames.Add(parts.values[i].value);
+                    }
+                }
                 if (BDArmorySettings.DEBUG_DAMAGE) Debug.Log($"[BDArmory.ProjectileUtils]: Ignored Parts: " + string.Join(", ", IgnoredPartNames));
             }
             return ProjectileUtils.IgnoredPartNames.Contains(part.partInfo.name);
@@ -29,12 +80,42 @@ namespace BDArmory.Utils
         static HashSet<string> armorParts;
         public static bool IsArmorPart(Part part)
         {
+            if (BDArmorySettings.LEGACY_ARMOR) return false;
             if (armorParts == null)
             {
                 armorParts = PartLoader.LoadedPartsList.Select(p => p.partPrefab.partInfo.name).Where(name => name.ToLower().Contains("armor")).ToHashSet();
                 if (BDArmorySettings.DEBUG_ARMOR) Debug.Log($"[BDArmory.ProjectileUtils]: Armor Parts: " + string.Join(", ", armorParts));
             }
             return armorParts.Contains(part.partInfo.name);
+        }
+
+        static HashSet<string> materialsBlacklist;
+        public static bool isMaterialBlackListpart(Part Part)
+        {
+            if (materialsBlacklist == null)
+            {
+                materialsBlacklist = new HashSet<string> { "bdPilotAI", "bdShipAI", "missileController", "bdammGuidanceModule" };
+
+                var fileNode = ConfigNode.Load(settingsConfigURL);
+                if (fileNode.HasNode("MaterialsBlacklist"))
+                {
+                    ConfigNode parts = fileNode.GetNode("MaterialsBlacklist");
+                    //Debug.Log($"[BDArmory.ProjectileUtils]: partsBlacklist.cfg BlacklistParts count: " + parts.CountValues);
+                    for (int i = 0; i < parts.CountValues; i++)
+                    {
+                        if (parts.values[i].value.Contains("*"))
+                        {
+                            string partsName = parts.values[i].value.Trim('*');
+                            Debug.Log($"[BDArmory.ProjectileUtils]: Found wildcard, name:" + partsName);
+                            materialsBlacklist.UnionWith(PartLoader.LoadedPartsList.Select(p => p.partPrefab.partInfo.name).Where(name => name.Contains(partsName)));
+                        }
+                        else
+                            materialsBlacklist.Add(parts.values[i].value);
+                    }
+                }
+                if (BDArmorySettings.DEBUG_DAMAGE) Debug.Log($"[BDArmory.ProjectileUtils]: Part Material blacklist: " + string.Join(", ", materialsBlacklist));
+            }
+            return ProjectileUtils.materialsBlacklist.Contains(Part.partInfo.name);
         }
 
         public static void ApplyDamage(Part hitPart, RaycastHit hit, float multiplier, float penetrationfactor, float caliber, float projmass, float impactVelocity, float DmgMult, double distanceTraveled, bool explosive, bool incendiary, bool hasRichocheted, Vessel sourceVessel, string name, string team, ExplosionSourceType explosionSource, bool firstHit, bool partAlreadyHit, bool cockpitPen)
@@ -63,7 +144,7 @@ namespace BDArmory.Utils
             // Update scoring structures
             //if (firstHit)
             //{
-                ApplyScore(hitPart, sourceVessel.GetName(), distanceTraveled, damage, name, explosionSource, firstHit);
+            ApplyScore(hitPart, sourceVessel.GetName(), distanceTraveled, damage, name, explosionSource, firstHit);
             //}
             ResourceUtils.StealResources(hitPart, sourceVessel);
         }
@@ -221,7 +302,7 @@ namespace BDArmory.Utils
                 ApplyScore(hitPart, sourceVesselName, 0, damage, "Spalling", explosionSource);
             }
         }
-        public static void CalculateShrapnelDamage(Part hitPart, RaycastHit hit, float caliber, float HEmass, float detonationDist, string sourceVesselName, ExplosionSourceType explosionSource, float projmass = -1, float penetrationFactor = -1)
+        public static void CalculateShrapnelDamage(Part hitPart, RaycastHit hit, float caliber, float HEmass, float detonationDist, string sourceVesselName, ExplosionSourceType explosionSource, float projmass = -1, float penetrationFactor = -1, float thickness = -1)
         {
             /// <summary>
             /// Calculates damage from flak/shrapnel, based on HEmass and projMass, of both contact and airburst detoantions.
@@ -229,7 +310,7 @@ namespace BDArmory.Utils
             /// Shrapnel penetration dist determined by caliber, penetration. Penetration = -1 is part only hit by blast/airburst
             /// </summary>
             if (BDArmorySettings.PAINTBALL_MODE) return; //don't damage armor if paintball mode
-            float thickness = (float)hitPart.GetArmorThickness();
+            if (thickness < 0) thickness = (float)hitPart.GetArmorThickness();
             if (thickness < 1)
             {
                 thickness = 1; //prevent divide by zero or other odd behavior
@@ -414,7 +495,7 @@ namespace BDArmory.Utils
                 float Density = Armor.Density;
                 if (Armor.ArmorPanel) spallArea = Armor.armorVolume * 10000;
 
-                float ArmorTolerance = (((Strength * (1 + ductility)) + Density) / 1000) * thickness; 
+                float ArmorTolerance = (((Strength * (1 + ductility)) + Density) / 1000) * thickness;
 
                 float blowthroughFactor = (float)BlastPressure / ArmorTolerance;
                 if (BDArmorySettings.DEBUG_ARMOR)
@@ -569,7 +650,7 @@ namespace BDArmory.Utils
                                 }
                                 if (BDArmorySettings.BATTLEDAMAGE)
                                 {
-                                    BattleDamageHandler.CheckDamageFX(hitPart, spallArea/100000, blowthroughFactor, true, false, sourcevessel, hit);
+                                    BattleDamageHandler.CheckDamageFX(hitPart, spallArea / 100000, blowthroughFactor, true, false, sourcevessel, hit);
                                 }
                             }
                             return true;
@@ -718,8 +799,8 @@ namespace BDArmory.Utils
                 length = ((bulletMass * 1000.0f * 400.0f) / ((caliber * caliber *
                     Mathf.PI) * (sabot ? 19.0f : 11.34f)) + 1.0f) * 10.0f;
             }
-            
-            float penetration = 0;
+
+            //float penetration = 0;
             // 1400 is an arbitrary velocity around where the linear function used to
             // simplify diverges from the result predicted by the Frank and Zook S2 based
             // equation used. It is also inaccurate under 1400 for long rod projectiles
@@ -744,14 +825,28 @@ namespace BDArmory.Utils
             // Perhaps capping this with the hydrodynamic limit makes sense, but even with
             // these kind of penetrators they easily blow past the hydrodynamic limit in
             // actual experiments so I'm a little hesitant about putting it in.
+
+            // Above text has been deprecated, Tate is used for everything and projectile
+            // aspect ratio is now used to reduce penetration at L/D < 1
+
+            float penetration = ((length - caliber) * (1.0f - Mathf.Exp((-vFactor *
+                    bulletVelocity * bulletVelocity) * muParam1)) * muParam2 + caliber *
+                    muParam3 * Mathf.Log(1.0f + vFactor * bulletVelocity *
+                    bulletVelocity)) * apBulletMod;
+
             if (length < caliber)
             {
                 // Formula based on IDA paper P5032, Appendix D, modified to match the
                 // Krupp equation this mod used before.
-                penetration = (BDAMath.Sqrt(bulletMass * 1000.0f / (0.7f * Strength * Mathf.PI
-                    * caliber)) * 0.727457902089f * bulletVelocity) * apBulletMod;
+                //penetration = (BDAMath.Sqrt(bulletMass * 1000.0f / (0.7f * Strength * Mathf.PI
+                //    * caliber)) * 0.727457902089f * bulletVelocity) * apBulletMod;
+
+                // Deprecated the above formula in favor of this, it actually follows the
+                // old Krupp formula's predictions pretty well. It may not necessarily be
+                // 100% accurate but it gets the job done
+                penetration = penetration * length / caliber;
             }
-            else
+            /*else
             {
                 // Formula based on "Energy-efficient penetration and perforation of
                 // targets in the hypervelocity regime" by Frank and Zook (1987) Used the
@@ -759,14 +854,16 @@ namespace BDArmory.Utils
                 // and is an overestimate but the S4 option is far more complex than even
                 // this and it also requires an empirical parameter that requires testing
                 // long rod penetrators against targets so lolno
-                penetration =  ((length - caliber) * (1.0f - Mathf.Exp((-vFactor *
+                penetration = ((length - caliber) * (1.0f - Mathf.Exp((-vFactor *
                     bulletVelocity * bulletVelocity) * muParam1)) * muParam2 + caliber *
                     muParam3 * Mathf.Log(1.0f + vFactor * bulletVelocity *
-                    bulletVelocity))*apBulletMod;
-            }
+                    bulletVelocity)) * apBulletMod;
+            }*/
+
+
             if (BDArmorySettings.DEBUG_ARMOR)
             {
-                Debug.Log("[BDArmory.ProjectileUtils{Calc Penetration}]: Length: " + length + "; sabot: " + sabot + " ;Penetration: " + Mathf.Round(penetration / 10) + " cm");
+                Debug.Log("[BDArmory.ProjectileUtils{Calc Penetration}]: Caliber: " + caliber + " Length: " + length + "; sabot: " + sabot + " ;Penetration: " + Mathf.Round(penetration / 10) + " cm");
                 Debug.Log("[BDArmory.ProjectileUtils{Calc Penetration}]: vFactor: " + vFactor + "; EXP: " + Mathf.Exp((-vFactor *
                     bulletVelocity * bulletVelocity) * muParam1) + " ;MuParam1: " + muParam1);
                 Debug.Log("[BDArmory.ProjectileUtils{Calc Penetration}]: MuParam2: " + muParam2 + "; muParam3: " + muParam3 + " ;log: " + Mathf.Log(1.0f + vFactor * bulletVelocity *
@@ -821,7 +918,7 @@ namespace BDArmory.Utils
         public static float CalculateThickness(Part hitPart, float anglemultiplier)
         {
             float thickness = (float)hitPart.GetArmorThickness(); //return mm
-            return Mathf.Max(thickness / anglemultiplier, 1);
+            return Mathf.Max(thickness / (anglemultiplier > 0.001f ? anglemultiplier : 0.001f), 1);
         }
         public static bool CheckGroundHit(Part hitPart, RaycastHit hit, float caliber)
         {
@@ -842,8 +939,8 @@ namespace BDArmory.Utils
             try
             {
                 building = hit.collider.gameObject.GetComponentUpwards<DestructibleBuilding>();
-                if (building != null)
-                    building.damageDecay = 600f;
+                //if (building != null)
+                //   building.damageDecay = 600f; //check if new method is still subject to building regen
             }
             catch (Exception e)
             {
@@ -852,20 +949,23 @@ namespace BDArmory.Utils
 
             if (building != null && building.IsIntact)
             {
+                if (BDArmorySettings.BUILDING_DMG_MULTIPLIER == 0) return true;
                 float damageToBuilding = ((0.5f * (projMass * (currentVelocity.magnitude * currentVelocity.magnitude)))
-                            * (BDArmorySettings.DMG_MULTIPLIER / 100) * DmgMult
+                            * (BDArmorySettings.DMG_MULTIPLIER / 100) * DmgMult * BDArmorySettings.BALLISTIC_DMG_FACTOR
                             * 1e-4f);
                 damageToBuilding /= 8f;
                 damageToBuilding *= BDArmorySettings.BUILDING_DMG_MULTIPLIER;
-                building.AddDamage(damageToBuilding);
-                if (building.Damage > building.impactMomentumThreshold * 150)
+                BuildingDamage.RegisterDamage(building);
+                building.FacilityDamageFraction += damageToBuilding;
+                if (building.FacilityDamageFraction > (building.impactMomentumThreshold * 2))
                 {
+                    if (BDArmorySettings.DEBUG_DAMAGE) Debug.Log("[BDArmory.ProjectileUtils]: Building demolished due to ballistic damage! Dmg to building: " + building.Damage);
                     building.Demolish();
                 }
-                if (BDArmorySettings.DEBUG_WEAPONS)
-                    Debug.Log("[BDArmory.ProjectileUtils]: Ballistic hit destructible building! Hitpoints Applied: " + Mathf.Round(damageToBuilding) +
-                             ", Building Damage : " + Mathf.Round(building.Damage) +
-                             " Building Threshold : " + building.impactMomentumThreshold);
+                if (BDArmorySettings.DEBUG_DAMAGE)
+                    Debug.Log("[BDArmory.ProjectileUtils]: Ballistic hit destructible building " + building.name + "! Hitpoints Applied: " + damageToBuilding.ToString("F3") +
+                             ", Building Damage : " + building.FacilityDamageFraction +
+                             " Building Threshold : " + building.impactMomentumThreshold * 2);
 
                 return true;
             }

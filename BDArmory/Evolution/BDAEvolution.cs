@@ -37,7 +37,7 @@ namespace BDArmory.Evolution
     {
         public string savegame;
         public string evolutionId;
-        public SpawnConfig spawnConfig;
+        public CircularSpawnConfig spawnConfig;
         // public Dictionary<string, Dictionary<string, float>> aggregateScores;
     }
 
@@ -112,7 +112,7 @@ namespace BDArmory.Evolution
         private VariantEngine engine = null;
 
         // Spawn settings
-        private static SpawnConfig spawnConfig;
+        private static CircularSpawnConfig spawnConfig;
 
         // config node for evolution details
         private ConfigNode config = null;
@@ -185,20 +185,23 @@ namespace BDArmory.Evolution
             nextVariantId = 1;
             groupId = 1;
             evolutionId = DateTimeOffset.Now.ToUnixTimeSeconds().ToString();
-            spawnConfig = new SpawnConfig(
-                BDArmorySettings.VESSEL_SPAWN_WORLDINDEX,
-                BDArmorySettings.VESSEL_SPAWN_GEOCOORDS.x,
-                BDArmorySettings.VESSEL_SPAWN_GEOCOORDS.y,
-                BDArmorySettings.VESSEL_SPAWN_ALTITUDE,
+            spawnConfig = new CircularSpawnConfig(
+                new SpawnConfig(
+                    BDArmorySettings.VESSEL_SPAWN_WORLDINDEX,
+                    BDArmorySettings.VESSEL_SPAWN_GEOCOORDS.x,
+                    BDArmorySettings.VESSEL_SPAWN_GEOCOORDS.y,
+                    BDArmorySettings.VESSEL_SPAWN_ALTITUDE,
+                    BDArmorySettings.VESSEL_SPAWN_EASE_IN_SPEED,
+                    true,
+                    true,
+                    0,
+                    null,
+                    null,
+                    workingDirectory
+                ),
                 BDArmorySettings.VESSEL_SPAWN_DISTANCE_TOGGLE ? BDArmorySettings.VESSEL_SPAWN_DISTANCE : BDArmorySettings.VESSEL_SPAWN_DISTANCE_FACTOR,
-                BDArmorySettings.VESSEL_SPAWN_DISTANCE_TOGGLE,
-                BDArmorySettings.VESSEL_SPAWN_EASE_IN_SPEED,
-                true,
-                true,
-                0,
-                null,
-                null,
-                workingDirectory);
+                BDArmorySettings.VESSEL_SPAWN_DISTANCE_TOGGLE
+            );
             evolutionState = new EvolutionState(evolutionId, status, new List<VariantGroup>());
 
             // create new config
@@ -327,7 +330,7 @@ namespace BDArmory.Evolution
                 {
                     var strings = File.ReadAllLines(stateFile);
                     state = JsonUtility.FromJson<EvolutionWorkingState>(strings[0]);
-                    state.spawnConfig = JsonUtility.FromJson<SpawnConfig>(strings[1]);
+                    state.spawnConfig = JsonUtility.FromJson<CircularSpawnConfig>(strings[1]);
                 }
                 catch (Exception e)
                 {

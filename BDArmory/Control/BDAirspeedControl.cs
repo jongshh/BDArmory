@@ -15,6 +15,7 @@ namespace BDArmory.Control
         public bool allowAfterburner = true;
         public bool forceAfterburner = false;
         public float afterburnerPriority = 50f;
+        public bool forceAfterburnerIfMaxThrottle = false;
 
         //[KSPField(isPersistant = false, guiActive = true, guiActiveEditor = false, guiName = "ThrottleFactor"),
         //	UI_FloatRange(minValue = 1f, maxValue = 20f, stepIncrement = .5f, scene = UI_Scene.All)]
@@ -25,6 +26,8 @@ namespace BDArmory.Control
         bool controlEnabled;
 
         private float smoothedAccel = 0; // smoothed acceleration, prevents super fast toggling of afterburner
+        bool shouldSetAfterburners = false;
+        bool setAfterburnersEnabled = false;
 
         //[KSPField(guiActive = true, guiName = "Thrust")]
         public float debugThrust;
@@ -74,6 +77,11 @@ namespace BDArmory.Control
             float setAccel = speedError * throttleFactor;
 
             SetAcceleration(setAccel, s);
+
+            if (forceAfterburnerIfMaxThrottle && s.mainThrottle == 1f)
+                SetAfterBurners(true);
+            else if (shouldSetAfterburners)
+                SetAfterBurners(setAfterburnersEnabled);
         }
 
         void SetAcceleration(float accel, FlightCtrlState s)
@@ -168,18 +176,29 @@ namespace BDArmory.Control
             allowAfterburner = allowAfterburner && (afterburnerPriority != 0f);
 
             //use multimode afterburner for extra accel if lacking
-            using (List<MultiModeEngine>.Enumerator mmes = multiModeEngines.GetEnumerator())
+            if (allowAfterburner && (forceAfterburner || smoothedAccel < requestAccel * (1.5f / (Mathf.Exp(100f / 27f) - 1f) * (Mathf.Exp(Mathf.Clamp(afterburnerPriority, 0f, 100f) / 27f) - 1f))))
+            { shouldSetAfterburners = true; setAfterburnersEnabled = true; }
+            else if (!allowAfterburner || (!forceAfterburner && smoothedAccel > requestAccel * (1f + 0.5f / (Mathf.Exp(50f / 25f) - 1f) * (Mathf.Exp(Mathf.Clamp(afterburnerPriority, 0f, 100f) / 25f) - 1f))))
+            { shouldSetAfterburners = true; setAfterburnersEnabled = false; }
+            else
+            { shouldSetAfterburners = false; }
+            return accel;
+        }
+
+        void SetAfterBurners(bool enable)
+        {
+            using (var mmes = multiModeEngines.GetEnumerator())
                 while (mmes.MoveNext())
                 {
                     if (mmes.Current == null) continue;
-                    if (allowAfterburner && (forceAfterburner || smoothedAccel < requestAccel * (1.5f / (Mathf.Exp(100f / 27f) - 1f) * (Mathf.Exp(Mathf.Clamp(afterburnerPriority, 0f, 100f) / 27f) - 1f))))
+                    if (enable)
                     {
                         if (mmes.Current.runningPrimary)
                         {
                             mmes.Current.Events["ModeEvent"].Invoke();
                         }
                     }
-                    else if (!allowAfterburner || (!forceAfterburner && smoothedAccel > requestAccel * (1f + 0.5f / (Mathf.Exp(50f / 25f) - 1f) * (Mathf.Exp(Mathf.Clamp(afterburnerPriority, 0f, 100f) / 25f) - 1f))))
+                    else
                     {
                         if (!mmes.Current.runningPrimary)
                         {
@@ -187,7 +206,6 @@ namespace BDArmory.Control
                         }
                     }
                 }
-            return accel;
         }
 
         private static bool IsAfterBurnerEngine(MultiModeEngine engine)
@@ -302,7 +320,7 @@ namespace BDArmory.Control
                 float altP = Kp * (targetAltitude - (float)vessel.radarAltitude);
                 float altD = Kd * (float)vessel.verticalSpeed;
                 altIntegral = Ki * Mathf.Clamp(altIntegral + altError * Time.deltaTime, -1f, 1f);
-                
+
                 float throttle = altP + altIntegral - altD;
                 s.mainThrottle = Mathf.Clamp01(throttle);
 

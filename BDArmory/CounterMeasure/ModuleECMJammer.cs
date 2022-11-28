@@ -12,6 +12,8 @@ namespace BDArmory.CounterMeasure
 
         [KSPField] public double resourceDrain = 5;
 
+        [KSPField] public string resourceName = "ElectricCharge";
+
         [KSPField] public bool alwaysOn = false;
 
         [KSPField] public bool signalSpam = true;
@@ -24,6 +26,8 @@ namespace BDArmory.CounterMeasure
         public bool jammerEnabled = false;
 
         public bool manuallyEnabled = false;
+
+        private int resourceID;
 
         VesselECMJInfo vesselJammer;
 
@@ -63,7 +67,10 @@ namespace BDArmory.CounterMeasure
                 EnableJammer();
             }
         }
-
+        void Start()
+        {
+            resourceID = PartResourceLibrary.Instance.GetDefinition(resourceName).id;
+        }
         public override void OnStart(StartState state)
         {
             base.OnStart(state);
@@ -153,7 +160,7 @@ namespace BDArmory.CounterMeasure
             }
 
             double drainAmount = resourceDrain * TimeWarp.fixedDeltaTime;
-            double chargeAvailable = part.RequestResource("ElectricCharge", drainAmount, ResourceFlowMode.ALL_VESSEL);
+            double chargeAvailable = part.RequestResource(resourceID, drainAmount, ResourceFlowMode.ALL_VESSEL);
             if (chargeAvailable < drainAmount * 0.95f)
             {
                 DisableJammer();

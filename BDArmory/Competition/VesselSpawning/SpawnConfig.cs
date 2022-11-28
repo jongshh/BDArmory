@@ -1,7 +1,10 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
+
+using BDArmory.Utils;
 
 namespace BDArmory.Competition.VesselSpawning
 {
@@ -15,14 +18,12 @@ namespace BDArmory.Competition.VesselSpawning
     [Serializable]
     public class SpawnConfig
     {
-        public SpawnConfig(int worldIndex, double latitude, double longitude, double altitude, float distance, bool absDistanceOrFactor, float easeInSpeed = 1f, bool killEverythingFirst = true, bool assignTeams = true, int numberOfTeams = 0, List<int> teamCounts = null, List<List<string>> teamsSpecific = null, string folder = "", List<string> craftFiles = null)
+        public SpawnConfig(int worldIndex, double latitude, double longitude, double altitude, float easeInSpeed = 1f, bool killEverythingFirst = true, bool assignTeams = true, int numberOfTeams = 0, List<int> teamCounts = null, List<List<string>> teamsSpecific = null, string folder = "", List<string> craftFiles = null)
         {
             this.worldIndex = worldIndex;
             this.latitude = latitude;
             this.longitude = longitude;
             this.altitude = altitude;
-            this.distance = distance;
-            this.absDistanceOrFactor = absDistanceOrFactor;
             this.easeInSpeed = easeInSpeed;
             this.killEverythingFirst = killEverythingFirst;
             this.assignTeams = assignTeams;
@@ -38,8 +39,6 @@ namespace BDArmory.Competition.VesselSpawning
             this.latitude = other.latitude;
             this.longitude = other.longitude;
             this.altitude = other.altitude;
-            this.distance = other.distance;
-            this.absDistanceOrFactor = other.absDistanceOrFactor;
             this.easeInSpeed = other.easeInSpeed;
             this.killEverythingFirst = other.killEverythingFirst;
             this.assignTeams = other.assignTeams;
@@ -53,8 +52,6 @@ namespace BDArmory.Competition.VesselSpawning
         public double latitude;
         public double longitude;
         public double altitude;
-        public float distance;
-        public bool absDistanceOrFactor; // If true, the distance value is used as-is, otherwise it is used as a factor giving the actual distance: (N+1)*distance, where N is the number of vessels.
         public float easeInSpeed;
         public bool killEverythingFirst = true;
         public bool assignTeams = true;
@@ -79,7 +76,8 @@ namespace BDArmory.Competition.VesselSpawning
         public bool airborne; // Whether the vessel should be spawned in an airborne configuration or not.
         public int teamIndex;
         public bool reuseURLVesselName; // Reuse the vesselName for the same craftURL (for continuous spawning).
-        public VesselSpawnConfig(string craftURL, Vector3 position, Vector3 direction, float altitude, float pitch, bool airborne, int teamIndex = 0, bool reuseURLVesselName = false)
+        public List<ProtoCrewMember> crew; // Override the crew.
+        public VesselSpawnConfig(string craftURL, Vector3 position, Vector3 direction, float altitude, float pitch, bool airborne, int teamIndex = 0, bool reuseURLVesselName = false, List<ProtoCrewMember> crew = null)
         {
             this.craftURL = craftURL;
             this.position = position;
@@ -89,6 +87,67 @@ namespace BDArmory.Competition.VesselSpawning
             this.airborne = airborne;
             this.teamIndex = teamIndex;
             this.reuseURLVesselName = reuseURLVesselName;
+            this.crew = crew == null ? null : crew.ToList(); // Take a copy.
         }
+    }
+
+    /// <summary>
+    /// Spawn config for circular spawning.
+    /// Probably more of the fields from SpawnConfig should be in here.
+    /// </summary>
+    [Serializable]
+    public class CircularSpawnConfig : SpawnConfig
+    {
+        public CircularSpawnConfig(SpawnConfig spawnConfig, float distance, bool absDistanceOrFactor) : base(spawnConfig)
+        {
+            this.distance = distance;
+            this.absDistanceOrFactor = absDistanceOrFactor;
+        }
+        public CircularSpawnConfig(CircularSpawnConfig other) : base(other)
+        {
+            this.distance = other.distance;
+            this.absDistanceOrFactor = other.absDistanceOrFactor;
+        }
+        public CircularSpawnConfig(int worldIndex, double latitude, double longitude, double altitude, float distance, bool absDistanceOrFactor, float easeInSpeed = 1f, bool killEverythingFirst = true, bool assignTeams = true, int numberOfTeams = 0, List<int> teamCounts = null, List<List<string>> teamsSpecific = null, string folder = "", List<string> craftFiles = null) : this(new SpawnConfig(worldIndex, latitude, longitude, altitude, easeInSpeed, killEverythingFirst, assignTeams, numberOfTeams, teamCounts, teamsSpecific, folder, craftFiles), distance, absDistanceOrFactor) { } // Constructor for legacy SpawnConfigs that should be CircularSpawnConfigs.
+        public float distance;
+        public bool absDistanceOrFactor; // If true, the distance value is used as-is, otherwise it is used as a factor giving the actual distance: (N+1)*distance, where N is the number of vessels.
+    }
+
+    /// <summary>
+    /// Spawn config for custom templates.
+    /// </summary>
+    [Serializable]
+    public class CustomSpawnConfig : SpawnConfig
+    {
+        public CustomSpawnConfig(string name, SpawnConfig spawnConfig, List<List<CustomVesselSpawnConfig>> vesselSpawnConfigs) : base(spawnConfig)
+        {
+            this.name = name;
+            this.customVesselSpawnConfigs = vesselSpawnConfigs;
+        }
+        public string name;
+        public List<List<CustomVesselSpawnConfig>> customVesselSpawnConfigs;
+        public override string ToString() => $"{{name: {name}, worldIndex: {worldIndex}, lat: {latitude:F3}, lon: {longitude:F3}, alt: {altitude:F0}; {(customVesselSpawnConfigs == null ? "" : string.Join("; ", customVesselSpawnConfigs.Select(cfgs => string.Join(", ", cfgs))))}}}";
+    }
+
+    /// <summary>
+    /// The individual custom vessel spawn configs.
+    /// </summary>
+    [Serializable]
+    public class CustomVesselSpawnConfig
+    {
+        public CustomVesselSpawnConfig(double latitude, double longitude, float heading, int teamIndex)
+        {
+            this.latitude = latitude;
+            this.longitude = longitude;
+            this.heading = heading;
+            this.teamIndex = teamIndex;
+        }
+        public string craftURL;
+        public string kerbalName;
+        public double latitude;
+        public double longitude;
+        public float heading;
+        public int teamIndex;
+        public override string ToString() => $"{{{(string.IsNullOrEmpty(craftURL) ? "" : $"{Path.GetFileNameWithoutExtension(craftURL)}, ")}{(string.IsNullOrEmpty(kerbalName) ? "" : $"{kerbalName}, ")}lat: {latitude:G3}, lon: {longitude:G3}, heading: {heading:F0}°, team: {teamIndex}}}";
     }
 }

@@ -16,8 +16,11 @@ namespace BDArmory.FX
         Part parentPart;
         // string parentPartName = "";
         // string parentVesselName = "";
+        static bool hasOnVesselUnloaded = false;
         public static ObjectPool CreateDecalPool(string modelPath)
         {
+            if ((Versioning.version_major == 1 && Versioning.version_minor > 10) || Versioning.version_major > 1) // onVesselUnloaded event introduced in 1.11
+                hasOnVesselUnloaded = true;
             var template = GameDatabase.Instance.GetModel(modelPath);
             var decal = template.AddComponent<Decal>();
             template.AddOrGetComponent<Renderer>();
@@ -36,8 +39,11 @@ namespace BDArmory.FX
             transform.rotation = Quaternion.FromToRotation(Vector3.forward, hit.normal);
             parentPart.OnJustAboutToDie += OnParentDestroy;
             parentPart.OnJustAboutToBeDestroyed += OnParentDestroy;
-            if ((Versioning.version_major == 1 && Versioning.version_minor > 10) || Versioning.version_major > 1) // onVesselUnloaded event introduced in 1.11
+            if (hasOnVesselUnloaded)
+            {
+                OnVesselUnloaded_1_11(false); // Remove any previous onVesselUnloaded event handler (due to forced reuse in the pool).
                 OnVesselUnloaded_1_11(true); // Catch unloading events too.
+            }
             gameObject.SetActive(true);
         }
         public void SetColor(Color color)
@@ -88,20 +94,20 @@ namespace BDArmory.FX
 
         void Deactivate()
         {
+            if (hasOnVesselUnloaded) // onVesselUnloaded event introduced in 1.11
+                OnVesselUnloaded_1_11(false);
             if (gameObject is not null && gameObject.activeSelf) // Deactivate even if a parent is already inactive.
             {
                 parentPart = null;
                 transform.parent = null;
                 gameObject.SetActive(false);
             }
-            if ((Versioning.version_major == 1 && Versioning.version_minor > 10) || Versioning.version_major > 1) // onVesselUnloaded event introduced in 1.11
-                OnVesselUnloaded_1_11(false);
         }
 
         public void OnDestroy() // This shouldn't be happening except on exiting KSP, but sometimes they get destroyed instead of disabled!
         {
             // if (HighLogic.LoadedSceneIsFlight) Debug.LogError($"[BDArmory.BulletHitFX]: BulletHitFX on {parentPartName} ({parentVesselName}) was destroyed!");
-            if ((Versioning.version_major == 1 && Versioning.version_minor > 10) || Versioning.version_major > 1) // onVesselUnloaded event introduced in 1.11
+            if (hasOnVesselUnloaded) // onVesselUnloaded event introduced in 1.11
                 OnVesselUnloaded_1_11(false);
         }
     }
@@ -319,13 +325,13 @@ namespace BDArmory.FX
             if (audioClips == null)
             {
                 audioClips = new Dictionary<AudioClipType, AudioClip>{
-                    {AudioClipType.Ricochet1, GameDatabase.Instance.GetAudioClip("BDArmory/Sounds/ricochet1")},
-                    {AudioClipType.Ricochet2, GameDatabase.Instance.GetAudioClip("BDArmory/Sounds/ricochet1")},
-                    {AudioClipType.Ricochet3, GameDatabase.Instance.GetAudioClip("BDArmory/Sounds/ricochet3")},
-                    {AudioClipType.BulletHit1, GameDatabase.Instance.GetAudioClip("BDArmory/Sounds/bulletHit1")},
-                    {AudioClipType.BulletHit2, GameDatabase.Instance.GetAudioClip("BDArmory/Sounds/bulletHit2")},
-                    {AudioClipType.BulletHit3, GameDatabase.Instance.GetAudioClip("BDArmory/Sounds/bulletHit3")},
-                    {AudioClipType.Artillery_Shot, GameDatabase.Instance.GetAudioClip("BDArmory/Sounds/Artillery_Shot")},
+                    {AudioClipType.Ricochet1, SoundUtils.GetAudioClip("BDArmory/Sounds/ricochet1")},
+                    {AudioClipType.Ricochet2, SoundUtils.GetAudioClip("BDArmory/Sounds/ricochet1")},
+                    {AudioClipType.Ricochet3, SoundUtils.GetAudioClip("BDArmory/Sounds/ricochet3")},
+                    {AudioClipType.BulletHit1, SoundUtils.GetAudioClip("BDArmory/Sounds/bulletHit1")},
+                    {AudioClipType.BulletHit2, SoundUtils.GetAudioClip("BDArmory/Sounds/bulletHit2")},
+                    {AudioClipType.BulletHit3, SoundUtils.GetAudioClip("BDArmory/Sounds/bulletHit3")},
+                    {AudioClipType.Artillery_Shot, SoundUtils.GetAudioClip("BDArmory/Sounds/Artillery_Shot")},
                 };
             }
         }

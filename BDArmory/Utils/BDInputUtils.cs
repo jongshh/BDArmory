@@ -17,6 +17,7 @@ namespace BDArmory.Utils
             for (int i = 0; i < numberOfKeycodes; i++)
             {
                 string output = names[i];
+                if (output.ToLower().StartsWith("mouse") || output.ToLower().StartsWith("joystick")) continue; // Handle mouse and joystick separately.
 
                 if (output.Contains("Keypad"))
                 {
@@ -109,7 +110,8 @@ namespace BDArmory.Utils
                 }
                 catch (System.Exception e)
                 {
-                    Debug.LogWarning("[BDArmory.BDInputUtils]: Exception thrown in GetInputString: " + e.Message + "\n" + e.StackTrace);
+                    if (!e.Message.EndsWith("is unknown")) // Ignore unknown keys
+                        Debug.LogWarning("[BDArmory.BDInputUtils]: Exception thrown in GetInputString: " + e.Message + "\n" + e.StackTrace);
                 }
             }
 

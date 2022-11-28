@@ -120,7 +120,7 @@ def encode_names(log_lines: List[str]) -> Tuple[Dict[str, str], List[str]]:
     craft_names.update({json.dumps(name)[1:-1] for name in craft_names})
     craft_names = {cn: b64encode(cn.encode()) for cn in craft_names}
     sorted_craft_names = list(sorted(craft_names, key=lambda k: len(k), reverse=True))  # Sort the craft names from longest to shortest to avoid accidentally replacing substrings.
-    for i in range(len(log_lines)):
+    for i in range(1, len(log_lines)):  # The first line doesn't contain craft names
         for name in sorted_craft_names:
             log_lines[i] = log_lines[i].replace(name, craft_names[name].decode())
     encoded_craft_names = {v.decode(): k for k, v in craft_names.items()}
@@ -144,7 +144,7 @@ for tournamentNumber, tournamentDir in enumerate(tournamentDirs):
             del tournamentData[round.name]
             continue
         for heat in logFiles if args.N == None else logFiles[:args.N]:
-            with open(heat, "r") as logFile:
+            with open(heat, "r", encoding="utf-8") as logFile:
                 log_lines = [line.strip() for line in logFile]
             tournamentData[round.name][heat.name] = {'result': None, 'duration': 0, 'craft': {}}
             encoded_craft_names, log_lines = encode_names(log_lines)
@@ -276,7 +276,7 @@ for tournamentNumber, tournamentDir in enumerate(tournamentDirs):
                     tournamentData[round.name][heat.name]['craft'][encoded_craft_names[craft]].update({'waypoints': [waypoint.split(':') for waypoint in waypoints_str.split(';')]})  # List[Tuple[int, float, float]] = [(index, deviation, timestamp),]
 
     if not args.no_files and len(tournamentData) > 0:
-        with open(tournamentDir / 'results.json', 'w') as outFile:
+        with open(tournamentDir / 'results.json', 'w', encoding="utf-8") as outFile:
             json.dump(tournamentData, outFile, indent=2)
 
     craftNames = sorted(list(set(craft for round in tournamentData.values() for heat in round.values() for craft in heat['craft'].keys())))
@@ -379,7 +379,7 @@ for tournamentNumber, tournamentDir in enumerate(tournamentDirs):
                 craft['score'] -= offset
 
     if not args.no_files and len(summary['craft']) > 0:
-        with open(tournamentDir / 'summary.json', 'w') as outFile:
+        with open(tournamentDir / 'summary.json', 'w', encoding="utf-8") as outFile:
             json.dump(summary, outFile, indent=2)
 
     if len(summary['craft']) > 0:
@@ -396,7 +396,7 @@ for tournamentNumber, tournamentDir in enumerate(tournamentDirs):
                     else str(int(100 * score[h]) / 100)
                 for h in headers))
             # Write main summary results to the summary.csv file.
-            with open(tournamentDir / 'summary.csv', 'w') as outFile:
+            with open(tournamentDir / 'summary.csv', 'w', encoding="utf-8") as outFile:
                 outFile.write("\n".join(csv_summary))
 
         teamNames = sorted(list(set([team for result_type in summary['team results'].values() for team in result_type])))
@@ -547,7 +547,7 @@ for tournamentNumber, tournamentDir in enumerate(tournamentDirs):
 
         # Write teams results to the summary.csv file.
         if not args.no_files:
-            with open(tournamentDir / 'summary.csv', 'a') as f:
+            with open(tournamentDir / 'summary.csv', 'a', encoding="utf-8") as f:
                 f.write('\n\nTeam,Wins,Draws,Deaths,Vessels')
                 for team in sorted(teamNames, key=lambda team: teamWins[team], reverse=True):
                     f.write('\n' + ','.join([str(v) for v in (team, teamWins[team], teamDraws[team], teamDeaths[team], summary['teams'][team].replace(", ", ","))]))
