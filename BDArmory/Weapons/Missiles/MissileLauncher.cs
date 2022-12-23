@@ -986,6 +986,7 @@ namespace BDArmory.Weapons.Missiles
             yield return new WaitUntilFixed(() => ml.SetupComplete); // Wait until missile fully initialized.
 
             ml.launched = true;
+            GetMissileCount();
             var wpm = VesselModuleRegistry.GetMissileFire(SourceVessel, true);
             BDATargetManager.FiredMissiles.Add(ml);
             ml.SourceVessel = SourceVessel;

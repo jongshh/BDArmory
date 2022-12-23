@@ -159,12 +159,12 @@ namespace BDArmory.Utils
 
         public static bool GetKey(BDInputInfo input)
         {
-            return input.inputString != string.Empty && Input.GetKey(input.inputString);
+            return !string.IsNullOrEmpty(input.inputString) && Input.GetKey(input.inputString);
         }
 
         public static bool GetKeyDown(BDInputInfo input)
         {
-            return input.inputString != string.Empty && Input.GetKeyDown(input.inputString);
+            return !string.IsNullOrEmpty(input.inputString) && Input.GetKeyDown(input.inputString);
         }
     }
 

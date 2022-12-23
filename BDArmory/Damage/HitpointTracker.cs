@@ -1484,8 +1484,8 @@ namespace BDArmory.Damage
             part.crashTolerance = part.partInfo.partPrefab.crashTolerance * hullInfo.ImpactMod;
             hullType = hullInfo.name;
             float partCost = part.partInfo.cost + part.partInfo.variant.Cost;
-            if (hullInfo.costMod < 1) HullCostAdjust = Mathf.Max((partCost - (float)resourceCost) * hullInfo.costMod, partCost - (1000 - (hullInfo.costMod * 1000))) - (partCost - (float)resourceCost);//make wooden parts up to 500 funds cheaper
-            else HullCostAdjust = Mathf.Min((partCost - (float)resourceCost) * hullInfo.costMod, (partCost - (float)resourceCost) + (hullInfo.costMod * 1000)); //make steel parts rather more expensive                                                                                                                                                                 
+            if (hullInfo.costMod < 1) HullCostAdjust = Mathf.Max((partCost - (float)resourceCost) * hullInfo.costMod, partCost - (1000 - (hullInfo.costMod * 1000))) - (partCost - (float)resourceCost);//max of 1000 funds discount on cheaper materials
+            else HullCostAdjust = Mathf.Min((partCost - (float)resourceCost) * hullInfo.costMod, (partCost - (float)resourceCost) + (hullInfo.costMod * 1000)) - (partCost - (float)resourceCost); //Increase costs if costMod => 1                                                                                                                                                             
             //this returns cost of base variant, yielding part variant that are discounted by 50% or 500 of base variant cost, not current variant. method to get currently selected variant?
 
             if (OldHullType != HullTypeNum || OldHullMassAdjust != HullMassAdjust)

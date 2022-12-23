@@ -1173,7 +1173,7 @@ namespace BDArmory.Radar
             {
                 DrawDisplayedContacts();
                 if (iCount > 0)
-                    DrawDisplayedIRContacts(); //something is throwing a GUIClips NRE somewhere before DisplayRadarControls()
+                    DrawDisplayedIRContacts();
             }
             pingPositionsDirty = false;
 
@@ -2274,7 +2274,7 @@ namespace BDArmory.Radar
                     if ((displayedIRTargets[i].targetData.targetInfo && displayedIRTargets[i].targetData.targetInfo.isMissile) || displayedIRTargets[i].targetData.Team == null)
                     {
 
-                        float mDotSize = (2) / rangeIndex;
+                        float mDotSize = (2) / (rangeIndex + 1);
                         if (mDotSize < 1) mDotSize = 1;
                         pingRect = new Rect(pingPosition.x - (mDotSize / 2), pingPosition.y - (mDotSize / 2), mDotSize, mDotSize);
                         GUI.DrawTexture(pingRect, BDArmorySetup.Instance.redDotTexture, ScaleMode.StretchToFill, true);
@@ -2315,7 +2315,7 @@ namespace BDArmory.Radar
                     //draw as dots    
                     else
                     {
-                        float mDotSize = (displayedIRTargets[i].magnitude / 25) / rangeIndex;
+                        float mDotSize = (displayedIRTargets[i].magnitude / 25) / (rangeIndex + 1);
                         if (mDotSize < 1) mDotSize = 1;
                         if (mDotSize > 20) mDotSize = 20;
                         pingRect = new Rect(pingPosition.x - (mDotSize / 2), pingPosition.y - (mDotSize / 2), mDotSize, mDotSize);

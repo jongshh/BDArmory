@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Tuple, Union
 
-VERSION = "1.16.5"
+VERSION = "1.17.0"
 
 parser = argparse.ArgumentParser(description="Tournament log parser", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('tournament', type=str, nargs='*', help="Tournament folder to parse.")
@@ -24,6 +24,7 @@ parser.add_argument('-w', '--weights', type=str, default="1,0,0,-1,1,2e-3,3,1.5,
 # Old weights: 0.1,0,0,-1,1,2e-3,2,1,2e-2,0,2e-4,1e-4,0.05,0,2e-3,0,1e-4,5e-5,0.5,0,0.01,0,2e-5,1e-5,0.01,0,0,0,0,0
 parser.add_argument('-c', '--current-dir', action='store_true', help="Parse the logs in the current directory as if it was a tournament without the folder structure.")
 parser.add_argument('-nc', '--no-cumulative', action='store_true', help="Don't display cumulative scores at the end.")
+parser.add_argument('-nh', '--no-header', action='store_true', help="Don't display the header.")
 parser.add_argument('-N', type=int, help="Only the first N logs in the folder (in -c mode).")
 parser.add_argument('-z', '--zero-lowest-score', action='store_true', help="Shift the scores so that the lowest is 0.")
 parser.add_argument('-sw', '--show-weights', action='store_true', help="Display the score weights.")
@@ -467,7 +468,7 @@ for tournamentNumber, tournamentDir in enumerate(tournamentDirs):
 
         if not args.quiet:  # Write results to console
             strings = []
-            if not args.current_dir and 'duration' in tournamentMetadata:
+            if not args.no_header and not args.current_dir and 'duration' in tournamentMetadata:
                 strings.append(f"Tournament {tournamentMetadata.get('ID', '???')} of duration {tournamentMetadata['duration'][1]-tournamentMetadata['duration'][0]} starting at {tournamentMetadata['duration'][0]}")
             headers = ['Name', 'Wins', 'Survive', 'MIA', 'Deaths (BRMRAS)', 'D.Order', 'D.Time', 'Kills (BRMR)', 'Assists', 'Hits', 'Damage', 'DmgTaken', 'RocHits', 'RocParts', 'RocDmg', 'HitByRoc', 'MisHits', 'MisParts', 'MisDmg', 'HitByMis', 'Ram', 'BD dealt', 'BD taken', 'Acc%', 'RktAcc%', 'HP%', 'Dmg/Hit', 'Hits/Sp', 'Dmg/Sp'] if not args.scores_only else ['Name']
             if hasWaypoints and not args.scores_only:

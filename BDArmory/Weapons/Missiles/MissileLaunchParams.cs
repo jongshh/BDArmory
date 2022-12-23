@@ -43,6 +43,7 @@ namespace BDArmory.Weapons.Missiles
         /// <param name="maxAngleOffTarget">If non-negative, restrict the calculations to assuming the launcher velocity is at most this angle off-target. Avoids extreme extending ranges.</param>
         public static MissileLaunchParams GetDynamicLaunchParams(MissileBase missile, Vector3 targetVelocity, Vector3 targetPosition, float maxAngleOffTarget = -1)
         {
+            if (missile == null || missile.part == null) return new MissileLaunchParams(0, 0); // Safety check in case the missile part is being destroyed at the same time.
             Vector3 launcherVelocity = missile.vessel.Velocity();
             Vector3 launcherPosition = missile.part.transform.position;
             Vector3 vectorToTarget = targetPosition - launcherPosition;
@@ -88,7 +89,7 @@ namespace BDArmory.Weapons.Missiles
                     float missileTurnRadius = (ml.optimumAirspeed * ml.optimumAirspeed) / maxEstimatedGForce;
                     float targetAngle = Vector3.Angle(missileFwd, futureRelPosition);
                     arcLength = Mathf.Deg2Rad * targetAngle * missileTurnRadius;
-                    
+
                     // Add additional range term for the missile to manuever to target at missileActiveTime
                     minLaunchRange = Mathf.Max(arcLength, minLaunchRange);
                 }

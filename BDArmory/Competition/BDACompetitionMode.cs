@@ -758,7 +758,7 @@ namespace BDArmory.Competition
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError($"[BDArmory.BDACompetitionMode]: Exception thrown in DogfightCompetitionModeRoutine: " + e.Message);
+                    Debug.LogError($"[BDArmory.BDACompetitionMode]: Exception thrown in DogfightCompetitionModeRoutine: " + e.Message + "\n" + e.StackTrace);
                     if (startDespiteFailures)
                     {
                         competitionStatus.Add("Failed to update radar cross sections, continuing anyway");
@@ -937,7 +937,7 @@ namespace BDArmory.Competition
             {
                 if (vessel.parts.Count == 1) // Check for a falling combat seat.
                 {
-                    Debug.Log("[BDArmory.BDACompetitionMode]: Found a lone combat seat, killing it.");
+                    Debug.Log($"[BDArmory.BDACompetitionMode]: Found a lone combat seat ({vessel.vesselName}), killing it.");
                     PartExploderSystem.AddPartToExplode(vessel.parts[0]);
                     return;
                 }
@@ -947,7 +947,7 @@ namespace BDArmory.Competition
                 {
                     if (VesselModuleRegistry.GetModules<ModuleCommand>(vessel).All(c => c.GetControlSourceState() == CommNet.VesselControlState.None))
                     {
-                        Debug.Log("[BDArmory.BDACompetitionMode]: Kerbal has left the seat of " + vessel.vesselName + " and it has no other controls, disabling the AI.");
+                        Debug.Log($"[BDArmory.BDACompetitionMode]: Kerbal has left the seat of {vessel.vesselName} and it has no other controls, disabling the AI.");
                         AI.DeactivatePilot();
                     }
                 }

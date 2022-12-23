@@ -909,6 +909,7 @@
 
       <!-- Deploy to all KSP folders in ksp_dir.txt -->
       bash -c 'cat $(ProjectDir)../../_LocalDev/ksp_dir.txt | while read KSP_DIR; do
+        if [[ "${KSP_DIR:0:1}" == "#" ]]; then continue; fi
         echo Deploy $(ProjectDir) Distribution files to test env:  "${KSP_DIR}/GameData"...
         echo copying:"$(ProjectDir)Distribution/GameData" to "${KSP_DIR}/GameData" 
         cp -a "$(ProjectDir)Distribution/GameData/${ModName}" "${KSP_DIR}/GameData"

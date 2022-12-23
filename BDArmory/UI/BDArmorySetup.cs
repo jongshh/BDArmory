@@ -1127,6 +1127,11 @@ namespace BDArmory.UI
                         {
                             ActiveWeaponManager.ToggleRippleFire();
                         }
+                        if (ActiveWeaponManager.rippleFire)
+                        {
+                            GUI.Label(new Rect(leftIndent + contentWidth / 2 + _windowMargin, contentTop + line * entryHeight, contentWidth / 4 - _windowMargin, entryHeight * 1.25f), $"{StringUtils.Localize("#LOC_BDArmory_WMWindow_barrageStagger")}: {(ActiveWeaponManager.barrageStagger > 0 ? ActiveWeaponManager.barrageStagger : 1):G1}");
+                            ActiveWeaponManager.barrageStagger = BDAMath.RoundToUnit(GUI.HorizontalSlider(new Rect(leftIndent + 3 * contentWidth / 4, contentTop + (line + 0.25f) * entryHeight, contentWidth / 4, entryHeight), ActiveWeaponManager.barrageStagger, 0f, 0.1f), 0.01f);
+                        }
 
                         rippleHeight = Mathf.Lerp(rippleHeight, 1.25f, 0.15f);
                     }

@@ -233,6 +233,7 @@ namespace BDArmory.Control
             //Debug.Log("[BDArmory.MissileFire]: Saved ripple data");
         }
 
+        public float barrageStagger = 0f;
         public bool hasSingleFired;
 
         public bool engageAir = true;

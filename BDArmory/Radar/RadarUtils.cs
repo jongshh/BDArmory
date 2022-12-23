@@ -149,7 +149,9 @@ namespace BDArmory.Radar
             TargetInfo ti = GetVesselRadarCrossSection(v);
 
             //2. modifiedSig = GetVesselModifiedSignature(baseSig)    //ECM-jammers with rcs reduction effect; other rcs reductions (stealth)
-            float modifiedSig = GetVesselModifiedSignature(v, ti);
+            ti.radarRCSReducedSignature = ti.radarBaseSignature; //These are needed for Radar functions to work!
+            ti.radarModifiedSignature = ti.radarBaseSignature;
+            //ti.radarLockbreakFactor = 1;
 
             return ti;
         }
@@ -201,46 +203,14 @@ namespace BDArmory.Radar
                 ti.radarBaseSignatureNeedsUpdate = false;
                 ti.alreadyScheduledRCSUpdate = false;
                 ti.radarMassAtUpdate = v.GetTotalMass();
+
+                // Update ECM impact on RCS if base RCS is modified
+                VesselECMJInfo jammer = v.gameObject.GetComponent<VesselECMJInfo>();
+                if (jammer != null)
+                    jammer.UpdateJammerStrength();
             }
 
             return ti;
-        }
-
-        /// <summary>
-        /// Internal method: get a vessels siganture modifiers (ecm, stealth, ...)
-        /// </summary>
-        public static float GetVesselModifiedSignature(Vessel v, TargetInfo ti)
-        {
-            ti.radarRCSReducedSignature = ti.radarBaseSignature;
-            ti.radarModifiedSignature = ti.radarBaseSignature;
-            ti.radarLockbreakFactor = 1;
-
-            //Wouldn't this make more sense to calculate once when ECM (de)activated, instead of re-calcing every fixedUpdate tick? @JOSUE
-            /*
-            // read vessel ecminfo for active jammers and calculate effects:
-            VesselECMJInfo vesseljammer = v.gameObject.GetComponent<VesselECMJInfo>();
-            if (vesseljammer)
-            {
-                //1) read vessel ecminfo for jammers with RCS reduction effect and multiply factor
-                ti.radarRCSReducedSignature *= vesseljammer.rcsReductionFactor;
-                ti.radarModifiedSignature *= vesseljammer.rcsReductionFactor;
-
-                //2) increase in detectability relative to jammerstrength and vessel rcs signature:
-                // rcs_factor = jammerStrength / modifiedSig / 100 + 1.0f
-                ti.radarModifiedSignature *= (((vesseljammer.jammerStrength / ti.radarRCSReducedSignature) / 100) + 1.0f);
-
-                //3) garbling due to overly strong jamming signals relative to jammer's strength in relation to vessel rcs signature:
-                // jammingDistance =  (jammerstrength / baseSig / 100 + 1.0) x js
-                ti.radarJammingDistance = ((vesseljammer.jammerStrength / ti.radarBaseSignature / 100) + 1.0f) * vesseljammer.jammerStrength;
-
-                //4) lockbreaking strength relative to jammer's lockbreak strength in relation to vessel rcs signature:
-                // lockbreak_factor = baseSig/modifiedSig x (1 � lopckBreakStrength/baseSig/100)
-                // Use clamp to prevent RCS reduction resulting in increased lockbreak factor, which negates value of RCS reduction)
-                ti.radarLockbreakFactor = (ti.radarRCSReducedSignature == 0) ? 0f :
-                    Mathf.Max(Mathf.Clamp01(ti.radarRCSReducedSignature / ti.radarModifiedSignature) * (1 - (vesseljammer.lockBreakStrength / ti.radarRCSReducedSignature / 100)), 0); // 0 is minimum lockbreak factor
-            }
-            */
-            return ti.radarModifiedSignature;
         }
 
         /// <summary>

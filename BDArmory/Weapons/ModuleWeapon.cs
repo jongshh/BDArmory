@@ -839,6 +839,8 @@ namespace BDArmory.Weapons
 
         public float timeFired;
         public float initialFireDelay = 0; //used to ripple fire multiple weapons of this type
+        float InitialFireDelay => weaponManager.barrageStagger > 0 ? initialFireDelay * weaponManager.barrageStagger : initialFireDelay;
+
 
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "#LOC_BDArmory_Barrage")]//Barrage
         public bool useRippleFire = true;
@@ -1982,6 +1984,11 @@ namespace BDArmory.Weapons
                                     pBullet.timeToLiveUntil = Mathf.Max(maxTargetingRange, maxEffectiveDistance) / bulletVelocity * 1.1f + Time.time;
 
                                     timeFired = Time.time - iTime;
+                                    if (isRippleFiring && weaponManager.barrageStagger > 0) // Add variability to fired time to cause variability in reload time.
+                                    {
+                                        var reloadVariability = UnityEngine.Random.Range(-weaponManager.barrageStagger, weaponManager.barrageStagger);
+                                        timeFired += reloadVariability;
+                                    }
 
                                     Vector3 firedVelocity = VectorUtils.GaussianDirectionDeviation(fireTransform.forward, (maxDeviation / 2)) * bulletVelocity;
                                     pBullet.currentVelocity = (part.rb.velocity + BDKrakensbane.FrameVelocityV3f) + firedVelocity; // use the real velocity, w/o offloading
@@ -2139,7 +2146,7 @@ namespace BDArmory.Weapons
                         //Debug.Log("[BDArmory.ModuleWeapon]: barrelIndex for " + this.GetShortName() + " is " + barrelIndex + "; total barrels " + fireTransforms.Length);
                         if ((!BurstFire || (BurstFire && (RoundsRemaining >= RoundsPerMag))) && barrelIndex + 1 > fireTransforms.Length) //only advance ripple index if weapon isn't brustfire, has finished burst, or has fired with all barrels
                         {
-                            StartCoroutine(IncrementRippleIndex(initialFireDelay * TimeWarp.CurrentRate));
+                            StartCoroutine(IncrementRippleIndex(InitialFireDelay * TimeWarp.CurrentRate));
                             isRippleFiring = true;
                             if (barrelIndex + 1 > fireTransforms.Length)
                             {
@@ -2152,7 +2159,7 @@ namespace BDArmory.Weapons
                     {
                         if (!BurstFire || (BurstFire && (RoundsRemaining >= RoundsPerMag)))
                         {
-                            StartCoroutine(IncrementRippleIndex(initialFireDelay * TimeWarp.CurrentRate)); //this is why ripplefire is slower, delay to stagger guns should only be being called once
+                            StartCoroutine(IncrementRippleIndex(InitialFireDelay * TimeWarp.CurrentRate)); //this is why ripplefire is slower, delay to stagger guns should only be being called once
                             isRippleFiring = true;
                             //need to know what next weapon in ripple sequence is, and have firedelay be set to whatever it's RPM is, not this weapon's or a generic average
                         }
@@ -2222,7 +2229,7 @@ namespace BDArmory.Weapons
                                 //Debug.Log("[BDArmory.ModuleWeapon]: barrelIndex for " + this.GetShortName() + " is " + barrelIndex + "; total barrels " + fireTransforms.Length);
                                 if ((!BurstFire || (BurstFire && (RoundsRemaining >= RoundsPerMag))) && barrelIndex + 1 > fireTransforms.Length) //only advance ripple index if weapon isn't brustfire, has finished burst, or has fired with all barrels
                                 {
-                                    StartCoroutine(IncrementRippleIndex(initialFireDelay * TimeWarp.CurrentRate));
+                                    StartCoroutine(IncrementRippleIndex(InitialFireDelay * TimeWarp.CurrentRate));
                                     isRippleFiring = true;
                                     if (barrelIndex + 1 > fireTransforms.Length)
                                     {
@@ -2235,7 +2242,7 @@ namespace BDArmory.Weapons
                             {
                                 if (!BurstFire || (BurstFire && (RoundsRemaining >= RoundsPerMag)))
                                 {
-                                    StartCoroutine(IncrementRippleIndex(initialFireDelay * TimeWarp.CurrentRate));
+                                    StartCoroutine(IncrementRippleIndex(InitialFireDelay * TimeWarp.CurrentRate));
                                     isRippleFiring = true;
                                 }
                             }
@@ -2808,7 +2815,7 @@ namespace BDArmory.Weapons
                         //Debug.Log("[BDArmory.ModuleWeapon]: barrelIndex for " + this.GetShortName() + " is " + barrelIndex + "; total barrels " + fireTransforms.Length);
                         if ((!BurstFire || (BurstFire && (RoundsRemaining >= RoundsPerMag))) && barrelIndex + 1 > fireTransforms.Length) //only advance ripple index if weapon isn't brustfire, has finished burst, or has fired with all barrels
                         {
-                            StartCoroutine(IncrementRippleIndex(initialFireDelay * TimeWarp.CurrentRate));
+                            StartCoroutine(IncrementRippleIndex(InitialFireDelay * TimeWarp.CurrentRate));
                             isRippleFiring = true;
                             if (barrelIndex + 1 > fireTransforms.Length)
                             {
@@ -2821,7 +2828,7 @@ namespace BDArmory.Weapons
                     {
                         if (!BurstFire || (BurstFire && (RoundsRemaining >= RoundsPerMag)))
                         {
-                            StartCoroutine(IncrementRippleIndex(initialFireDelay * TimeWarp.CurrentRate));
+                            StartCoroutine(IncrementRippleIndex(InitialFireDelay * TimeWarp.CurrentRate));
                             isRippleFiring = true;
                         }
                     }
@@ -2920,7 +2927,7 @@ namespace BDArmory.Weapons
             {
                 return true;
             }
-            StartCoroutine(IncrementRippleIndex(useRippleFire ? initialFireDelay * TimeWarp.CurrentRate : 0)); //if out of ammo (howitzers, say, or other weapon with internal ammo, move on to next weapon; maybe it still has ammo
+            StartCoroutine(IncrementRippleIndex(useRippleFire ? InitialFireDelay * TimeWarp.CurrentRate : 0)); //if out of ammo (howitzers, say, or other weapon with internal ammo, move on to next weapon; maybe it still has ammo
             isRippleFiring = true;
             return false;
         }
@@ -3909,12 +3916,13 @@ namespace BDArmory.Weapons
             {
                 if (autoFire && autofireShotCount >= fireBurstLength)
                 {
+                    if (Time.time - autoFireTimer > autoFireLength) autofireShotCount = 0;
                     autoFire = false;
                     //visualTargetVessel = null; //if there's no target, these get nulled in MissileFire. Nulling them here would cause Ai to stop engaging target with longer TargetScanIntervals as 
                     //visualTargetPart = null; //there's no longer a targetVessel/part to do leadOffset aim calcs for.
                     tgtShell = null;
                     tgtRocket = null;
-                    autofireShotCount = 0;
+
                     if (SpoolUpTime > 0)
                     {
                         roundsPerMinute = baseRPM / 10;
@@ -4027,7 +4035,7 @@ namespace BDArmory.Weapons
                     if (useRippleFire) //old method wouldn't catch non-ripple guns (i.e. Vulcan) trying to fire at targets beyond fire range
                     {
                         //StartCoroutine(IncrementRippleIndex(0));
-                        StartCoroutine(IncrementRippleIndex(initialFireDelay * TimeWarp.CurrentRate)); //FIXME - possibly not getting called in all circumstances? Investigate later, future SI
+                        StartCoroutine(IncrementRippleIndex(InitialFireDelay * TimeWarp.CurrentRate)); //FIXME - possibly not getting called in all circumstances? Investigate later, future SI
                         //Debug.Log($"[BDarmory.moduleWeapon] Weapon on rippleindex {weaponManager.GetRippleIndex(WeaponName)} cant't fire, skipping to next weapon after a {initialFireDelay * TimeWarp.CurrentRate} sec delay");
                         isRippleFiring = true;
                     }
@@ -4053,7 +4061,7 @@ namespace BDArmory.Weapons
                             roundsPerMinute = Mathf.Lerp((baseRPM / 10), baseRPM, spooltime);
                         }
                     }
-                    if (!useRippleFire || weaponManager.GetRippleIndex(WeaponName) == rippleIndex) // Don't fire rippling weapons when they're on the wrong part of the cycle. Spool up and grow lasers though.
+                    if (!useRippleFire || isRippleFiring || weaponManager.GetRippleIndex(WeaponName) == rippleIndex) // Don't fire rippling weapons when they're on the wrong part of the cycle (initially; afterwards, let their timers decide). Spool up and grow lasers though.
                     {
                         finalFire = true;
                     }
@@ -4334,10 +4342,10 @@ namespace BDArmory.Weapons
         {
             if (isReloading)
             {
-                ReloadTimer = Mathf.Clamp((ReloadTimer + 1 * TimeWarp.fixedDeltaTime / ReloadTime), 0, 1);
+                ReloadTimer = Mathf.Min(ReloadTimer + TimeWarp.fixedDeltaTime / ReloadTime, 1);
                 if (hasDeployAnim)
                 {
-                    AnimTimer = Mathf.Clamp((AnimTimer + 1 * TimeWarp.fixedDeltaTime / (ReloadAnimTime)), 0, 1);
+                    AnimTimer = Mathf.Min(AnimTimer + TimeWarp.fixedDeltaTime / ReloadAnimTime, 1);
                 }
             }
             if ((RoundsRemaining >= RoundsPerMag && !isReloading) && (ammoCount > 0 || BDArmorySettings.INFINITE_AMMO))
@@ -4995,7 +5003,7 @@ namespace BDArmory.Weapons
 
             reloadState.normalizedTime = 0;
             reloadState.enabled = true;
-            reloadState.speed = (reloadState.length / ReloadTime);//ensure relaod anim is not longer than reload time
+            reloadState.speed = (reloadState.length / ReloadTime);//ensure reload anim is not longer than reload time
             yield return new WaitWhileFixed(() => reloadState.normalizedTime < 1); //wait for animation here
             reloadState.normalizedTime = 1;
             reloadState.speed = 0;

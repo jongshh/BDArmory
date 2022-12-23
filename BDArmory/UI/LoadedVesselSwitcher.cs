@@ -1186,10 +1186,10 @@ namespace BDArmory.UI
                                     // If we're running a waypoints competition, only focus on vessels still running waypoints.
                                     if (BDACompetitionMode.Instance.competitionType == CompetitionType.WAYPOINTS && AI != null && AI.currentCommand != Control.PilotCommands.Waypoints) continue;
 
-                                    HP = (wm.Current.currentHP / wm.Current.totalHP) * 100;
-                                    if (HP < 100)
+                                    HP = wm.Current.currentHP / wm.Current.totalHP;
+                                    if (HP < 1)
                                     {
-                                        WreckFactor += (100 - HP) / 100; //the less plane remaining, the greater the chance it's a wreck
+                                        WreckFactor += 1f - HP * HP; //the less plane remaining, the greater the chance it's a wreck
                                     }
                                     if (wm.Current.vessel.verticalSpeed < -30) //falling out of the sky? Could be an intact plane diving to default alt, could be a cockpit
                                     {
@@ -1222,7 +1222,7 @@ namespace BDArmory.UI
                                     {
                                         crashTime = (float)(-Math.Abs(wm.Current.vessel.radarAltitude) / wm.Current.vessel.verticalSpeed);
                                     }
-                                    if (crashTime < 30)
+                                    if (crashTime < 30 && HP > 0.5f)
                                     {
                                         vesselScore *= crashTime / 30;
                                     }

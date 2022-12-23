@@ -43,6 +43,7 @@ namespace BDArmory.UI
         bool showTerrain;
         bool showRam;
         bool showMisc;
+        bool fixedAutoTuneFields = false;
 
         int Drivertype = 0;
         int broadsideDir = 0;
@@ -341,22 +342,22 @@ namespace BDArmory.UI
                     inputFields = new Dictionary<string, NumericInputField> {
                         { "steerMult", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.steerMult, 0.1, 20) },
                         { "steerKiAdjust", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.steerKiAdjust, 0.01, 1) },
-                        { "steerDamping", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.steerDamping, 1, 8) },
+                        { "steerDamping", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.steerDamping, 0.1, 8) },
 
-                        { "DynamicDampingMin", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.DynamicDampingMin, 1, 8) },
-                        { "DynamicDampingMax", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.DynamicDampingMax, 1, 8) },
+                        { "DynamicDampingMin", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.DynamicDampingMin, 0.1, 8) },
+                        { "DynamicDampingMax", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.DynamicDampingMax, 0.1, 8) },
                         { "dynamicSteerDampingFactor", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.dynamicSteerDampingFactor, 0.1, 10) },
 
-                        { "DynamicDampingPitchMin", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.DynamicDampingPitchMin, 1, 8) },
-                        { "DynamicDampingPitchMax", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.DynamicDampingPitchMax, 1, 8) },
+                        { "DynamicDampingPitchMin", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.DynamicDampingPitchMin, 0.1, 8) },
+                        { "DynamicDampingPitchMax", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.DynamicDampingPitchMax, 0.1, 8) },
                         { "dynamicSteerDampingPitchFactor", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.dynamicSteerDampingPitchFactor, 0.1, 10) },
 
-                        { "DynamicDampingYawMin", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.DynamicDampingYawMin, 1, 8) },
-                        { "DynamicDampingYawMax", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.DynamicDampingYawMax, 1, 8) },
+                        { "DynamicDampingYawMin", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.DynamicDampingYawMin, 0.1, 8) },
+                        { "DynamicDampingYawMax", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.DynamicDampingYawMax, 0.1, 8) },
                         { "dynamicSteerDampingYawFactor", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.dynamicSteerDampingYawFactor, 0.1, 10) },
 
-                        { "DynamicDampingRollMin", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.DynamicDampingRollMin, 1, 8) },
-                        { "DynamicDampingRollMax", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.DynamicDampingRollMax, 1, 8) },
+                        { "DynamicDampingRollMin", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.DynamicDampingRollMin, 0.1, 8) },
+                        { "DynamicDampingRollMax", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.DynamicDampingRollMax, 0.1, 8) },
                         { "dynamicSteerDampingRollFactor", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.dynamicSteerDampingRollFactor, 0.1, 10) },
 
                         { "autoTuningOptionNumSamples", gameObject.AddComponent<NumericInputField>().Initialise(0, ActivePilot.autoTuningOptionNumSamples, 1, 10) },
@@ -871,8 +872,7 @@ namespace BDArmory.UI
 
                     if (showPID || showAltitude || showSpeed || showControl || showEvade || showTerrain || showRam || showMisc)
                     {
-                        scrollViewVector = GUI.BeginScrollView(new Rect(leftIndent + 100, contentTop + (entryHeight * 1.5f), (ColumnWidth * 2) - 100 - (leftIndent), WindowHeight - entryHeight * 1.5f - (2 * contentTop)), scrollViewVector,
-                                               new Rect(0, 0, (ColumnWidth * 2) - 120 - (leftIndent * 2), height + 5));
+                        scrollViewVector = GUI.BeginScrollView(new Rect(leftIndent + 100, contentTop + (entryHeight * 1.5f), (ColumnWidth * 2) - 100 - (leftIndent), WindowHeight - entryHeight * 1.5f - (2 * contentTop)), scrollViewVector, new Rect(0, 0, (ColumnWidth * 2) - 120 - (leftIndent * 2), height + 5));
 
                         GUI.BeginGroup(new Rect(leftIndent, 0, (ColumnWidth * 2) - 120 - (leftIndent * 2), height + 5), GUIContent.none, BDArmorySetup.BDGuiSkin.box); //darker box
 
@@ -882,9 +882,7 @@ namespace BDArmory.UI
                         if (showPID)
                         {
                             pidLines += 0.2f;
-                            GUI.BeginGroup(
-                                new Rect(0, (pidLines * entryHeight), contentWidth, pidHeight * entryHeight),
-                                GUIContent.none, BDArmorySetup.BDGuiSkin.box);
+                            GUI.BeginGroup(new Rect(0, (pidLines * entryHeight), contentWidth, pidHeight * entryHeight), GUIContent.none, BDArmorySetup.BDGuiSkin.box);
                             pidLines += 0.25f;
 
                             GUI.Label(SettinglabelRect(leftIndent, pidLines), StringUtils.Localize("#LOC_BDArmory_PilotAI_PID"), BoldLabel);//"Pid Controller"
@@ -892,10 +890,8 @@ namespace BDArmory.UI
 
                             if (!NumFieldsEnabled)
                             {
-                                ActivePilot.steerMult =
-                                    GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines, contentWidth),
-                                        ActivePilot.steerMult, 0.1f, ActivePilot.UpToEleven ? 200 : 20);
-                                ActivePilot.steerMult = Mathf.Round(ActivePilot.steerMult * 10f) / 10f;
+                                if (ActivePilot.steerMult != (ActivePilot.steerMult = GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines, contentWidth), ActivePilot.steerMult, 0.1f, ActivePilot.UpToEleven ? 200 : 20)))
+                                    ActivePilot.steerMult = BDAMath.RoundToUnit(ActivePilot.steerMult, 0.1f);
                             }
                             else
                             {
@@ -914,10 +910,8 @@ namespace BDArmory.UI
                             }
                             if (!NumFieldsEnabled)
                             {
-                                ActivePilot.steerKiAdjust =
-                                      GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines, contentWidth),
-                                          ActivePilot.steerKiAdjust, 0.01f, ActivePilot.UpToEleven ? 20 : 1);
-                                ActivePilot.steerKiAdjust = Mathf.Round(ActivePilot.steerKiAdjust * 100f) / 100f;
+                                if (ActivePilot.steerKiAdjust != (ActivePilot.steerKiAdjust = GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines, contentWidth), ActivePilot.steerKiAdjust, 0.01f, ActivePilot.UpToEleven ? 20 : 1)))
+                                    ActivePilot.steerKiAdjust = BDAMath.RoundToUnit(ActivePilot.steerKiAdjust, 0.01f);
                             }
                             else
                             {
@@ -935,10 +929,8 @@ namespace BDArmory.UI
                             }
                             if (!NumFieldsEnabled)
                             {
-                                ActivePilot.steerDamping =
-                                    GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines, contentWidth),
-                                        ActivePilot.steerDamping, 0.01f, ActivePilot.UpToEleven ? 100 : 8);
-                                ActivePilot.steerDamping = Mathf.Round(ActivePilot.steerDamping * 100f) / 100f;
+                                if (ActivePilot.steerDamping != (ActivePilot.steerDamping = GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines, contentWidth), ActivePilot.steerDamping, 0.1f, ActivePilot.UpToEleven ? 100 : 8)))
+                                    ActivePilot.steerDamping = BDAMath.RoundToUnit(ActivePilot.steerDamping, 0.1f);
                             }
                             else
                             {
@@ -955,16 +947,13 @@ namespace BDArmory.UI
                                 pidLines++;
                             }
 
-                            ActivePilot.dynamicSteerDamping =
-                               GUI.Toggle(ToggleButtonRect(leftIndent, pidLines, contentWidth),
-                                   ActivePilot.dynamicSteerDamping, StringUtils.Localize("#LOC_BDArmory_DynamicDamping"), ActivePilot.dynamicSteerDamping ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button);//"Dynamic damping"
+                            ActivePilot.dynamicSteerDamping = GUI.Toggle(ToggleButtonRect(leftIndent, pidLines, contentWidth), ActivePilot.dynamicSteerDamping, StringUtils.Localize("#LOC_BDArmory_DynamicDamping"), ActivePilot.dynamicSteerDamping ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button);//"Dynamic damping"
                             pidLines += 1.25f;
 
                             if (ActivePilot.dynamicSteerDamping)
                             {
                                 float dynPidLines = 0;
-                                ActivePilot.CustomDynamicAxisFields = GUI.Toggle(ToggleButtonRect(leftIndent, pidLines, contentWidth),
-                                ActivePilot.CustomDynamicAxisFields, StringUtils.Localize("#LOC_BDArmory_3AxisDynamicSteerDamping"), ActivePilot.CustomDynamicAxisFields ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button);//"3 axis damping"
+                                ActivePilot.CustomDynamicAxisFields = GUI.Toggle(ToggleButtonRect(leftIndent, pidLines, contentWidth), ActivePilot.CustomDynamicAxisFields, StringUtils.Localize("#LOC_BDArmory_3AxisDynamicSteerDamping"), ActivePilot.CustomDynamicAxisFields ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button);//"3 axis damping"
                                 dynPidLines++;
                                 if (!ActivePilot.CustomDynamicAxisFields)
                                 {
@@ -974,10 +963,8 @@ namespace BDArmory.UI
                                     dynPidLines++;
                                     if (!NumFieldsEnabled)
                                     {
-                                        ActivePilot.DynamicDampingMin =
-                                            GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth),
-                                                ActivePilot.DynamicDampingMin, 1f, ActivePilot.UpToEleven ? 100 : 8);
-                                        ActivePilot.DynamicDampingMin = Mathf.Round(ActivePilot.DynamicDampingMin * 10f) / 10f;
+                                        if (ActivePilot.DynamicDampingMin != (ActivePilot.DynamicDampingMin = GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth), ActivePilot.DynamicDampingMin, 0.1f, ActivePilot.UpToEleven ? 100 : 8)))
+                                            ActivePilot.DynamicDampingMin = BDAMath.RoundToUnit(ActivePilot.DynamicDampingMin, 0.1f);
                                     }
                                     else
                                     {
@@ -993,10 +980,8 @@ namespace BDArmory.UI
                                     }
                                     if (!NumFieldsEnabled)
                                     {
-                                        ActivePilot.DynamicDampingMax =
-                                            GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth),
-                                                ActivePilot.DynamicDampingMax, 1f, ActivePilot.UpToEleven ? 100 : 8);
-                                        ActivePilot.DynamicDampingMax = Mathf.Round(ActivePilot.DynamicDampingMax * 10f) / 10f;
+                                        if (ActivePilot.DynamicDampingMax != (ActivePilot.DynamicDampingMax = GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth), ActivePilot.DynamicDampingMax, 0.1f, ActivePilot.UpToEleven ? 100 : 8)))
+                                            ActivePilot.DynamicDampingMax = BDAMath.RoundToUnit(ActivePilot.DynamicDampingMax, 0.1f);
                                     }
                                     else
                                     {
@@ -1013,10 +998,8 @@ namespace BDArmory.UI
                                     }
                                     if (!NumFieldsEnabled)
                                     {
-                                        ActivePilot.dynamicSteerDampingFactor =
-                                            GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth),
-                                                ActivePilot.dynamicSteerDampingFactor, 0.1f, ActivePilot.UpToEleven ? 100 : 10);
-                                        ActivePilot.dynamicSteerDampingFactor = Mathf.Round(ActivePilot.dynamicSteerDampingFactor * 10f) / 10f;
+                                        if (ActivePilot.dynamicSteerDampingFactor != (ActivePilot.dynamicSteerDampingFactor = GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth), ActivePilot.dynamicSteerDampingFactor, 0.1f, ActivePilot.UpToEleven ? 100 : 10)))
+                                            ActivePilot.dynamicSteerDampingFactor = BDAMath.RoundToUnit(ActivePilot.dynamicSteerDampingFactor, 0.1f);
                                     }
                                     else
                                     {
@@ -1034,8 +1017,7 @@ namespace BDArmory.UI
                                 }
                                 else
                                 {
-                                    ActivePilot.dynamicDampingPitch = GUI.Toggle(ToggleButtonRect(leftIndent, pidLines + dynPidLines, contentWidth),
-                                    ActivePilot.dynamicDampingPitch, StringUtils.Localize("#LOC_BDArmory_DynamicDampingPitch"), ActivePilot.dynamicDampingPitch ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button);//"Dynamic damp pitch"
+                                    ActivePilot.dynamicDampingPitch = GUI.Toggle(ToggleButtonRect(leftIndent, pidLines + dynPidLines, contentWidth), ActivePilot.dynamicDampingPitch, StringUtils.Localize("#LOC_BDArmory_DynamicDampingPitch"), ActivePilot.dynamicDampingPitch ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button);//"Dynamic damp pitch"
                                     dynPidLines += 1.25f;
 
                                     if (ActivePilot.dynamicDampingPitch)
@@ -1044,10 +1026,8 @@ namespace BDArmory.UI
                                         dynPidLines++;
                                         if (!NumFieldsEnabled)
                                         {
-                                            ActivePilot.DynamicDampingPitchMin =
-                                                GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth),
-                                                    ActivePilot.DynamicDampingPitchMin, 1f, ActivePilot.UpToEleven ? 100 : 8);
-                                            ActivePilot.DynamicDampingPitchMin = Mathf.Round(ActivePilot.DynamicDampingPitchMin * 10f) / 10f;
+                                            if (ActivePilot.DynamicDampingPitchMin != (ActivePilot.DynamicDampingPitchMin = GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth), ActivePilot.DynamicDampingPitchMin, 0.1f, ActivePilot.UpToEleven ? 100 : 8)))
+                                                ActivePilot.DynamicDampingPitchMin = BDAMath.RoundToUnit(ActivePilot.DynamicDampingPitchMin, 0.1f);
                                         }
                                         else
                                         {
@@ -1063,10 +1043,8 @@ namespace BDArmory.UI
                                         }
                                         if (!NumFieldsEnabled)
                                         {
-                                            ActivePilot.DynamicDampingPitchMax =
-                                                GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth),
-                                                    ActivePilot.DynamicDampingPitchMax, 1f, ActivePilot.UpToEleven ? 100 : 8);
-                                            ActivePilot.DynamicDampingPitchMax = Mathf.Round(ActivePilot.DynamicDampingPitchMax * 10f) / 10f;
+                                            if (ActivePilot.DynamicDampingPitchMax != (ActivePilot.DynamicDampingPitchMax = GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth), ActivePilot.DynamicDampingPitchMax, 0.1f, ActivePilot.UpToEleven ? 100 : 8)))
+                                                ActivePilot.DynamicDampingPitchMax = BDAMath.RoundToUnit(ActivePilot.DynamicDampingPitchMax, 0.1f);
                                         }
                                         else
                                         {
@@ -1083,10 +1061,8 @@ namespace BDArmory.UI
                                         }
                                         if (!NumFieldsEnabled)
                                         {
-                                            ActivePilot.dynamicSteerDampingPitchFactor =
-                                                GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth),
-                                                    ActivePilot.dynamicSteerDampingPitchFactor, 0.1f, ActivePilot.UpToEleven ? 100 : 10);
-                                            ActivePilot.dynamicSteerDampingPitchFactor = Mathf.Round(ActivePilot.dynamicSteerDampingPitchFactor * 10f) / 10f;
+                                            if (ActivePilot.dynamicSteerDampingPitchFactor != (ActivePilot.dynamicSteerDampingPitchFactor = GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth), ActivePilot.dynamicSteerDampingPitchFactor, 0.1f, ActivePilot.UpToEleven ? 100 : 10)))
+                                                ActivePilot.dynamicSteerDampingPitchFactor = BDAMath.RoundToUnit(ActivePilot.dynamicSteerDampingPitchFactor, 0.1f);
                                         }
                                         else
                                         {
@@ -1103,8 +1079,7 @@ namespace BDArmory.UI
                                         }
                                     }
 
-                                    ActivePilot.dynamicDampingYaw = GUI.Toggle(ToggleButtonRect(leftIndent, pidLines + dynPidLines, contentWidth),
-                                   ActivePilot.dynamicDampingYaw, StringUtils.Localize("#LOC_BDArmory_DynamicDampingYaw"), ActivePilot.dynamicDampingYaw ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button);//"Dynamic damp yaw"
+                                    ActivePilot.dynamicDampingYaw = GUI.Toggle(ToggleButtonRect(leftIndent, pidLines + dynPidLines, contentWidth), ActivePilot.dynamicDampingYaw, StringUtils.Localize("#LOC_BDArmory_DynamicDampingYaw"), ActivePilot.dynamicDampingYaw ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button);//"Dynamic damp yaw"
                                     dynPidLines += 1.25f;
                                     if (ActivePilot.dynamicDampingYaw)
                                     {
@@ -1112,10 +1087,8 @@ namespace BDArmory.UI
                                         dynPidLines++;
                                         if (!NumFieldsEnabled)
                                         {
-                                            ActivePilot.DynamicDampingYawMin =
-                                                GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth),
-                                                    ActivePilot.DynamicDampingYawMin, 1f, ActivePilot.UpToEleven ? 100 : 8);
-                                            ActivePilot.DynamicDampingYawMin = Mathf.Round(ActivePilot.DynamicDampingYawMin * 10f) / 10f;
+                                            if (ActivePilot.DynamicDampingYawMin != (ActivePilot.DynamicDampingYawMin = GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth), ActivePilot.DynamicDampingYawMin, 0.1f, ActivePilot.UpToEleven ? 100 : 8)))
+                                                ActivePilot.DynamicDampingYawMin = BDAMath.RoundToUnit(ActivePilot.DynamicDampingYawMin, 0.1f);
                                         }
                                         else
                                         {
@@ -1132,10 +1105,8 @@ namespace BDArmory.UI
                                         }
                                         if (!NumFieldsEnabled)
                                         {
-                                            ActivePilot.DynamicDampingYawMax =
-                                                GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth),
-                                                    ActivePilot.DynamicDampingYawMax, 1f, ActivePilot.UpToEleven ? 100 : 8);
-                                            ActivePilot.DynamicDampingYawMax = Mathf.Round(ActivePilot.DynamicDampingYawMax * 10f) / 10f;
+                                            if (ActivePilot.DynamicDampingYawMax != (ActivePilot.DynamicDampingYawMax = GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth), ActivePilot.DynamicDampingYawMax, 0.1f, ActivePilot.UpToEleven ? 100 : 8)))
+                                                ActivePilot.DynamicDampingYawMax = BDAMath.RoundToUnit(ActivePilot.DynamicDampingYawMax, 0.1f);
                                         }
                                         else
                                         {
@@ -1152,10 +1123,8 @@ namespace BDArmory.UI
                                         }
                                         if (!NumFieldsEnabled)
                                         {
-                                            ActivePilot.dynamicSteerDampingYawFactor =
-                                                GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth),
-                                                    ActivePilot.dynamicSteerDampingYawFactor, 0.1f, ActivePilot.UpToEleven ? 100 : 10);
-                                            ActivePilot.dynamicSteerDampingYawFactor = Mathf.Round(ActivePilot.dynamicSteerDampingYawFactor * 10) / 10;
+                                            if (ActivePilot.dynamicSteerDampingYawFactor != (ActivePilot.dynamicSteerDampingYawFactor = GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth), ActivePilot.dynamicSteerDampingYawFactor, 0.1f, ActivePilot.UpToEleven ? 100 : 10)))
+                                                ActivePilot.dynamicSteerDampingYawFactor = BDAMath.RoundToUnit(ActivePilot.dynamicSteerDampingYawFactor, 0.1f);
                                         }
                                         else
                                         {
@@ -1172,8 +1141,7 @@ namespace BDArmory.UI
                                         }
                                     }
 
-                                    ActivePilot.dynamicDampingRoll = GUI.Toggle(ToggleButtonRect(leftIndent, pidLines + dynPidLines, contentWidth),
-                                    ActivePilot.dynamicDampingRoll, StringUtils.Localize("#LOC_BDArmory_DynamicDampingRoll"), ActivePilot.dynamicDampingRoll ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button);//"Dynamic damp roll"
+                                    ActivePilot.dynamicDampingRoll = GUI.Toggle(ToggleButtonRect(leftIndent, pidLines + dynPidLines, contentWidth), ActivePilot.dynamicDampingRoll, StringUtils.Localize("#LOC_BDArmory_DynamicDampingRoll"), ActivePilot.dynamicDampingRoll ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button);//"Dynamic damp roll"
                                     dynPidLines += 1.25f;
                                     if (ActivePilot.dynamicDampingRoll)
                                     {
@@ -1181,10 +1149,8 @@ namespace BDArmory.UI
                                         dynPidLines++;
                                         if (!NumFieldsEnabled)
                                         {
-                                            ActivePilot.DynamicDampingRollMin =
-                                                GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth),
-                                                    ActivePilot.DynamicDampingRollMin, 1f, ActivePilot.UpToEleven ? 100 : 8);
-                                            ActivePilot.DynamicDampingRollMin = Mathf.Round(ActivePilot.DynamicDampingRollMin * 10f) / 10f;
+                                            if (ActivePilot.DynamicDampingRollMin != (ActivePilot.DynamicDampingRollMin = GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth), ActivePilot.DynamicDampingRollMin, 0.1f, ActivePilot.UpToEleven ? 100 : 8)))
+                                                ActivePilot.DynamicDampingRollMin = BDAMath.RoundToUnit(ActivePilot.DynamicDampingRollMin, 0.1f);
                                         }
                                         else
                                         {
@@ -1201,10 +1167,8 @@ namespace BDArmory.UI
                                         }
                                         if (!NumFieldsEnabled)
                                         {
-                                            ActivePilot.DynamicDampingRollMax =
-                                                GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth),
-                                                    ActivePilot.DynamicDampingRollMax, 1f, ActivePilot.UpToEleven ? 100 : 8);
-                                            ActivePilot.DynamicDampingRollMax = Mathf.Round(ActivePilot.DynamicDampingRollMax * 10f) / 10f;
+                                            if (ActivePilot.DynamicDampingRollMax != (ActivePilot.DynamicDampingRollMax = GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth), ActivePilot.DynamicDampingRollMax, 0.1f, ActivePilot.UpToEleven ? 100 : 8)))
+                                                ActivePilot.DynamicDampingRollMax = BDAMath.RoundToUnit(ActivePilot.DynamicDampingRollMax, 0.1f);
                                         }
                                         else
                                         {
@@ -1221,10 +1185,8 @@ namespace BDArmory.UI
                                         }
                                         if (!NumFieldsEnabled)
                                         {
-                                            ActivePilot.dynamicSteerDampingRollFactor =
-                                                GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth),
-                                                    ActivePilot.dynamicSteerDampingRollFactor, 0.1f, ActivePilot.UpToEleven ? 100 : 10);
-                                            ActivePilot.dynamicSteerDampingRollFactor = Mathf.Round(ActivePilot.dynamicSteerDampingRollFactor * 10f) / 10f;
+                                            if (ActivePilot.dynamicSteerDampingRollFactor != (ActivePilot.dynamicSteerDampingRollFactor = GUI.HorizontalSlider(SettingSliderRect(leftIndent, pidLines + dynPidLines, contentWidth), ActivePilot.dynamicSteerDampingRollFactor, 0.1f, ActivePilot.UpToEleven ? 100 : 10)))
+                                                ActivePilot.dynamicSteerDampingRollFactor = BDAMath.RoundToUnit(ActivePilot.dynamicSteerDampingRollFactor, 0.1f);
                                         }
                                         else
                                         {
@@ -1321,12 +1283,47 @@ namespace BDArmory.UI
                                     GUI.Label(ContextLabelRect(leftIndent, pidLines + autoTuneLines++), StringUtils.Localize("#LOC_BDArmory_AIWindow_PIDAutoTuningSpeedContext"), Label);
                                 }
 
-                                ActivePilot.autoTuningOptionFixedP = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 0, 2, contentWidth), ActivePilot.autoTuningOptionFixedP, StringUtils.Localize("#LOC_BDArmory_AIWindow_PIDAutoTuningFixedP"), ActivePilot.autoTuningOptionFixedP ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button);
+                                fixedAutoTuneFields = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 0, 2, contentWidth), fixedAutoTuneFields, StringUtils.Localize("#LOC_BDArmory_AIWindow_PIDAutoTuningFixedFields"), fixedAutoTuneFields ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button);
 
                                 ActivePilot.autoTuningOptionClampMaximums = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 1, 2, contentWidth), ActivePilot.autoTuningOptionClampMaximums, StringUtils.Localize("#LOC_BDArmory_AIWindow_PIDAutoTuningClampMaximums"), ActivePilot.autoTuningOptionClampMaximums ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button);
-                                autoTuneLines += 1.25f;
+                                ++autoTuneLines;
 
-                                pidLines += autoTuneLines;
+                                if (fixedAutoTuneFields)
+                                {
+                                    bool resetGradient = false;
+                                    if (!ActivePilot.dynamicSteerDamping)
+                                    {
+                                        if (ActivePilot.autoTuningOptionFixedP != (ActivePilot.autoTuningOptionFixedP = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 0, 3, contentWidth), ActivePilot.autoTuningOptionFixedP, StringUtils.Localize("P"), ActivePilot.autoTuningOptionFixedP ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button))) resetGradient = true;
+                                        if (ActivePilot.autoTuningOptionFixedI != (ActivePilot.autoTuningOptionFixedI = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 1, 3, contentWidth), ActivePilot.autoTuningOptionFixedI, StringUtils.Localize("I"), ActivePilot.autoTuningOptionFixedI ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button))) resetGradient = true;
+                                        if (ActivePilot.autoTuningOptionFixedD != (ActivePilot.autoTuningOptionFixedD = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 2, 3, contentWidth), ActivePilot.autoTuningOptionFixedD, StringUtils.Localize("D"), ActivePilot.autoTuningOptionFixedD ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button))) resetGradient = true;
+                                    }
+                                    else if (!ActivePilot.CustomDynamicAxisFields)
+                                    {
+                                        if (ActivePilot.autoTuningOptionFixedP != (ActivePilot.autoTuningOptionFixedP = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 0, 5, contentWidth), ActivePilot.autoTuningOptionFixedP, StringUtils.Localize("P"), ActivePilot.autoTuningOptionFixedP ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button))) resetGradient = true;
+                                        if (ActivePilot.autoTuningOptionFixedI != (ActivePilot.autoTuningOptionFixedI = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 1, 5, contentWidth), ActivePilot.autoTuningOptionFixedI, StringUtils.Localize("I"), ActivePilot.autoTuningOptionFixedI ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button))) resetGradient = true;
+                                        if (ActivePilot.autoTuningOptionFixedDOff != (ActivePilot.autoTuningOptionFixedDOff = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 2, 5, contentWidth), ActivePilot.autoTuningOptionFixedDOff, StringUtils.Localize("DOff"), ActivePilot.autoTuningOptionFixedDOff ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button))) resetGradient = true;
+                                        if (ActivePilot.autoTuningOptionFixedDOn != (ActivePilot.autoTuningOptionFixedDOn = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 3, 5, contentWidth), ActivePilot.autoTuningOptionFixedDOn, StringUtils.Localize("DOn"), ActivePilot.autoTuningOptionFixedDOn ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button))) resetGradient = true;
+                                        if (ActivePilot.autoTuningOptionFixedDF != (ActivePilot.autoTuningOptionFixedDF = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 4, 5, contentWidth), ActivePilot.autoTuningOptionFixedDF, StringUtils.Localize("DF"), ActivePilot.autoTuningOptionFixedDF ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button))) resetGradient = true;
+                                    }
+                                    else
+                                    {
+                                        if (ActivePilot.autoTuningOptionFixedP != (ActivePilot.autoTuningOptionFixedP = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 0, 11, contentWidth), ActivePilot.autoTuningOptionFixedP, StringUtils.Localize("P"), ActivePilot.autoTuningOptionFixedP ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button))) resetGradient = true;
+                                        if (ActivePilot.autoTuningOptionFixedI != (ActivePilot.autoTuningOptionFixedI = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 1, 11, contentWidth), ActivePilot.autoTuningOptionFixedI, StringUtils.Localize("I"), ActivePilot.autoTuningOptionFixedI ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button))) resetGradient = true;
+                                        if (ActivePilot.autoTuningOptionFixedDPOff != (ActivePilot.autoTuningOptionFixedDPOff = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 2, 11, contentWidth), ActivePilot.autoTuningOptionFixedDPOff, StringUtils.Localize("DPOff"), ActivePilot.autoTuningOptionFixedDPOff ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button))) resetGradient = true;
+                                        if (ActivePilot.autoTuningOptionFixedDPOn != (ActivePilot.autoTuningOptionFixedDPOn = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 3, 11, contentWidth), ActivePilot.autoTuningOptionFixedDPOn, StringUtils.Localize("DPOn"), ActivePilot.autoTuningOptionFixedDPOn ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button))) resetGradient = true;
+                                        if (ActivePilot.autoTuningOptionFixedDPF != (ActivePilot.autoTuningOptionFixedDPF = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 4, 11, contentWidth), ActivePilot.autoTuningOptionFixedDPF, StringUtils.Localize("DPF"), ActivePilot.autoTuningOptionFixedDPF ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button))) resetGradient = true;
+                                        if (ActivePilot.autoTuningOptionFixedDYOff != (ActivePilot.autoTuningOptionFixedDYOff = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 5, 11, contentWidth), ActivePilot.autoTuningOptionFixedDYOff, StringUtils.Localize("DYOff"), ActivePilot.autoTuningOptionFixedDYOff ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button))) resetGradient = true;
+                                        if (ActivePilot.autoTuningOptionFixedDYOn != (ActivePilot.autoTuningOptionFixedDYOn = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 6, 11, contentWidth), ActivePilot.autoTuningOptionFixedDYOn, StringUtils.Localize("DYOn"), ActivePilot.autoTuningOptionFixedDYOn ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button))) resetGradient = true;
+                                        if (ActivePilot.autoTuningOptionFixedDYF != (ActivePilot.autoTuningOptionFixedDYF = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 7, 11, contentWidth), ActivePilot.autoTuningOptionFixedDYF, StringUtils.Localize("DYF"), ActivePilot.autoTuningOptionFixedDYF ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button))) resetGradient = true;
+                                        if (ActivePilot.autoTuningOptionFixedDROff != (ActivePilot.autoTuningOptionFixedDROff = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 8, 11, contentWidth), ActivePilot.autoTuningOptionFixedDROff, StringUtils.Localize("DROff"), ActivePilot.autoTuningOptionFixedDROff ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button))) resetGradient = true;
+                                        if (ActivePilot.autoTuningOptionFixedDROn != (ActivePilot.autoTuningOptionFixedDROn = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 9, 11, contentWidth), ActivePilot.autoTuningOptionFixedDROn, StringUtils.Localize("DROn"), ActivePilot.autoTuningOptionFixedDROn ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button))) resetGradient = true;
+                                        if (ActivePilot.autoTuningOptionFixedDRF != (ActivePilot.autoTuningOptionFixedDRF = GUI.Toggle(ToggleButtonRects(leftIndent, pidLines + autoTuneLines, 10, 11, contentWidth), ActivePilot.autoTuningOptionFixedDRF, StringUtils.Localize("DRF"), ActivePilot.autoTuningOptionFixedDRF ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button))) resetGradient = true;
+                                    }
+                                    if (resetGradient) ActivePilot.pidAutoTuning.ResetGradient();
+                                    ++autoTuneLines;
+                                }
+
+                                pidLines += autoTuneLines + 0.25f;
                             }
                             #endregion
 

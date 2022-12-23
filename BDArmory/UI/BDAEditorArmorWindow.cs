@@ -371,19 +371,20 @@ namespace BDArmory.UI
                 GUI.Label(new Rect(10, line * lineHeight, 300, lineHeight), $"{StringUtils.Localize("#LOC_BDArmory_ArmorTotalMass")}: {totalArmorMass:0.00}", style);
                 line++;
                 GUI.Label(new Rect(10, line * lineHeight, 300, lineHeight), $"{StringUtils.Localize("#LOC_BDArmory_ArmorTotalCost")}: {Mathf.Round(totalArmorCost)}", style);
-                if (!FerramAerospace.hasFAR)
-                {
-                    line++;
-                    GUI.Label(new Rect(10, line * lineHeight, 300, lineHeight), $"{StringUtils.Localize("#LOC_BDArmory_ArmorTotalLift")}: {totalLift:0.00} ({totalLiftArea:F3} m2)", style);
-                    line++;
-                    GUI.Label(new Rect(10, line * lineHeight, 300, lineHeight), $"{StringUtils.Localize("#LOC_BDArmory_ArmorWingLoading")}: {wingLoading:0.0} ({WLRatio:F3} kg/m2)", style);
-                }
-                line += 1.5f;
+                line++;
+            }
+            if (!FerramAerospace.hasFAR)
+            {
+                GUI.Label(new Rect(10, line * lineHeight, 300, lineHeight), $"{StringUtils.Localize("#LOC_BDArmory_ArmorTotalLift")}: {totalLift:0.00} ({totalLiftArea:F3} m2)", style);
+                line++;
+                GUI.Label(new Rect(10, line * lineHeight, 300, lineHeight), $"{StringUtils.Localize("#LOC_BDArmory_ArmorWingLoading")}: {wingLoading:0.0} ({WLRatio:F3} kg/m2)", style);
+                line++;
             }
             float StatLines = 0;
             float armorLines = 0;
             if (!BDArmorySettings.RESET_ARMOUR)
             {
+                line += 0.5f;
                 if (Thickness != oldThickness)
                 {
                     oldThickness = Thickness;

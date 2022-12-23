@@ -396,7 +396,7 @@ namespace BDArmory.FX
                     {
                         message += " parts damaged due to explosion";
                     }
-                    message += (SourceWeaponName != null ? $" ({SourceWeaponName})" : "") + (sourceVesselName != null ? $"from {sourceVesselName}" : "") + ".";
+                    message += (SourceWeaponName != null ? $" ({SourceWeaponName})" : "") + (sourceVesselName != null ? $" from {sourceVesselName}" : "") + ".";
                     BDACompetitionMode.Instance.competitionStatus.Add(message);
                 }
                 // Note: damage hasn't actually been applied to the parts yet, just assigned as events, so we can't know if they survived.

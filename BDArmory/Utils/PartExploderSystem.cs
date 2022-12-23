@@ -2,6 +2,9 @@
 using System.Linq;
 using UnityEngine;
 
+using BDArmory.Extensions;
+using BDArmory.Settings;
+
 namespace BDArmory.Utils
 {
     [KSPAddon(KSPAddon.Startup.Flight, false)]
