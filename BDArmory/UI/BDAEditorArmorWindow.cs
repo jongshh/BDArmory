@@ -40,6 +40,7 @@ namespace BDArmory.UI
         private float totalArmorCost;
         private float totalLift;
         private float totalLiftArea;
+        private float totalLiftStackRatio;
         private float wingLoading;
         private float WLRatio;
         private bool CalcArmor = false;
@@ -217,7 +218,7 @@ namespace BDArmory.UI
         IEnumerator ToolbarButtonRoutine()
         {
             if (toolbarButton || (!HighLogic.LoadedSceneIsEditor)) yield break;
-            yield return new WaitUntil(() => ApplicationLauncher.Ready);
+            yield return new WaitUntil(() => ApplicationLauncher.Ready && BDArmorySetup.toolbarButtonAdded); // Wait until after the main BDA toolbar button.
 
             AddToolbarButton();
         }
@@ -371,19 +372,22 @@ namespace BDArmory.UI
                 GUI.Label(new Rect(10, line * lineHeight, 300, lineHeight), $"{StringUtils.Localize("#LOC_BDArmory_ArmorTotalMass")}: {totalArmorMass:0.00}", style);
                 line++;
                 GUI.Label(new Rect(10, line * lineHeight, 300, lineHeight), $"{StringUtils.Localize("#LOC_BDArmory_ArmorTotalCost")}: {Mathf.Round(totalArmorCost)}", style);
-                if (!FerramAerospace.hasFAR)
-                {
-                    line++;
-                    GUI.Label(new Rect(10, line * lineHeight, 300, lineHeight), $"{StringUtils.Localize("#LOC_BDArmory_ArmorTotalLift")}: {totalLift:0.00} ({totalLiftArea:F3} m2)", style);
-                    line++;
-                    GUI.Label(new Rect(10, line * lineHeight, 300, lineHeight), $"{StringUtils.Localize("#LOC_BDArmory_ArmorWingLoading")}: {wingLoading:0.0} ({WLRatio:F3} kg/m2)", style);
-                }
-                line += 1.5f;
+                line++;
+            }
+            if (!FerramAerospace.hasFAR)
+            {
+                GUI.Label(new Rect(10, line * lineHeight, 300, lineHeight), $"{StringUtils.Localize("#LOC_BDArmory_ArmorTotalLift")}: {totalLift:0.00} ({totalLiftArea:F3} m2)", style);
+                line++;
+                GUI.Label(new Rect(10, line * lineHeight, 300, lineHeight), $"{StringUtils.Localize("#LOC_BDArmory_ArmorWingLoading")}: {wingLoading:0.0} ({WLRatio:F3} kg/m2)", style);
+                line++;
+                GUI.Label(new Rect(10, line * lineHeight, 300, lineHeight), $"{StringUtils.Localize("#LOC_BDArmory_ArmorLiftStacking")}: {totalLiftStackRatio:0%}", style);
+                line++;
             }
             float StatLines = 0;
             float armorLines = 0;
             if (!BDArmorySettings.RESET_ARMOUR)
             {
+                line += 0.5f;
                 if (Thickness != oldThickness)
                 {
                     oldThickness = Thickness;
@@ -614,6 +618,94 @@ namespace BDArmory.UI
             wingLoading = totalLift / EditorLogic.fetch.ship.GetTotalMass(); //convert to kg/m2. 1 LiftingArea is ~ 3.51m2, or ~285kg/m2
             totalLiftArea = totalLift * 3.51f;
             WLRatio = (EditorLogic.fetch.ship.GetTotalMass() * 1000) / totalLiftArea;
+
+            CalculateTotalLiftStacking();
+        }
+
+        void CalculateTotalLiftStacking()
+        {
+            if (EditorLogic.RootPart == null)
+                return;
+
+            float liftStackedAll = 0;
+            float liftStackedAllEval = 0;
+            List<Part> evaluatedParts = new List<Part>(); ;
+            totalLiftStackRatio = 0;
+            using (List<Part>.Enumerator parts1 = EditorLogic.fetch.ship.Parts.GetEnumerator())
+                while (parts1.MoveNext())
+                {
+                    if (parts1.Current.IsMissile()) continue;
+                    if (IsAeroBrake(parts1.Current)) continue;
+                    ModuleLiftingSurface wing1 = parts1.Current.GetComponent<ModuleLiftingSurface>();
+                    if (wing1 != null)
+                    {
+                        evaluatedParts.Add(parts1.Current);
+                        float lift1area = wing1.deflectionLiftCoeff * Vector3.Project(wing1.transform.forward, Vector3.up).sqrMagnitude; // Only return vertically oriented lift components
+                        float lift1rad = BDAMath.Sqrt(lift1area / Mathf.PI);
+                        Vector3 col1Pos = wing1.part.partTransform.TransformPoint(wing1.part.CoLOffset);
+                        Vector3 col1PosProj = Vector3.ProjectOnPlane(col1Pos, Vector3.up);
+                        liftStackedAllEval += lift1area; // Add up total lift areas
+
+                        using (List<Part>.Enumerator parts2 = EditorLogic.fetch.ship.Parts.GetEnumerator())
+                            while (parts2.MoveNext())
+                            {
+                                if (evaluatedParts.Contains(parts2.Current)) continue;
+                                if (parts1.Current == parts2.Current) continue;
+                                if (parts2.Current.IsMissile()) continue;
+                                if (IsAeroBrake(parts2.Current)) continue;
+                                ModuleLiftingSurface wing2 = parts2.Current.GetComponent<ModuleLiftingSurface>();
+                                if (wing2 != null)
+                                {
+                                    float lift2area = wing2.deflectionLiftCoeff * Vector3.Project(wing2.transform.forward, Vector3.up).sqrMagnitude; // Only return vertically oriented lift components
+                                    float lift2rad = BDAMath.Sqrt(lift2area / Mathf.PI);
+                                    Vector3 col2Pos = wing2.part.partTransform.TransformPoint(wing2.part.CoLOffset);
+                                    Vector3 col2PosProj = Vector3.ProjectOnPlane(col2Pos, Vector3.up);
+
+                                    float d = Vector3.Distance(col1PosProj, col2PosProj);
+                                    float R = lift1rad;
+                                    float r = lift2rad;
+
+                                    float a = 0;
+
+                                    // Calc overlapping area between two circles
+                                    if (d >= R + r) // Circles not overlapping
+                                        a = 0;
+                                    else if (R >= (d + r)) // Circle 2 inside Circle 1
+                                        a = Mathf.PI * r * r;
+                                    else if (r >= (d + R)) // Circle 1 inside Circle 2
+                                        a = Mathf.PI * R * R;
+                                    else if (d < R + r) // Circles overlapping
+                                        a = r * r * Mathf.Acos((d * d + r * r - R * R) / (2 * d * r)) + R * R * Mathf.Acos((d * d + R * R - r * r) / (2 * d * R)) -
+                                            0.5f * BDAMath.Sqrt((-d + r + R) * (d + r - R) * (d - r + R) * (d + r + R));
+
+                                    // Calculate vertical spacing factor (0 penalty if surfaces are spaced sqrt(2*lift) apart)
+                                    float v_dist = Vector3.Distance(Vector3.Project(col1Pos, Vector3.up),Vector3.Project(col2Pos, Vector3.up));
+                                    float l_spacing = Mathf.Round(Mathf.Max(lift1area, lift2area, 0.25f)*100f)/100f; // Round lift to nearest 0.01
+                                    float v_factor = Mathf.Pow(Mathf.Clamp01((BDAMath.Sqrt(2 * l_spacing) - v_dist) / (BDAMath.Sqrt(2 * l_spacing) - BDAMath.Sqrt(l_spacing))), 0.1f);
+
+                                    // Add overlapping area
+                                    liftStackedAll += a * v_factor;
+                                }
+                            }
+                    }
+                }
+            // Look at total overlapping lift area as a percentage of total lift area. Since overlapping lift area for multiple parts can potentially be greater than the total lift area, cap 
+            // the stacking at 100%. Also, multiply stacked lift by two for the edge case where only two parts are evaluated.
+            liftStackedAll *= (evaluatedParts.Count == 2) ? 2 : 1;
+            totalLiftStackRatio = Mathf.Clamp01(liftStackedAll / Mathf.Max(liftStackedAllEval, 0.01f));
+        }
+
+        bool IsAeroBrake(Part part)
+        {
+            if (part.GetComponent<ModuleLiftingSurface>() is not null)
+            {
+                if (part.GetComponent<ModuleAeroSurface>() is not null)
+                    return true;
+                else
+                    return false;
+            }
+            else
+                return false;
         }
 
         IEnumerator calcArmorMassAndCost()
@@ -662,10 +754,10 @@ namespace BDArmory.UI
                             if (LiftVisualizer)
                             {
                                 ModuleLiftingSurface wing = parts.Current.GetComponent<ModuleLiftingSurface>();
-                                if (wing != null)
+                                if (wing != null && wing.deflectionLiftCoeff > 0f)
                                     VisualizerColor = Color.HSVToRGB(Mathf.Clamp01(Mathf.Log10(wing.deflectionLiftCoeff + 1f)) / 3, 1, 1);
                                 else
-                                    VisualizerColor = Color.HSVToRGB(0, 1, 1);
+                                    VisualizerColor = Color.HSVToRGB(0, 0, 0.5f);
                             }
                             var r = parts.Current.GetComponentsInChildren<Renderer>();
                             {

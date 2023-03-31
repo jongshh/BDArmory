@@ -196,7 +196,7 @@ namespace BDArmory.Weapons.Missiles
             if (HasFired && !HasExploded)
             {
                 UpdateGuidance();
-                CheckDetonationState();
+                CheckDetonationState(true);
                 CheckDetonationDistance();
                 CheckDelayedFired();
                 CheckNextStage();
@@ -216,7 +216,7 @@ namespace BDArmory.Weapons.Missiles
         void Update()
         {
             if (!HasFired)
-                CheckDetonationState();
+                CheckDetonationState(true);
         }
 
         private void CheckNextStage()
@@ -707,6 +707,7 @@ namespace BDArmory.Weapons.Missiles
             TargetMf = null;
             isTimed = true;
             detonationTime = TimeIndex + 1.5f;
+            if (BDArmorySettings.CAMERA_SWITCH_INCLUDE_MISSILES && vessel.isActiveVessel) LoadedVesselSwitcher.Instance.TriggerSwitchVessel();
         }
 
         private void ResetMissile()
@@ -758,6 +759,7 @@ namespace BDArmory.Weapons.Missiles
                 TargetMf = null;
                 isTimed = true;
                 detonationTime = TimeIndex + 1.5f;
+                if (BDArmorySettings.CAMERA_SWITCH_INCLUDE_MISSILES && vessel.isActiveVessel) LoadedVesselSwitcher.Instance.TriggerSwitchVessel();
             }
         }
 
@@ -1024,6 +1026,11 @@ namespace BDArmory.Weapons.Missiles
 
                 HasFired = true;
                 DetonationDistanceState = DetonationDistanceStates.NotSafe;
+                if (vessel.atmDensity < 0.05)
+                {
+                    vessel.ActionGroups.SetGroup(KSPActionGroup.RCS, true);
+                }
+                if (BDArmorySettings.CAMERA_SWITCH_INCLUDE_MISSILES && SourceVessel.isActiveVessel) LoadedVesselSwitcher.Instance.ForceSwitchVessel(vessel);
             }
             if (BDArmorySetup.Instance.ActiveWeaponManager != null)
             {

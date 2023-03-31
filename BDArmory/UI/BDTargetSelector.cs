@@ -59,14 +59,15 @@ namespace BDArmory.UI
                 targetWeaponManager.targetCoM = !targetWeaponManager.targetCoM;
                 if (targetWeaponManager.targetCoM)
                 {
-                    targetWeaponManager.targetWeapon = false;
-                    targetWeaponManager.targetEngine = false;
                     targetWeaponManager.targetCommand = false;
+                    targetWeaponManager.targetEngine = false;
+                    targetWeaponManager.targetWeapon = false;
                     targetWeaponManager.targetMass = false;
+                    targetWeaponManager.targetRandom = false;
                 }
-                if (!targetWeaponManager.targetCoM && (!targetWeaponManager.targetWeapon && !targetWeaponManager.targetEngine && !targetWeaponManager.targetCommand && !targetWeaponManager.targetMass))
+                if (!targetWeaponManager.targetCoM && (!targetWeaponManager.targetWeapon && !targetWeaponManager.targetEngine && !targetWeaponManager.targetCommand && !targetWeaponManager.targetMass && !targetWeaponManager.targetRandom))
                 {
-                    targetWeaponManager.targetMass = true;
+                    targetWeaponManager.targetRandom = true;
                 }
             }
             height += buttonHeight;
@@ -82,7 +83,7 @@ namespace BDArmory.UI
                 {
                     targetWeaponManager.targetCoM = false;
                 }
-                if (!targetWeaponManager.targetCoM && (!targetWeaponManager.targetWeapon && !targetWeaponManager.targetEngine && !targetWeaponManager.targetCommand && !targetWeaponManager.targetMass))
+                if (!targetWeaponManager.targetCoM && (!targetWeaponManager.targetWeapon && !targetWeaponManager.targetEngine && !targetWeaponManager.targetCommand && !targetWeaponManager.targetMass && !targetWeaponManager.targetRandom))
                 {
                     targetWeaponManager.targetCoM = true;
                 }
@@ -100,7 +101,7 @@ namespace BDArmory.UI
                 {
                     targetWeaponManager.targetCoM = false;
                 }
-                if (!targetWeaponManager.targetCoM && (!targetWeaponManager.targetWeapon && !targetWeaponManager.targetEngine && !targetWeaponManager.targetCommand && !targetWeaponManager.targetMass))
+                if (!targetWeaponManager.targetCoM && (!targetWeaponManager.targetWeapon && !targetWeaponManager.targetEngine && !targetWeaponManager.targetCommand && !targetWeaponManager.targetMass && !targetWeaponManager.targetRandom))
                 {
                     targetWeaponManager.targetCoM = true;
                 }
@@ -118,7 +119,7 @@ namespace BDArmory.UI
                 {
                     targetWeaponManager.targetCoM = false;
                 }
-                if (!targetWeaponManager.targetCoM && (!targetWeaponManager.targetWeapon && !targetWeaponManager.targetEngine && !targetWeaponManager.targetCommand && !targetWeaponManager.targetMass))
+                if (!targetWeaponManager.targetCoM && (!targetWeaponManager.targetWeapon && !targetWeaponManager.targetEngine && !targetWeaponManager.targetCommand && !targetWeaponManager.targetMass && !targetWeaponManager.targetRandom))
                 {
                     targetWeaponManager.targetCoM = true;
                 }
@@ -136,7 +137,25 @@ namespace BDArmory.UI
                 {
                     targetWeaponManager.targetCoM = false;
                 }
-                if (!targetWeaponManager.targetCoM && (!targetWeaponManager.targetWeapon && !targetWeaponManager.targetEngine && !targetWeaponManager.targetCommand && !targetWeaponManager.targetMass))
+                if (!targetWeaponManager.targetCoM && (!targetWeaponManager.targetWeapon && !targetWeaponManager.targetEngine && !targetWeaponManager.targetCommand && !targetWeaponManager.targetMass && !targetWeaponManager.targetRandom))
+                {
+                    targetWeaponManager.targetCoM = true;
+                }
+            }
+            height += buttonHeight;
+
+            height += buttonGap;
+            Rect RNGRect = new Rect(margin, height, width - 2 * margin, buttonHeight);
+            GUIStyle RNGStyle = targetWeaponManager.targetWeapon ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button;
+
+            if (GUI.Button(RNGRect, StringUtils.Localize("#LOC_BDArmory_Random"), RNGStyle))
+            {
+                targetWeaponManager.targetRandom = !targetWeaponManager.targetRandom;
+                if (targetWeaponManager.targetRandom)
+                {
+                    targetWeaponManager.targetCoM = false;
+                }
+                if (!targetWeaponManager.targetCoM && (!targetWeaponManager.targetWeapon && !targetWeaponManager.targetEngine && !targetWeaponManager.targetCommand && !targetWeaponManager.targetMass && !targetWeaponManager.targetRandom))
                 {
                     targetWeaponManager.targetCoM = true;
                 }
@@ -148,7 +167,8 @@ namespace BDArmory.UI
                 + (targetWeaponManager.targetMass ? StringUtils.Localize("#LOC_BDArmory_Mass") + "; " : "")
                 + (targetWeaponManager.targetCommand ? StringUtils.Localize("#LOC_BDArmory_Command") + "; " : "")
                 + (targetWeaponManager.targetEngine ? StringUtils.Localize("#LOC_BDArmory_Engines") + "; " : "")
-                + (targetWeaponManager.targetWeapon ? StringUtils.Localize("#LOC_BDArmory_Weapons") + "; " : "");
+                + (targetWeaponManager.targetWeapon ? StringUtils.Localize("#LOC_BDArmory_Weapons") + "; " : "")
+                +(targetWeaponManager.targetRandom ? StringUtils.Localize("#LOC_BDArmory_Random") + "; " : "");
             GUIUtils.RepositionWindow(ref window);
             GUIUtils.UseMouseEventInRect(window);
         }

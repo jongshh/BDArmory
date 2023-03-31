@@ -155,7 +155,7 @@ namespace BDArmory.Competition
                                     BDArmorySettings.VESSEL_SPAWN_WORLDINDEX,
                                     BDArmorySettings.VESSEL_SPAWN_GEOCOORDS.x,
                                     BDArmorySettings.VESSEL_SPAWN_GEOCOORDS.y,
-                                    BDArmorySettings.VESSEL_SPAWN_ALTITUDE,
+                                    BDArmorySettings.VESSEL_SPAWN_ALTITUDE_,
                                     BDArmorySettings.VESSEL_SPAWN_DISTANCE_TOGGLE ? BDArmorySettings.VESSEL_SPAWN_DISTANCE : BDArmorySettings.VESSEL_SPAWN_DISTANCE_FACTOR,
                                     BDArmorySettings.VESSEL_SPAWN_DISTANCE_TOGGLE,
                                     BDArmorySettings.VESSEL_SPAWN_EASE_IN_SPEED,
@@ -188,7 +188,7 @@ namespace BDArmory.Competition
                                 BDArmorySettings.VESSEL_SPAWN_WORLDINDEX,
                                 BDArmorySettings.VESSEL_SPAWN_GEOCOORDS.x,
                                 BDArmorySettings.VESSEL_SPAWN_GEOCOORDS.y,
-                                BDArmorySettings.VESSEL_SPAWN_ALTITUDE,
+                                BDArmorySettings.VESSEL_SPAWN_ALTITUDE_,
                                 BDArmorySettings.VESSEL_SPAWN_DISTANCE_TOGGLE ? BDArmorySettings.VESSEL_SPAWN_DISTANCE : BDArmorySettings.VESSEL_SPAWN_DISTANCE_FACTOR,
                                 BDArmorySettings.VESSEL_SPAWN_DISTANCE_TOGGLE,
                                 BDArmorySettings.VESSEL_SPAWN_EASE_IN_SPEED,
@@ -335,7 +335,7 @@ namespace BDArmory.Competition
                                     BDArmorySettings.VESSEL_SPAWN_WORLDINDEX,
                                     BDArmorySettings.VESSEL_SPAWN_GEOCOORDS.x,
                                     BDArmorySettings.VESSEL_SPAWN_GEOCOORDS.y,
-                                    BDArmorySettings.VESSEL_SPAWN_ALTITUDE,
+                                    BDArmorySettings.VESSEL_SPAWN_ALTITUDE_,
                                     BDArmorySettings.VESSEL_SPAWN_DISTANCE_TOGGLE ? BDArmorySettings.VESSEL_SPAWN_DISTANCE : BDArmorySettings.VESSEL_SPAWN_DISTANCE_FACTOR,
                                     BDArmorySettings.VESSEL_SPAWN_DISTANCE_TOGGLE,
                                     BDArmorySettings.VESSEL_SPAWN_EASE_IN_SPEED,
@@ -374,7 +374,7 @@ namespace BDArmory.Competition
                                     BDArmorySettings.VESSEL_SPAWN_WORLDINDEX,
                                     BDArmorySettings.VESSEL_SPAWN_GEOCOORDS.x,
                                     BDArmorySettings.VESSEL_SPAWN_GEOCOORDS.y,
-                                    BDArmorySettings.VESSEL_SPAWN_ALTITUDE,
+                                    BDArmorySettings.VESSEL_SPAWN_ALTITUDE_,
                                     BDArmorySettings.VESSEL_SPAWN_DISTANCE_TOGGLE ? BDArmorySettings.VESSEL_SPAWN_DISTANCE : BDArmorySettings.VESSEL_SPAWN_DISTANCE_FACTOR,
                                     BDArmorySettings.VESSEL_SPAWN_DISTANCE_TOGGLE,
                                     BDArmorySettings.VESSEL_SPAWN_EASE_IN_SPEED,
@@ -458,7 +458,7 @@ namespace BDArmory.Competition
                                         BDArmorySettings.VESSEL_SPAWN_WORLDINDEX,
                                         BDArmorySettings.VESSEL_SPAWN_GEOCOORDS.x,
                                         BDArmorySettings.VESSEL_SPAWN_GEOCOORDS.y,
-                                        BDArmorySettings.VESSEL_SPAWN_ALTITUDE,
+                                        BDArmorySettings.VESSEL_SPAWN_ALTITUDE_,
                                         BDArmorySettings.VESSEL_SPAWN_DISTANCE_TOGGLE ? BDArmorySettings.VESSEL_SPAWN_DISTANCE : BDArmorySettings.VESSEL_SPAWN_DISTANCE_FACTOR,
                                         BDArmorySettings.VESSEL_SPAWN_DISTANCE_TOGGLE,
                                         BDArmorySettings.VESSEL_SPAWN_EASE_IN_SPEED,
@@ -794,7 +794,7 @@ namespace BDArmory.Competition
                 }
             }
             if (stateFile != "") this.stateFile = stateFile;
-            if ((BDArmorySettings.WAYPOINTS_MODE || (BDArmorySettings.RUNWAY_PROJECT && BDArmorySettings.RUNWAY_PROJECT_ROUND == 50)) && BDArmorySettings.WAYPOINTS_ONE_AT_A_TIME) vesselsPerHeat = 1; // Override vessels per heat.
+            if ((BDArmorySettings.WAYPOINTS_MODE || (BDArmorySettings.RUNWAY_PROJECT && (BDArmorySettings.RUNWAY_PROJECT_ROUND == 50 || BDArmorySettings.RUNWAY_PROJECT_ROUND == 55))) && BDArmorySettings.WAYPOINTS_ONE_AT_A_TIME) vesselsPerHeat = 1; // Override vessels per heat.
             tournamentState = new TournamentState();
             if (numberOfTeams == 0) // FFA
             {
@@ -862,7 +862,7 @@ namespace BDArmory.Competition
                     while (!competitionStarted && attempts++ < 3) // 3 attempts is plenty
                     {
                         tournamentStatus = TournamentStatus.Running;
-                        if (BDArmorySettings.WAYPOINTS_MODE || (BDArmorySettings.RUNWAY_PROJECT && BDArmorySettings.RUNWAY_PROJECT_ROUND == 50))
+                        if (BDArmorySettings.WAYPOINTS_MODE || (BDArmorySettings.RUNWAY_PROJECT && (BDArmorySettings.RUNWAY_PROJECT_ROUND == 50 || BDArmorySettings.RUNWAY_PROJECT_ROUND == 55)))
                             yield return ExecuteWaypointHeat(roundIndex, heatIndex);
                         else
                             yield return ExecuteHeat(roundIndex, heatIndex, attempts == 3 && BDArmorySettings.COMPETITION_START_DESPITE_FAILURES); // On the third attempt, start despite failures if the option is set.
@@ -932,7 +932,7 @@ namespace BDArmory.Competition
                     message = "All heats in round " + roundIndex + " have been run.";
                     BDACompetitionMode.Instance.competitionStatus.Add(message);
                     Debug.Log("[BDArmory.BDATournament]: " + message);
-                    if (BDArmorySettings.WAYPOINTS_MODE || (BDArmorySettings.RUNWAY_PROJECT && BDArmorySettings.RUNWAY_PROJECT_ROUND == 50))
+                    if (BDArmorySettings.WAYPOINTS_MODE || (BDArmorySettings.RUNWAY_PROJECT && (BDArmorySettings.RUNWAY_PROJECT_ROUND == 50 || BDArmorySettings.RUNWAY_PROJECT_ROUND == 55)))
                     {
                         /* commented out until this is made functional
                         foreach (var tracer in WaypointFollowingStrategy.Ghosts) //clear and reset vessel ghosts each new Round
@@ -985,9 +985,9 @@ namespace BDArmory.Competition
         {
             if (TournamentCoordinator.Instance.IsRunning) TournamentCoordinator.Instance.Stop();
             var spawnConfig = tournamentState.rounds[roundIndex][heatIndex];
-            spawnConfig.worldIndex = 1;
-            spawnConfig.latitude = 27.97f;
-            spawnConfig.longitude = -39.35f;
+            spawnConfig.worldIndex = WaypointCourses.CourseLocations[BDArmorySettings.WAYPOINT_COURSE_INDEX].worldIndex;
+            spawnConfig.latitude = WaypointCourses.CourseLocations[BDArmorySettings.WAYPOINT_COURSE_INDEX].spawnPoint.x;
+            spawnConfig.longitude = WaypointCourses.CourseLocations[BDArmorySettings.WAYPOINT_COURSE_INDEX].spawnPoint.y;
 
             TournamentCoordinator.Instance.Configure(new SpawnConfigStrategy(spawnConfig),
                 new WaypointFollowingStrategy(WaypointCourses.CourseLocations[BDArmorySettings.WAYPOINT_COURSE_INDEX].waypoints),
@@ -1021,6 +1021,9 @@ namespace BDArmory.Competition
                         BDACompetitionMode.Instance.StartRapidDeployment(0);
                         break;
                     case 44:
+                        BDACompetitionMode.Instance.StartRapidDeployment(0);
+                        break;
+                    case 53: 
                         BDACompetitionMode.Instance.StartRapidDeployment(0);
                         break;
                     case 60: // FIXME temporary index, to be assigned later

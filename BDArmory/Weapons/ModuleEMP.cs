@@ -28,6 +28,7 @@ namespace BDArmory.Weapons
         {
             foreach (Vessel v in FlightGlobals.Vessels)
             {
+                if (v == null || !v.loaded || v.packed) continue;
                 if (VesselModuleRegistry.ignoredVesselTypes.Contains(v.vesselType)) continue;
                 if (!v.HoldPhysics)
                 {

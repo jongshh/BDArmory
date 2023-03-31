@@ -141,8 +141,8 @@ namespace BDArmory.Targeting
 
         void RenderCameras()
         {
-            cameras[3].Render();
-            cameras[2].Render();
+            if (cameras[3] != null) cameras[3].Render();
+            if (cameras[2] != null) cameras[2].Render();
 
             Color origAmbientColor = RenderSettings.ambientLight;
             if (nvMode)
@@ -150,8 +150,8 @@ namespace BDArmory.Targeting
                 RenderSettings.ambientLight = new Color(0.5f, 0.5f, 0.5f, 1);
                 nvLight.enabled = true;
             }
-            cameras[1].Render();
-            cameras[0].Render();
+            if (cameras[1] != null) cameras[1].Render();
+            if (cameras[0] != null) cameras[0].Render();
 
             nvLight.enabled = false;
             if (nvMode)

@@ -38,13 +38,18 @@ namespace BDArmory.Settings
         // General toggle settings
         //[BDAPersistentSettingsField] public static bool INSTAKILL = true; //Deprecated, only affects lasers; use an Instagib mutator isntead
         [BDAPersistentSettingsField] public static bool AI_TOOLBAR_BUTTON = true;                 // Show or hide the BDA AI toolbar button.
+        [BDAPersistentSettingsField] public static bool VM_TOOLBAR_BUTTON = true;                 // Show or hide the BDA VM toolbar button.
         [BDAPersistentSettingsField] public static bool INFINITE_AMMO = false;              //infinite Bullets/rockets/laserpower
         [BDAPersistentSettingsField] public static bool INFINITE_ORDINANCE = false;         //infinite missiles/bombs (on ordinance w/ Reload Module)
+        [BDAPersistentSettingsField] public static bool INFINITE_FUEL = false;              //Infinite propellant
+        [BDAPersistentSettingsField] public static bool INFINITE_EC = false;                          //Infinite electric charge
         [BDAPersistentSettingsField] public static bool BULLET_HITS = true;
         [BDAPersistentSettingsField] public static bool EJECT_SHELLS = true;
         [BDAPersistentSettingsField] public static bool VESSEL_RELATIVE_BULLET_CHECKS = false;
         [BDAPersistentSettingsField] public static bool AIM_ASSIST = true;
         [BDAPersistentSettingsField] public static bool DRAW_AIMERS = true;
+        [BDAPersistentSettingsField] public static bool RESTORE_KAL = true;                  // Restore the Part, Module and AxisField references on the KAL to make it work.
+
         // Debug Labels
         [BDAPersistentSettingsField] public static bool DEBUG_LINES = false;                 //AI/Weapon aim visualizers
         [BDAPersistentSettingsField] public static bool DEBUG_OTHER = false;                 //internal debugging
@@ -104,8 +109,12 @@ namespace BDArmory.Settings
         [BDAPersistentSettingsField] public static float COMPETITION_KILLER_GM_GRACE_PERIOD = 150;     // Competition killer GM grace period in seconds.
         [BDAPersistentSettingsField] public static float COMPETITION_ALTITUDE_LIMIT_HIGH = 46;         // Altitude (high) in km at which to kill off craft.
         [BDAPersistentSettingsField] public static float COMPETITION_ALTITUDE_LIMIT_LOW = -1;          // Altitude (low) in km at which to kill off craft.
+        [BDAPersistentSettingsField] public static bool COMPETITION_ALTITUDE__LIMIT_ASL = false;       // Does Killer GM use ASL or AGL for latitide ceiling/floor?
         [BDAPersistentSettingsField] public static float COMPETITION_NONCOMPETITOR_REMOVAL_DELAY = 30; // Competition non-competitor removal delay in seconds.
+        [BDAPersistentSettingsField] public static float COMPETITION_WAYPOINTS_GM_KILL_PERIOD = 60;    // Waypoint Competition GM kill period in seconds. Craft that don't pass a waypoint within this time are killed off.
         [BDAPersistentSettingsField] public static float COMPETITION_DISTANCE = 1000;                  // Competition distance.
+        [BDAPersistentSettingsField] public static float COMPETITION_INTRA_TEAM_SEPARATION_BASE = 800; // Intra-team separation (base value).
+        [BDAPersistentSettingsField] public static float COMPETITION_INTRA_TEAM_SEPARATION_PER_MEMBER = 100; // Intra-team separation (per member value).
         [BDAPersistentSettingsField] public static int COMPETITION_START_NOW_AFTER = 11;               // Competition auto-start now.
         [BDAPersistentSettingsField] public static bool COMPETITION_START_DESPITE_FAILURES = false;    // Start competition despite failures.
         [BDAPersistentSettingsField] public static float DEBRIS_CLEANUP_DELAY = 15f;                   // Clean up debris after 30s.
@@ -113,6 +122,7 @@ namespace BDArmory.Settings
         [BDAPersistentSettingsField] public static int TERRAIN_ALERT_FREQUENCY = 1;                    // Controls how often terrain avoidance checks are made (gets scaled by 1+(radarAltitude/500)^2)
         [BDAPersistentSettingsField] public static int CAMERA_SWITCH_FREQUENCY = 3;                    // Controls the minimum time between automated camera switches
         [BDAPersistentSettingsField] public static int DEATH_CAMERA_SWITCH_INHIBIT_PERIOD = 0;         // Controls the delay before the next switch after the currently active vessel dies
+        [BDAPersistentSettingsField] public static bool CAMERA_SWITCH_INCLUDE_MISSILES = false;        // Include missiles in the camera switching logic.
         [BDAPersistentSettingsField] public static int KERBAL_SAFETY_INVENTORY = 2;                    // Controls how Kerbal Safety adjusts the inventory of kerbals.
         [BDAPersistentSettingsField] public static float TRIGGER_HOLD_TIME = 0.2f;
         [BDAPersistentSettingsField] public static float BDARMORY_UI_VOLUME = 0.35f;
@@ -129,7 +139,9 @@ namespace BDArmory.Settings
         [BDAPersistentSettingsField] public static float FIRE_RATE_OVERRIDE_BIAS = 0.16f;
         [BDAPersistentSettingsField] public static float FIRE_RATE_OVERRIDE_HIT_MULTIPLIER = 2f;
         [BDAPersistentSettingsField] public static float HP_THRESHOLD = 0;                  //HP above this value will be scaled to a logarithmic value
+        [BDAPersistentSettingsField] public static float HP_CLAMP = 0;                  //HP will be clamped to this value
         [BDAPersistentSettingsField] public static bool PWING_EDGE_LIFT = true;                  //Toggle lift on PWing edges for balance with stock wings/remove edge abuse
+        [BDAPersistentSettingsField] public static bool PWING_THICKNESS_AFFECT_MASS_HP = false;
         // Physics constants
         [BDAPersistentSettingsField] public static float GLOBAL_LIFT_MULTIPLIER = 0.25f;
         [BDAPersistentSettingsField] public static float GLOBAL_DRAG_MULTIPLIER = 6f;
@@ -195,6 +207,7 @@ namespace BDArmory.Settings
         [BDAPersistentSettingsField] public static bool DISCO_MODE = false;
         [BDAPersistentSettingsField] public static bool NO_ENGINES = false;
         [BDAPersistentSettingsField] public static bool WAYPOINTS_MODE = false;         // Waypoint section of Vessel Spawner Window.
+        [BDAPersistentSettingsField] public static string PINATA_NAME = "Pinata";
 
         //Battle Damage settings
         [BDAPersistentSettingsField] public static bool BATTLEDAMAGE_TOGGLE = false;    // Main battle damage toggle.
@@ -244,12 +257,14 @@ namespace BDArmory.Settings
         [BDAPersistentSettingsField] public static float REMOTE_INTERHEAT_DELAY = 30;                                     // Delay between heats.
         [BDAPersistentSettingsField] public static int RUNWAY_PROJECT_ROUND = 10;                                         // RWP round index.
         [BDAPersistentSettingsField] public static string REMOTE_ORCHESTRATION_NPC_SWAPPER = "Rammer";
+        [BDAPersistentSettingsField] public static string REMOTE_ORC_NPCS_TEAM = "";
 
         // Spawner settings
         [BDAPersistentSettingsField] public static bool SHOW_SPAWN_OPTIONS = true;                 // Show spawn options.
         [BDAPersistentSettingsField] public static Vector2d VESSEL_SPAWN_GEOCOORDS = new Vector2d(0.05096, -74.8016); // Spawning coordinates on a planetary body; Lat, Lon
         [BDAPersistentSettingsField] public static int VESSEL_SPAWN_WORLDINDEX = 1;                // Spawning planetary body: world index
         [BDAPersistentSettingsField] public static float VESSEL_SPAWN_ALTITUDE = 5f;               // Spawning altitude above the surface.
+        public static float VESSEL_SPAWN_ALTITUDE_ => !RUNWAY_PROJECT ? VESSEL_SPAWN_ALTITUDE : RUNWAY_PROJECT_ROUND == 33 ? 10 : RUNWAY_PROJECT_ROUND == 53 ? FlightGlobals.currentMainBody.atmosphere ? (float)(FlightGlobals.currentMainBody.atmosphereDepth + (FlightGlobals.currentMainBody.atmosphereDepth / 10)) : 50000 : VESSEL_SPAWN_ALTITUDE; // Getter for handling the various RWP cases.
         [BDAPersistentSettingsField] public static float VESSEL_SPAWN_DISTANCE_FACTOR = 20f;       // Scale factor for the size of the spawning circle.
         [BDAPersistentSettingsField] public static float VESSEL_SPAWN_DISTANCE = 10f;              // Radius of the size of the spawning circle.
         [BDAPersistentSettingsField] public static bool VESSEL_SPAWN_DISTANCE_TOGGLE = false;      // Toggle between scaling factor and absolute distance.
@@ -267,6 +282,19 @@ namespace BDArmory.Settings
         [BDAPersistentSettingsField] public static string VESSEL_SPAWN_GAUNTLET_OPPONENTS_FILES_LOCATION = "";        // Gauntlet opponents spawn files location (under AutoSpawn).
         [BDAPersistentSettingsField] public static bool VESSEL_SPAWN_RANDOM_ORDER = true;          // Shuffle vessels before spawning them.
         [BDAPersistentSettingsField] public static bool SHOW_WAYPOINTS_OPTIONS = true;             // Waypoint section of Vessel Spawner Window.
+        [BDAPersistentSettingsField] public static bool VESSEL_SPAWN_START_COMPETITION_AUTOMATICALLY = false; // Automatically start a competition after spawning succeeds.
+
+        // Vessel Mover settings
+        [BDAPersistentSettingsField] public static bool VESSEL_MOVER_CHOOSE_CREW = false;          // Choose crew when spawning vessels.
+        [BDAPersistentSettingsField] public static bool VESSEL_MOVER_CLASSIC_CRAFT_CHOOSER = true; // Use the built-in craft chooser instead of the custom one.
+        [BDAPersistentSettingsField] public static bool VESSEL_MOVER_ENABLE_BRAKES = true;         // Enable brakes when spawning vessels.
+        [BDAPersistentSettingsField] public static bool VESSEL_MOVER_ENABLE_SAS = true;            // Enable SAS when spawning vessels.
+        [BDAPersistentSettingsField] public static float VESSEL_MOVER_MIN_LOWER_SPEED = 1f;        // Minimum speed to lower vessels.
+        [BDAPersistentSettingsField] public static bool VESSEL_MOVER_LOWER_FAST = true;            // Skip lowering from high altitude.
+        [BDAPersistentSettingsField] public static bool VESSEL_MOVER_BELOW_WATER = false;          // Lower below water (on planets that have water).
+        [BDAPersistentSettingsField] public static bool VESSEL_MOVER_DONT_WORRY_ABOUT_COLLISIONS = false; // Don't prevent collisions.
+        [BDAPersistentSettingsField] public static bool VESSEL_MOVER_CLOSE_ON_COMPETITION_START = false; // Close when starting a competition.
+        [BDAPersistentSettingsField] public static bool VESSEL_MOVER_PLACE_AFTER_SPAWN = false;    // Immediately place vessels after spawning them.
 
         // Waypoints
         [BDAPersistentSettingsField] public static float WAYPOINTS_ALTITUDE = 50f;                // Altitude above ground of the waypoints.
@@ -295,6 +323,7 @@ namespace BDArmory.Settings
         [BDAPersistentSettingsField] public static bool SF_FRICTION = false;
         [BDAPersistentSettingsField] public static bool SF_GRAVITY = false;
         [BDAPersistentSettingsField] public static bool SF_REPULSOR = false;
+        [BDAPersistentSettingsField] public static float SF_REPULSOR_STRENGTH = 5f;
         [BDAPersistentSettingsField] public static float SF_DRAGMULT = 2f;
 
         //Mutator Mode

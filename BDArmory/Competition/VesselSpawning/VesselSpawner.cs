@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 
 using BDArmory.Control;
-using BDArmory.Extensions;
 using BDArmory.Settings;
 using BDArmory.Weapons;
 
@@ -87,7 +86,9 @@ namespace BDArmory.Competition.VesselSpawning
 
             newData.crew = new List<CrewData>();
 
-            return SpawnVessel(newData, out shipFacility, crewData);
+            var vessel = SpawnVessel(newData, out shipFacility, crewData);
+            SpawnUtils.RestoreKAL(vessel, BDArmorySettings.RESTORE_KAL);
+            return vessel;
         }
 
         // Crew reserved for spawning in specific craft.
@@ -208,15 +209,18 @@ namespace BDArmory.Competition.VesselSpawning
                     }
                     foreach (var crew in crewData) crew.rosterStatus = ProtoCrewMember.RosterStatus.Available; // Make sure the rest are available.
                 }
+                int crewCountTotal = 0;
                 foreach (var part in crewParts)
                 {
-                    int crewToAdd = (BDArmorySettings.VESSEL_SPAWN_FILL_SEATS > 0 || (BDArmorySettings.RUNWAY_PROJECT && BDArmorySettings.RUNWAY_PROJECT_ROUND == 42)) ? part.CrewCapacity - part.protoModuleCrew.Count : 1;
+                    int crewToAdd = (BDArmorySettings.VESSEL_SPAWN_FILL_SEATS > 0 || (BDArmorySettings.RUNWAY_PROJECT && BDArmorySettings.RUNWAY_PROJECT_ROUND == 42)) ?
+                        part.CrewCapacity - part.protoModuleCrew.Count : crewData != null && crewData.Count - crewCountTotal > 0 ?
+                        Math.Min(crewData.Count - crewCountTotal, part.CrewCapacity - part.protoModuleCrew.Count) : 1;
                     for (int crewCount = 0; crewCount < crewToAdd; ++crewCount)
                     {
                         ProtoCrewMember crewMember = null;
-                        if (crewData != null && crewCount < crewData.Count) // Crew specified. Add them in order and fill the rest with non-reserved kerbals.
+                        if (crewData != null && crewCountTotal < crewData.Count) // Crew specified. Add them in order and fill the rest with non-reserved kerbals.
                         {
-                            crewMember = crewData[crewCount];
+                            crewMember = crewData[crewCountTotal++];
                         }
                         if (crewMember == null) // Create the ProtoCrewMember
                         {

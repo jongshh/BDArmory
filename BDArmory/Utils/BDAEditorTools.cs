@@ -67,7 +67,7 @@ namespace BDArmory.Utils
             return results;
         }
 
-        void dumpParts()
+        public static void dumpParts()
         {
             String gunName = "bda_weapons_list.csv";
             String missileName = "bda_missile_list.csv";

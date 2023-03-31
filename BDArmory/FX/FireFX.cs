@@ -373,7 +373,7 @@ namespace BDArmory.FX
                     pe.maxSize = burnScale * 1.2f;
                 }
             }
-            if (surfaceFire && parentPart.vessel.horizontalSrfSpeed > 120) //blow out surface fires if moving fast enough
+            if (surfaceFire && parentPart.vessel.horizontalSrfSpeed > 120 && SourceVessel != "GM") //blow out surface fires if moving fast enough
             {
                 burnTime = 5;
             }

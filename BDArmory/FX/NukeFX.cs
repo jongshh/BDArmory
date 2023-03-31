@@ -262,9 +262,28 @@ namespace BDArmory.FX
             {
                 KerbalEVA eva = hit.collider.gameObject.GetComponentUpwards<KerbalEVA>();
                 Part p = eva ? eva.part : hit.collider.gameObject.GetComponentInParent<Part>();
-                if (p == part)
+                if (lastValidAtmDensity < 0.1)
                 {
-                    eventList.Add(new PartNukeHitEvent()
+                    if (p == part) //if exoatmo, impulse/thermal bloom only to parts in LoS
+                    {
+                        eventList.Add(new PartNukeHitEvent()
+                        {
+                            Distance = distToG0,
+                            Part = part,
+                            TimeToImpact = distToG0 / ExplosionVelocity,
+                            HitPoint = hit.point,
+                            Hit = hit,
+                            SourceVesselName = sourceVesselName,
+                        });
+
+                        partsAdded.Add(part);
+                        return true;
+                    }
+                    return false;
+                }
+                else
+                {
+                    eventList.Add(new PartNukeHitEvent() //else everything heated/hit by shockwave
                     {
                         Distance = distToG0,
                         Part = part,
@@ -277,8 +296,8 @@ namespace BDArmory.FX
                     partsAdded.Add(part);
                     return true;
                 }
-                return false;
             }
+
             return false;
         }
 
@@ -386,12 +405,12 @@ namespace BDArmory.FX
             if (building && building.IsIntact)
             {
                 var distToEpicenter = Mathf.Max((transform.position - building.transform.position).magnitude, 1f);
-                var blastImpulse = Mathf.Pow(3.01f * 1100f / distToEpicenter, 1.25f) * 6.894f * lastValidAtmDensity * yieldCubeRoot;
-                //Debug.Log("[BDArmory.NukeFX]: Building hit; distToG0: " + distToEpicenter + ", yield: " + yield + ", building: " + building.name);
+                var blastImpulse = Mathf.Pow(3.01f * 1100f / distToEpicenter, 1.25f) * 6.894f * Mathf.Max(lastValidAtmDensity, 0.05f) * yieldCubeRoot;
+                // Debug.Log($"[BDArmory.NukeFX]: Building hit; distToG0: {distToEpicenter}, yield: {yield}, building: {building.name}, lastValidAtmDensity: {lastValidAtmDensity}, impulse: {blastImpulse}");
 
                 if (!double.IsNaN(blastImpulse)) //140kPa, level at which reinforced concrete structures are destroyed
                 {
-                    //Debug.Log("[BDArmory.NukeFX]: Building Impulse: " + blastImpulse);
+                    // Debug.Log("[BDArmory.NukeFX]: Building Impulse: " + blastImpulse);
                     if (blastImpulse > 140)
                     {
                         building.Demolish();
@@ -420,7 +439,11 @@ namespace BDArmory.FX
                     {
                         Debug.Log($"[BDArmory.NukeFX]: radiative area of part {part} was NaN, using approximate area {radiativeArea} instead.");
                     }
-                    double blastImpulse = Mathf.Pow(3.01f * 1100f / realDistance, 1.25f) * 6.894f * lastValidAtmDensity * yieldCubeRoot; // * (radiativeArea / 3f); pascals/m isn't going to increase if a larger surface area, it's still going go be same force
+                    double blastImpulse;
+                    if (lastValidAtmDensity > 0.1)
+                        blastImpulse = Mathf.Pow(3.01f * 1100f / realDistance, 1.25f) * 6.894f * lastValidAtmDensity * yieldCubeRoot; // * (radiativeArea / 3f); pascals/m isn't going to increase if a larger surface area, it's still going go be same force
+                    else
+                        blastImpulse = (part.mass * 15295.74) / (4 * Math.PI * Math.Pow(realDistance, 2.0)) * (part.radiativeArea / 3.0);
                     if (blastImpulse > 0)
                     {
                         float damage = 0;
@@ -433,7 +456,7 @@ namespace BDArmory.FX
                         }
                         else
                         {
-                            if (!ProjectileUtils.CalculateExplosiveArmorDamage(part, blastImpulse, SourceVesselName, eventToExecute.Hit, ExplosionSource, thermalRadius - realDistance)) //false = armor blowthrough
+                            if (!ProjectileUtils.CalculateExplosiveArmorDamage(part, blastImpulse, realDistance, SourceVesselName, eventToExecute.Hit, ExplosionSource, thermalRadius - realDistance)) //false = armor blowthrough
                             {
                                 damage = part.AddExplosiveDamage(blastDamage, 1, ExplosionSource, 1);
                             }
@@ -486,7 +509,7 @@ namespace BDArmory.FX
                             else
                             {
                                 if (BDArmorySettings.DEBUG_DAMAGE) Debug.Log("[BDArmory.NukeFX]: Applying " + blastImpulse.ToString("0.0") + " impulse to " + part + " of mass " + part.mass + " at distance " + realDistance + "m");
-                                part.rb.AddForceAtPosition((part.transform.position - transform.position).normalized * ((float)blastImpulse * (radiativeArea / 3f)), part.transform.position, ForceMode.Impulse);
+                                rb.AddForceAtPosition((part.transform.position - transform.position).normalized * ((float)blastImpulse * (radiativeArea / 3f)), part.transform.position, ForceMode.Impulse);
                             }
                         }
                         // Add Reverse Negative Event
@@ -504,7 +527,7 @@ namespace BDArmory.FX
                         Debug.Log("[BDArmory.NukeFX]: Part " + part.name + " at distance " + realDistance + "m took no damage");
                     }
                     //part.skinTemperature += fluence * 3370000000 / (4 * Math.PI * (realDistance * realDistance)) * radiativeArea / 2; // Fluence scales linearly w/ yield, 1 Kt will produce between 33 TJ and 337 kJ at 0-1000m,
-                    part.skinTemperature += (fluence * (337000000 * BDArmorySettings.EXP_DMG_MOD_MISSILE) / (4 * Math.PI * (realDistance * realDistance))) * lastValidAtmDensity; // everything gets heated via atmosphere
+                    part.skinTemperature += (fluence * (337000000 * BDArmorySettings.EXP_DMG_MOD_MISSILE) / (4 * Math.PI * (realDistance * realDistance))); // everything gets heated via atmosphere
                     if (isEMP)
                     {
                         if (part == part.vessel.rootPart) //don't apply EMP buildup per part
@@ -531,7 +554,7 @@ namespace BDArmory.FX
                         else
                         {
                             if (BDArmorySettings.DEBUG_DAMAGE) Debug.Log("[BDArmory.NukeFX]: Applying " + eventToExecute.NegativeForce.ToString("0.0") + " impulse to " + part + " of mass " + part.mass + " at distance " + realDistance + "m");
-                            part.rb.AddForceAtPosition((Position - part.transform.position).normalized * eventToExecute.NegativeForce * BDArmorySettings.EXP_IMP_MOD * 0.25f, part.transform.position, ForceMode.Impulse);
+                            rb.AddForceAtPosition((Position - part.transform.position).normalized * eventToExecute.NegativeForce * BDArmorySettings.EXP_IMP_MOD * 0.25f, part.transform.position, ForceMode.Impulse);
                         }
                     }
                 }

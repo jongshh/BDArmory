@@ -24,6 +24,7 @@ namespace BDArmory.Targeting
         public VesselECMJInfo vesselJammer;
         public ModuleRadar lockedByRadar;
         public Vessel vessel;
+        public Part IRSource;
         bool orbital;
         Orbit orbit;
 
@@ -35,7 +36,7 @@ namespace BDArmory.Targeting
                 timeAcquired == other.timeAcquired;
         }
 
-        public TargetSignatureData(Vessel v, float _signalStrength)
+        public TargetSignatureData(Vessel v, float _signalStrength, Part heatpart = null)
         {
             orbital = v.InOrbit();
             orbit = v.orbit;
@@ -43,8 +44,8 @@ namespace BDArmory.Targeting
             timeAcquired = Time.time;
             vessel = v;
             velocity = v.Velocity();
-
-            geoPos = VectorUtils.WorldPositionToGeoCoords(v.CoM, v.mainBody);
+            IRSource = heatpart;
+            geoPos = VectorUtils.WorldPositionToGeoCoords(IRSource != null ? IRSource.transform.position : v.CoM, v.mainBody);
             acceleration = v.acceleration_immediate;
             exists = true;
 
@@ -92,6 +93,7 @@ namespace BDArmory.Targeting
             orbit = null;
             lockedByRadar = null;
             vessel = null;
+            IRSource = null;
         }
 
         public TargetSignatureData(Vector3 _velocity, Vector3 _position, Vector3 _acceleration, bool _exists, float _signalStrength)
@@ -110,6 +112,7 @@ namespace BDArmory.Targeting
             orbit = null;
             lockedByRadar = null;
             vessel = null;
+            IRSource = null;
         }
 
         public Vector3 position

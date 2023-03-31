@@ -552,6 +552,8 @@ namespace BDArmory.Modules
                             Fields["partmass"].guiActiveEditor = false;
                             InertTank = false;
                             FireBottles = 0;
+                            FBmass = 0;
+                            FBRemaining = 0;
                         }
                         updateTimer = 0.5f; //doing it this way since PAW buttons don't seem to trigger onShipModified
                     }
@@ -562,6 +564,7 @@ namespace BDArmory.Modules
         {
             if (!HighLogic.LoadedSceneIsFlight || !FlightGlobals.ready || BDArmorySetup.GameIsPaused) return; // Not in flight scene, not ready or paused.
             if (vessel == null || vessel.packed || part == null) return; // Vessel or part is dead or packed.
+            if (!BDArmorySettings.BATTLEDAMAGE || BDArmorySettings.PEACE_MODE) return;
             if (!BDArmorySettings.BD_FIRES_ENABLED || !BDArmorySettings.BD_FIRE_HEATDMG) return; // Disabled.
 
             if (BDArmorySettings.BD_FIRES_ENABLED && BDArmorySettings.BD_FIRE_HEATDMG)

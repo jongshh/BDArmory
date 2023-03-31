@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Tuple, Union
 
-VERSION = "1.16.5"
+VERSION = "1.20.0"
 
 parser = argparse.ArgumentParser(description="Tournament log parser", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('tournament', type=str, nargs='*', help="Tournament folder to parse.")
@@ -24,6 +24,7 @@ parser.add_argument('-w', '--weights', type=str, default="1,0,0,-1,1,2e-3,3,1.5,
 # Old weights: 0.1,0,0,-1,1,2e-3,2,1,2e-2,0,2e-4,1e-4,0.05,0,2e-3,0,1e-4,5e-5,0.5,0,0.01,0,2e-5,1e-5,0.01,0,0,0,0,0
 parser.add_argument('-c', '--current-dir', action='store_true', help="Parse the logs in the current directory as if it was a tournament without the folder structure.")
 parser.add_argument('-nc', '--no-cumulative', action='store_true', help="Don't display cumulative scores at the end.")
+parser.add_argument('-nh', '--no-header', action='store_true', help="Don't display the header.")
 parser.add_argument('-N', type=int, help="Only the first N logs in the folder (in -c mode).")
 parser.add_argument('-z', '--zero-lowest-score', action='store_true', help="Shift the scores so that the lowest is 0.")
 parser.add_argument('-sw', '--show-weights', action='store_true', help="Display the score weights.")
@@ -36,6 +37,16 @@ if args.version:
     print(f"Version: {VERSION}")
     sys.exit()
 
+
+def naturalSortKey(key: Union[str, Path]):
+    if isinstance(key, Path):
+        key = key.name
+    try:
+        return int(key.rsplit(' ')[1])  # If the key ends in an integer, split that off and use that as the sort key.
+    except:
+        return key  # Otherwise, just use the key.
+
+
 if args.current_dir and len(args.tournament) == 0:
     tournamentDirs = [Path('')]
 else:
@@ -45,7 +56,7 @@ else:
         if logsDir.exists():
             tournamentFolders = list(logsDir.resolve().glob("Tournament*"))
             if len(tournamentFolders) > 0:
-                tournamentFolders = sorted(list(dir for dir in tournamentFolders if dir.is_dir()))
+                tournamentFolders = sorted(list(dir for dir in tournamentFolders if dir.is_dir()), key=naturalSortKey)
             if len(tournamentFolders) > 0:
                 tournamentDirs = [tournamentFolders[-1]]  # Latest tournament dir
         if tournamentDirs is None:  # Didn't find a tournament dir, revert to current-dir
@@ -82,15 +93,6 @@ def cumsum(l):
     for i in l:
         v += i
         yield v
-
-
-def naturalSortKey(key: Union[str, Path]):
-    if isinstance(key, Path):
-        key = key.name
-    try:
-        return int(key.rsplit(' ')[1])  # If the key ends in an integer, split that off and use that as the sort key.
-    except:
-        return key  # Otherwise, just use the key.
 
 
 def encode_names(log_lines: List[str]) -> Tuple[Dict[str, str], List[str]]:
@@ -135,6 +137,7 @@ for tournamentNumber, tournamentDir in enumerate(tournamentDirs):
     m = re.search('Tournament (\d+)', str(tournamentDir))
     if m is not None and len(m.groups()) > 0:
         tournamentMetadata['ID'] = m.groups()[0]
+    tournamentMetadata['rounds'] = len([roundDir for roundDir in tournamentDir.iterdir() if roundDir.is_dir() and roundDir.name.startswith('Round')])
     for round in sorted((roundDir for roundDir in tournamentDir.iterdir() if roundDir.is_dir()), key=naturalSortKey) if not args.current_dir else (tournamentDir,):
         if not args.current_dir and len(round.name) == 0:
             continue
@@ -289,6 +292,8 @@ for tournamentNumber, tournamentDir in enumerate(tournamentDirs):
         'meta': {
             'ID': tournamentMetadata.get('ID', 'unknown'),
             'duration': [ts.isoformat() for ts in tournamentMetadata.get('duration', (datetime.now(), datetime.now()))],
+            'rounds': tournamentMetadata.get('rounds', -1),
+            'score weights': {f: w for f, w in zip(score_fields, weights)},
         },
         'craft': {
             craft: {
@@ -467,8 +472,8 @@ for tournamentNumber, tournamentDir in enumerate(tournamentDirs):
 
         if not args.quiet:  # Write results to console
             strings = []
-            if not args.current_dir and 'duration' in tournamentMetadata:
-                strings.append(f"Tournament {tournamentMetadata.get('ID', '???')} of duration {tournamentMetadata['duration'][1]-tournamentMetadata['duration'][0]} starting at {tournamentMetadata['duration'][0]}")
+            if not args.no_header and not args.current_dir and 'duration' in tournamentMetadata:
+                strings.append(f"Tournament {tournamentMetadata.get('ID', '???')} of duration {tournamentMetadata['duration'][1]-tournamentMetadata['duration'][0]} with {tournamentMetadata['rounds']} rounds starting at {tournamentMetadata['duration'][0]}")
             headers = ['Name', 'Wins', 'Survive', 'MIA', 'Deaths (BRMRAS)', 'D.Order', 'D.Time', 'Kills (BRMR)', 'Assists', 'Hits', 'Damage', 'DmgTaken', 'RocHits', 'RocParts', 'RocDmg', 'HitByRoc', 'MisHits', 'MisParts', 'MisDmg', 'HitByMis', 'Ram', 'BD dealt', 'BD taken', 'Acc%', 'RktAcc%', 'HP%', 'Dmg/Hit', 'Hits/Sp', 'Dmg/Sp'] if not args.scores_only else ['Name']
             if hasWaypoints and not args.scores_only:
                 headers.extend(['WPcount', 'WPtime', 'WPdev', 'WPbestC', 'WPbestT', 'WPbestD'])

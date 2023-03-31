@@ -2,6 +2,9 @@
 using System.Linq;
 using UnityEngine;
 
+using BDArmory.Extensions;
+using BDArmory.Settings;
+
 namespace BDArmory.Utils
 {
     [KSPAddon(KSPAddon.Startup.Flight, false)]
@@ -12,8 +15,9 @@ namespace BDArmory.Utils
 
         public static void AddPartToExplode(Part p)
         {
-            if (p != null)
-            { ExplodingParts.Add(p); }
+            if (!HighLogic.LoadedSceneIsFlight) return;
+            if (p == null) return;
+            ExplodingParts.Add(p);
         }
 
         private void OnDestroy()

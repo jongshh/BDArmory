@@ -19,9 +19,9 @@ namespace BDArmory.CounterMeasure
 
         public enum CountermeasureTypes
         {
-            Flare,
-            Chaff,
-            Smoke
+            Flare = 1 << 0,
+            Chaff = 1 << 1,
+            Smoke = 1 << 2
         }
 
         public CountermeasureTypes cmType = CountermeasureTypes.Flare;
@@ -30,6 +30,11 @@ namespace BDArmory.CounterMeasure
         [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "#LOC_BDArmory_EjectVelocity"),//Eject Velocity
         UI_FloatRange(controlEnabled = true, scene = UI_Scene.Editor, minValue = 1f, maxValue = 200f, stepIncrement = 1f)]
         public float ejectVelocity = 30;
+
+        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "#LOC_BDArmory_FiringPriority"), // Selection Priority
+        UI_FloatRange(controlEnabled = true, scene = UI_Scene.Editor, minValue = 0f, maxValue = 10f, stepIncrement = 1f)]
+        public float priority = 0;
+        public int Priority => (int)priority;
 
         [KSPField] public string ejectTransformName;
         Transform ejectTransform;
@@ -45,29 +50,28 @@ namespace BDArmory.CounterMeasure
 
         VesselChaffInfo vci;
 
-        [KSPAction("Fire Countermeasure")]
+        [KSPAction("#LOC_BDArmory_FireCountermeasure")]
         public void AGDropCM(KSPActionParam param)
         {
             DropCM();
         }
 
         [KSPEvent(guiActive = true, guiName = "#LOC_BDArmory_FireCountermeasure", active = true)]//Fire Countermeasure
-        public void DropCM()
+        public void EventDropCM() => DropCM();
+        public bool DropCM()
         {
             switch (cmType)
             {
                 case CountermeasureTypes.Flare:
-                    DropFlare();
-                    break;
+                    return DropFlare();
 
                 case CountermeasureTypes.Chaff:
-                    DropChaff();
-                    break;
+                    return DropChaff();
 
                 case CountermeasureTypes.Smoke:
-                    PopSmoke();
-                    break;
+                    return PopSmoke();
             }
+            return false;
         }
 
         public override void OnStart(StartState state)
@@ -213,10 +217,10 @@ namespace BDArmory.CounterMeasure
             }
         }
 
-        void DropFlare()
+        bool DropFlare()
         {
             PartResource cmResource = GetCMResource();
-            if (cmResource == null || !(cmResource.amount >= 1)) return;
+            if (cmResource == null || !(cmResource.amount >= 1)) return false;
             cmResource.amount--;
             audioSource.pitch = UnityEngine.Random.Range(0.9f, 1.1f);
             audioSource.PlayOneShot(cmSound);
@@ -234,12 +238,13 @@ namespace BDArmory.CounterMeasure
             cm.SetActive(true);
 
             FireParticleEffects();
+            return true;
         }
 
-        void DropChaff()
+        bool DropChaff()
         {
             PartResource cmResource = GetCMResource();
-            if (cmResource == null || !(cmResource.amount >= 1)) return;
+            if (cmResource == null || !(cmResource.amount >= 1)) return false;
             cmResource.amount--;
             audioSource.pitch = UnityEngine.Random.Range(0.9f, 1.1f);
             audioSource.PlayOneShot(cmSound);
@@ -255,9 +260,10 @@ namespace BDArmory.CounterMeasure
             chaff.Emit(ejectTransform.position, ejectVelocity * ejectTransform.forward);
 
             FireParticleEffects();
+            return true;
         }
 
-        void PopSmoke()
+        bool PopSmoke()
         {
             PartResource smokeResource = GetCMResource();
             if (smokeResource.amount >= 1)
@@ -269,7 +275,9 @@ namespace BDArmory.CounterMeasure
                 StartCoroutine(SmokeRoutine());
 
                 FireParticleEffects();
+                return true;
             }
+            return false;
         }
 
         IEnumerator SmokeRoutine()

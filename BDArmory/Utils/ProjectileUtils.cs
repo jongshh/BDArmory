@@ -24,37 +24,52 @@ namespace BDArmory.Utils
                 fileNode = new ConfigNode();
                 if (!Directory.GetParent(settingsConfigURL).Exists)
                 { Directory.GetParent(settingsConfigURL).Create(); }
+            }
+            // IgnoredParts
+            {
                 if (!fileNode.HasNode("IgnoredParts"))
                 {
                     fileNode.AddNode("IgnoredParts");
                 }
                 ConfigNode Iparts = fileNode.GetNode("IgnoredParts");
-                Iparts.SetValue("Part1", "ladder1", true);
-                Iparts.SetValue("Part2", "telescopicLadder", true);
-                Iparts.SetValue("Part3", "telescopicLadderBay", true);
-
+                var partNames = Iparts.GetValues().ToHashSet(); // Get the existing part names, then add our ones.
+                partNames.Add("ladder1");
+                partNames.Add("telescopicLadder");
+                partNames.Add("telescopicLadderBay");
+                Iparts.ClearValues();
+                int partIndex = 0;
+                foreach (var partName in partNames)
+                    Iparts.SetValue($"Part{++partIndex}", partName, true);
+            }
+            // MaterialsBlacklist
+            {
                 if (!fileNode.HasNode("MaterialsBlacklist"))
                 {
                     fileNode.AddNode("MaterialsBlacklist");
                 }
                 ConfigNode BLparts = fileNode.GetNode("MaterialsBlacklist");
-                BLparts.SetValue("Part1", "InflatableHeatShield", true);
-                BLparts.SetValue("Part2", "foldingRad*", true);
-                BLparts.SetValue("Part3", "radPanel*", true);
-                BLparts.SetValue("Part4", "ISRU*", true);
-                BLparts.SetValue("Part5", "Scanner*", true);
-                BLparts.SetValue("Part5", "Drill*", true);
-
-                fileNode.Save(settingsConfigURL);
+                var partNames = BLparts.GetValues().ToHashSet(); // Get the existing part names, then add our ones.
+                partNames.Add("InflatableHeatShield");
+                partNames.Add("foldingRad*");
+                partNames.Add("radPanel*");
+                partNames.Add("ISRU*");
+                partNames.Add("Scanner*");
+                partNames.Add("Drill*");
+                partNames.Add("PotatoRoid");
+                BLparts.ClearValues();
+                int partIndex = 0;
+                foreach (var partName in partNames)
+                    BLparts.SetValue($"Part{++partIndex}", partName, true);
             }
+            fileNode.Save(settingsConfigURL);
         }
-            static HashSet<string> IgnoredPartNames;
+        static HashSet<string> IgnoredPartNames;
         public static bool IsIgnoredPart(Part part)
         {
             if (IgnoredPartNames == null)
             {
                 IgnoredPartNames = new HashSet<string> { "bdPilotAI", "bdShipAI", "missileController", "bdammGuidanceModule" };
-                IgnoredPartNames.UnionWith(PartLoader.LoadedPartsList.Select(p => p.partPrefab.partInfo.name).Where(name => name.Contains("flagPart")));
+                IgnoredPartNames.UnionWith(PartLoader.LoadedPartsList.Select(p => p.partPrefab.partInfo.name).Where(name => name.Contains("flag")));
                 IgnoredPartNames.UnionWith(PartLoader.LoadedPartsList.Select(p => p.partPrefab.partInfo.name).Where(name => name.Contains("conformaldecals")));
 
                 var fileNode = ConfigNode.Load(settingsConfigURL);
@@ -88,7 +103,31 @@ namespace BDArmory.Utils
             }
             return armorParts.Contains(part.partInfo.name);
         }
+        public static void SetUpWeaponReporting()
+        {
+            var fileNode = ConfigNode.Load(settingsConfigURL);
+            if (fileNode == null) // Note: this shouldn't happen since SetUpPartsHashSets is called before SetUpWeaponReporting.
+            {
+                SetUpPartsHashSets();
+                fileNode = ConfigNode.Load(settingsConfigURL);
+            }
 
+            string announcerGunsComment = "Note: replace '_' with '.' in part names (hint: see a craft's loadmeta file for part names)."; // Note: reading the node doesn't seem to get the comment, so we need to reset it each time.
+            if (!fileNode.HasNode("AnnouncerGuns"))
+            {
+                fileNode.AddNode("AnnouncerGuns", announcerGunsComment);
+            }
+            ConfigNode Iparts = fileNode.GetNode("AnnouncerGuns");
+            Iparts.comment = announcerGunsComment;
+            var partNames = Iparts.GetValues().ToHashSet(); // Get the existing part names, then add our ones.
+            partNames.Add("bahaRailgun");
+            Iparts.ClearValues();
+            int partIndex = 0;
+            foreach (var partName in partNames)
+                Iparts.SetValue($"Part{++partIndex}", partName, true);
+
+            fileNode.Save(settingsConfigURL);
+        }
         static HashSet<string> materialsBlacklist;
         public static bool isMaterialBlackListpart(Part Part)
         {
@@ -117,7 +156,32 @@ namespace BDArmory.Utils
             }
             return ProjectileUtils.materialsBlacklist.Contains(Part.partInfo.name);
         }
+        static HashSet<string> reportingWeaponList;
+        public static bool isReportingWeapon(Part Part)
+        {
+            if (reportingWeaponList == null)
+            {
+                reportingWeaponList = new HashSet<string> { };
 
+                var fileNode = ConfigNode.Load(settingsConfigURL);
+                if (fileNode.HasNode("AnnouncerGuns"))
+                {
+                    ConfigNode parts = fileNode.GetNode("AnnouncerGuns");
+                    for (int i = 0; i < parts.CountValues; i++)
+                    {
+                        if (parts.values[i].value.Contains("*"))
+                        {
+                            string partsName = parts.values[i].value.Trim('*');
+                            reportingWeaponList.UnionWith(PartLoader.LoadedPartsList.Select(p => p.partPrefab.partInfo.name).Where(name => name.Contains(partsName)));
+                        }
+                        else
+                            reportingWeaponList.Add(parts.values[i].value);
+                    }
+                }
+                if (BDArmorySettings.DEBUG_DAMAGE) Debug.Log($"[BDArmory.ProjectileUtils]: Weapon Reporting List: " + string.Join(", ", reportingWeaponList));
+            }
+            return ProjectileUtils.reportingWeaponList.Contains(Part.partInfo.name);
+        }
         public static void ApplyDamage(Part hitPart, RaycastHit hit, float multiplier, float penetrationfactor, float caliber, float projmass, float impactVelocity, float DmgMult, double distanceTraveled, bool explosive, bool incendiary, bool hasRichocheted, Vessel sourceVessel, string name, string team, ExplosionSourceType explosionSource, bool firstHit, bool partAlreadyHit, bool cockpitPen)
         {
             //hitting a vessel Part
@@ -248,7 +312,7 @@ namespace BDArmory.Utils
                         if (ductility < 0.05f) //ceramics
                         {
                             volumeToReduce = ((Mathf.CeilToInt(caliber / 500) * Mathf.CeilToInt(caliber / 500)) * (50 * 50) * ((float)hitPart.GetArmorMaxThickness() / 10)); //cm3 //replace thickness with starting thickness, to ensure armor failure removes proper amount of armor
-                            //total failue of 50x50cm armor tile(s)
+                                                                                                                                                                             //total failue of 50x50cm armor tile(s)
                             if (BDArmorySettings.DEBUG_ARMOR)
                             {
                                 Debug.Log("[BDArmory.ProjectileUtils{CalcArmorDamage}]: Armor failure on " + hitPart + ", " + hitPart.vessel.GetName() + "!");
@@ -460,7 +524,7 @@ namespace BDArmory.Utils
                 }
             }
         }
-        public static bool CalculateExplosiveArmorDamage(Part hitPart, double BlastPressure, string sourcevessel, RaycastHit hit, ExplosionSourceType explosionSource, float radius)
+        public static bool CalculateExplosiveArmorDamage(Part hitPart, double BlastPressure, double distance, string sourcevessel, RaycastHit hit, ExplosionSourceType explosionSource, float radius)
         {
             /// <summary>
             /// Calculates if shockwave from detonation is stopped by armor, and if not, how much damage is done to armor and part in case of armor rupture or spalling
@@ -470,6 +534,7 @@ namespace BDArmory.Utils
             if (BDArmorySettings.PAINTBALL_MODE) return true; //don't damage armor if paintball mode
             float thickness = (float)hitPart.GetArmorThickness();
             if (thickness <= 0) return false; //no armor to stop explosion
+            float armorArea = -1;
             float spallArea;  //using this as a hack for affected srf. area, convert m2 to cm2
             float spallMass;
             float damage;
@@ -478,13 +543,17 @@ namespace BDArmory.Utils
             {
                 if (IsArmorPart(hitPart))
                 {
-                    spallArea = Mathf.Min(hitPart.Modules.GetModule<HitpointTracker>().armorVolume, radius * radius) * 10000; //clamp based on max size of explosion
+                    armorArea = hitPart.Modules.GetModule<HitpointTracker>().armorVolume * 10000;
+                    spallArea = Mathf.Min(armorArea, radius * radius * 2500); //clamp based on max size of explosion
                 }
                 else
                 {
                     if (Armor.ArmorTypeNum == 1) return false;//ArmorType "None"; no armor to block/reduce blast, take full damage
-                    spallArea = Mathf.Min((!double.IsNaN(hitPart.radiativeArea) ? (float)hitPart.radiativeArea : hitPart.GetArea() / 3), radius * radius) * 10000;
+                    armorArea = !double.IsNaN(hitPart.radiativeArea) ? (float)hitPart.radiativeArea : hitPart.GetArea() * 10000;
+                    spallArea = Mathf.Min(armorArea / 3, radius * radius * 2500);
                 }
+                //have this scaled by blowthrough factor? afterall a very powerful blast right next to the plate is more likely to punch a localzied hole rather than generally push the whole plate, no?
+                if (distance < radius / 3) spallArea /= 4;
                 if (BDArmorySettings.DEBUG_ARMOR && double.IsNaN(hitPart.radiativeArea))
                 {
                     Debug.Log("[BDArmory.ProjectileUtils{CalculateExplosiveArmorDamage}]: radiative area of part " + hitPart + " was NaN, using approximate area " + spallArea + " instead.");
@@ -493,7 +562,6 @@ namespace BDArmory.Utils
                 float hardness = Armor.Hardness;
                 float Strength = Armor.Strength;
                 float Density = Armor.Density;
-                if (Armor.ArmorPanel) spallArea = Armor.armorVolume * 10000;
 
                 float ArmorTolerance = (((Strength * (1 + ductility)) + Density) / 1000) * thickness;
 
@@ -532,9 +600,8 @@ namespace BDArmory.Utils
                     {
                         spallArea *= ((1 - ductility) * blowthroughFactor);
 
-                        spallMass = spallArea * ((thickness / 10) * (blowthroughFactor - 0.66f)) * (Density / 1000000); //lose  up to 1/3rd thickness from spalling, based on severity of blast
-                        spallArea *= (thickness / 10) * (blowthroughFactor - 0.66f);
-
+                        spallMass = Mathf.Min(spallArea, armorArea) * ((thickness / 10) * (blowthroughFactor - 0.66f)) * (Density / 1000000); //lose  up to 1/3rd thickness from spalling, based on severity of blast
+                        if (spallArea > armorArea) spallArea = armorArea;
                         if (BDArmorySettings.DEBUG_ARMOR)
                         {
                             Debug.Log("[BDArmory.ProjectileUtils{CalculateExplosiveArmorDamage}]: Explosive Armor spalling" + hitPart.name + ", " + hitPart.vessel.GetName() + "! Size: " + spallArea + "; mass: " + spallMass + "kg");
@@ -544,12 +611,13 @@ namespace BDArmory.Utils
                             damage = hitPart.AddBallisticDamage(spallMass / 1000, spallArea, 1, blowthroughFactor, 1, 422.75f, explosionSource);
                             ApplyScore(hitPart, sourcevessel, 0, damage, "Spalling", explosionSource);
                         }
-                        //else soft enough to not spall. Armor has suffered some deformation, though, weakening it.
-                        hitPart.ReduceArmor(spallArea); //cm3
+                        //else soft enough to not spall. Armor has suffered some deformation, though, weakening it.=
                         if (BDArmorySettings.BATTLEDAMAGE)
                         {
                             BattleDamageHandler.CheckDamageFX(hitPart, spallArea, blowthroughFactor, false, false, sourcevessel, hit);
                         }
+                        spallArea *= (thickness / 10) * (blowthroughFactor - 0.66f);
+                        hitPart.ReduceArmor(spallArea); //cm3
                         return true;
                     }
                 }
@@ -560,7 +628,7 @@ namespace BDArmory.Utils
                         if (ductility < 0.05f) //ceramics
                         {
                             var volumeToReduce = (Mathf.CeilToInt(spallArea / 500) * Mathf.CeilToInt(spallArea / 500)) * (50 * 50) * ((float)hitPart.GetArmorMaxThickness() / 10); //cm3
-                            //total failue of 50x50cm armor tile(s)
+                                                                                                                                                                                   //total failue of 50x50cm armor tile(s)
                             if (hardness > 500)
                             {
                                 spallMass = volumeToReduce * (Density / 1000000);
@@ -582,6 +650,7 @@ namespace BDArmory.Utils
                         else //0.05-0.19 ductility - harder steels, etc
                         {
                             spallArea *= ((1.2f - ductility) * blowthroughFactor * (thickness / 10));
+                            if (spallArea > armorArea) spallArea = armorArea;
                             spallMass = spallArea * (Density / 1000000);
                             hitPart.ReduceArmor(spallArea); //cm3
                             damage = hitPart.AddBallisticDamage(spallMass / 1000, spallArea / 100000, 1, blowthroughFactor, 1, 422.75f, explosionSource);
@@ -613,7 +682,7 @@ namespace BDArmory.Utils
                             if (ductility < 0.05f)
                             {
                                 var volumeToReduce = Mathf.CeilToInt(spallArea / 2500) * (50 * 50) * ((float)hitPart.GetArmorMaxThickness() / 10); //cm3
-                                //total failue of 50x50cm armor tile(s)
+                                                                                                                                                   //total failue of 50x50cm armor tile(s)
                                 if (hardness > 500)
                                 {
                                     spallMass = volumeToReduce * (Density / 1000000);
@@ -635,6 +704,7 @@ namespace BDArmory.Utils
                             else //0.05-0.19 ductility - harder steels, etc
                             {
                                 spallArea *= ((1.2f - ductility) * blowthroughFactor) * ((thickness / 10) * (blowthroughFactor - 0.66f));
+                                if (spallArea > armorArea) spallArea = armorArea;
                                 if (hardness > 500)
                                 {
                                     //blowtrhoughFactor - 1 * 100
@@ -918,7 +988,8 @@ namespace BDArmory.Utils
         public static float CalculateThickness(Part hitPart, float anglemultiplier)
         {
             float thickness = (float)hitPart.GetArmorThickness(); //return mm
-            return Mathf.Max(thickness / (anglemultiplier > 0.001f ? anglemultiplier : 0.001f), 1);
+                                                                  // return Mathf.Max(thickness / (anglemultiplier > 0.001f ? anglemultiplier : 0.001f), 1);
+            return Mathf.Max(thickness / Mathf.Abs(anglemultiplier), 1);
         }
         public static bool CheckGroundHit(Part hitPart, RaycastHit hit, float caliber)
         {

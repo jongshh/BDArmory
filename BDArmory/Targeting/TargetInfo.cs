@@ -29,7 +29,7 @@ namespace BDArmory.Targeting
         public bool radarBaseSignatureNeedsUpdate = true;
         public float radarRCSReducedSignature;
         public float radarModifiedSignature;
-        public float radarLockbreakFactor;
+        public float radarLockbreakFactor = 1;
         public float radarJammingDistance;
         public bool alreadyScheduledRCSUpdate = false;
         public float radarMassAtUpdate = 0f;

@@ -64,9 +64,10 @@ namespace BDArmory.Competition.VesselSpawning
 
     /// <summary>
     /// Configuration for spawning individual vessels. 
+    /// @Note: this has to be a class so that setting editorFacility during spawning persists back to the calling function.
     /// </summary>
     [Serializable]
-    public struct VesselSpawnConfig
+    public class VesselSpawnConfig
     {
         public string craftURL; // The craft file.
         public Vector3 position; // World-space coordinates (x,y,z) to place the vessel once spawned (before adjusting for terrain altitude).
@@ -77,6 +78,7 @@ namespace BDArmory.Competition.VesselSpawning
         public int teamIndex;
         public bool reuseURLVesselName; // Reuse the vesselName for the same craftURL (for continuous spawning).
         public List<ProtoCrewMember> crew; // Override the crew.
+        public EditorFacility editorFacility = EditorFacility.SPH; // Which editorFacility the craft belongs to (found out during spawning).
         public VesselSpawnConfig(string craftURL, Vector3 position, Vector3 direction, float altitude, float pitch, bool airborne, int teamIndex = 0, bool reuseURLVesselName = false, List<ProtoCrewMember> crew = null)
         {
             this.craftURL = craftURL;

@@ -5,16 +5,21 @@ import re
 import subprocess
 import tempfile
 from pathlib import Path
+from shutil import which
 
 parser = argparse.ArgumentParser(description="Grab all the craft from the API for a competition and rename them.", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('compID', type=int, help="Competition ID")
 parser.add_argument('--curl-command', type=str, default='curl', help="Curl command (in case it needs specifying on Windows).")
 args = parser.parse_args()
 
+if which(args.curl_command) is None:
+    print(f"Error: curl command ({args.curl_command}) not found. Please provide a valid curl command as an argument.")
+    exit()
+
 comp_url = f"https://conquertheair.com/competitions/{args.compID}/vessels/manifest.json"
 players_url = f"https://conquertheair.com/players"
-manifest_file = Path(tempfile.mktemp())
-players_file = Path(tempfile.mktemp())
+manifest_file = Path(tempfile.mkstemp()[1])
+players_file = Path(tempfile.mkstemp()[1])
 
 print("Fetching players and competition manifest...", end='', flush=True)
 subprocess.run(f"{args.curl_command} -s {players_url} -o {players_file}".split())

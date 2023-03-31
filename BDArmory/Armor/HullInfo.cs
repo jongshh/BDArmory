@@ -13,7 +13,7 @@ namespace BDArmory.Armor
         public string localizedName { get; private set; } //display name
         public float massMod { get; private set; } //mass modifier
         public float costMod { get; private set; } //cost modifier
-        public float healthMod { get; private set; } //cost modifier
+        public float healthMod { get; private set; } //health modifier
         public float ignitionTemp { get; private set; } //can material catch fire?
         public float maxTemp { get; private set; } //In Kelvin, determines max temp material can sustain before part is destroyed
         public float ImpactMod { get; private set; } //impact tolerance modifier

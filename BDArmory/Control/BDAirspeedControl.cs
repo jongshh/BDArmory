@@ -23,6 +23,9 @@ namespace BDArmory.Control
 
         public Vessel vessel;
 
+        AxisGroupsModule axisGroupsModule;
+        bool hasAxisGroupsModule = false; // To avoid repeated null checks
+
         bool controlEnabled;
 
         private float smoothedAccel = 0; // smoothed acceleration, prevents super fast toggling of afterburner
@@ -33,6 +36,12 @@ namespace BDArmory.Control
         public float debugThrust;
 
         public List<MultiModeEngine> multiModeEngines;
+
+        void Start()
+        {
+            axisGroupsModule = vessel.FindVesselModuleImplementing<AxisGroupsModule>(); // Look for an axis group module.
+            if (axisGroupsModule != null) hasAxisGroupsModule = true;
+        }
 
         //[KSPEvent(guiActive = true, guiActiveEditor = false, guiName = "ToggleAC")]
         public void Toggle()
@@ -67,7 +76,7 @@ namespace BDArmory.Control
             {
                 if (useBrakes)
                     vessel.ActionGroups.SetGroup(KSPActionGroup.Brakes, true);
-                s.mainThrottle = 0;
+                SetThrottle(s, 0);
                 return;
             }
 
@@ -96,12 +105,12 @@ namespace BDArmory.Control
 
             if (throttleOverride >= 0)
             {
-                s.mainThrottle = throttleOverride;
+                SetThrottle(s, throttleOverride);
                 return;
             }
             if (engineAccel == 0)
             {
-                s.mainThrottle = accel > 0 ? 1 : 0;
+                SetThrottle(s, accel > 0 ? 1 : 0);
                 return;
             }
 
@@ -109,7 +118,7 @@ namespace BDArmory.Control
 
             float requestThrottle = (requestEngineAccel - dragAccel) / engineAccel;
 
-            s.mainThrottle = Mathf.Clamp01(requestThrottle);
+            SetThrottle(s, Mathf.Clamp01(requestThrottle));
 
             //use brakes if overspeeding too much
             if (useBrakes)
@@ -122,6 +131,20 @@ namespace BDArmory.Control
                 {
                     vessel.ActionGroups.SetGroup(KSPActionGroup.Brakes, false);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Set the main throttle and the corresponding axis group.
+        /// </summary>
+        /// <param name="s">The flight control state</param>
+        /// <param name="value">The throttle value</param>
+        public void SetThrottle(FlightCtrlState s, float value)
+        {
+            s.mainThrottle = value;
+            if (hasAxisGroupsModule)
+            {
+                axisGroupsModule.UpdateAxisGroup(KSPAxisGroup.MainThrottle, 2f * value - 1f); // Throttle is full-axis: 0—1 throttle maps to -1—1 axis.
             }
         }
 

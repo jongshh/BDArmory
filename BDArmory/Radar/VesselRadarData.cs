@@ -163,6 +163,7 @@ namespace BDArmory.Radar
                 if (displayedIRTargets[i].vessel == weaponManager.currentTarget)
                 {
                     data = displayedIRTargets[i].targetData;
+                    return data;
                 }
             }
             data = TargetSignatureData.noTarget;
@@ -580,7 +581,7 @@ namespace BDArmory.Radar
 
         private void Update()
         {
-            if (radarCount > 0)
+            if (radarCount + irstCount > 0)
             {
                 UpdateInputs();
             }
@@ -776,7 +777,7 @@ namespace BDArmory.Radar
                 radar.canLock
                 && (!radar.locked || radar.currentLocks < radar.maxLocks)
                 && RadarUtils.RadarCanDetect(radar, radarTarget.targetData.signalStrength, (radarTarget.targetData.predictedPosition - radar.transform.position).magnitude / 1000f)
-                && radarTarget.targetData.signalStrength > radar.radarLockTrackCurve.Evaluate((radarTarget.targetData.predictedPosition - radar.transform.position).magnitude / 1000f)
+                && radarTarget.targetData.signalStrength >= radar.radarLockTrackCurve.Evaluate((radarTarget.targetData.predictedPosition - radar.transform.position).magnitude / 1000f)
                 &&
                 (radar.omnidirectional ||
                  Vector3.Angle(radar.transform.up, radarTarget.targetData.predictedPosition - radar.transform.position) <
@@ -2274,7 +2275,7 @@ namespace BDArmory.Radar
                     if ((displayedIRTargets[i].targetData.targetInfo && displayedIRTargets[i].targetData.targetInfo.isMissile) || displayedIRTargets[i].targetData.Team == null)
                     {
 
-                        float mDotSize = (2) / rangeIndex;
+                        float mDotSize = (2) / (rangeIndex + 1);
                         if (mDotSize < 1) mDotSize = 1;
                         pingRect = new Rect(pingPosition.x - (mDotSize / 2), pingPosition.y - (mDotSize / 2), mDotSize, mDotSize);
                         GUI.DrawTexture(pingRect, BDArmorySetup.Instance.redDotTexture, ScaleMode.StretchToFill, true);
@@ -2315,7 +2316,7 @@ namespace BDArmory.Radar
                     //draw as dots    
                     else
                     {
-                        float mDotSize = (displayedIRTargets[i].magnitude / 25) / rangeIndex;
+                        float mDotSize = (displayedIRTargets[i].magnitude / 25) / (rangeIndex + 1);
                         if (mDotSize < 1) mDotSize = 1;
                         if (mDotSize > 20) mDotSize = 20;
                         pingRect = new Rect(pingPosition.x - (mDotSize / 2), pingPosition.y - (mDotSize / 2), mDotSize, mDotSize);
@@ -2366,24 +2367,34 @@ namespace BDArmory.Radar
                 ShowSelector();
                 SlewSelector(Vector2.up);
             }
-
-            if (BDInputUtils.GetKeyDown(BDInputSettingsFields.RADAR_LOCK))
+            if (radarCount > 0)
             {
-                if (showSelector)
+                if (BDInputUtils.GetKeyDown(BDInputSettingsFields.RADAR_LOCK))
                 {
-                    TryLockViaSelector();
+                    if (showSelector)
+                    {
+                        TryLockViaSelector();
+                    }
+                    ShowSelector();
                 }
-                ShowSelector();
-            }
 
-            if (BDInputUtils.GetKeyDown(BDInputSettingsFields.RADAR_CYCLE_LOCK))
-            {
-                if (locked)
+                if (BDInputUtils.GetKeyDown(BDInputSettingsFields.RADAR_CYCLE_LOCK))
                 {
-                    CycleActiveLock();
+                    if (locked)
+                    {
+                        CycleActiveLock();
+                    }
+                }
+
+                if (BDInputUtils.GetKeyDown(BDInputSettingsFields.RADAR_TARGET_NEXT))
+                {
+                    TargetNext();
+                }
+                else if (BDInputUtils.GetKeyDown(BDInputSettingsFields.RADAR_TARGET_PREV))
+                {
+                    TargetPrev();
                 }
             }
-
             if (BDInputUtils.GetKeyDown(BDInputSettingsFields.RADAR_SCAN_MODE))
             {
                 if (!locked && radarCount + irstCount > 0 && !omniDisplay)
@@ -2392,7 +2403,14 @@ namespace BDArmory.Radar
                     availableIRSTs[0].boresightScan = !availableIRSTs[0].boresightScan;
                 }
             }
-
+            if (BDInputUtils.GetKeyDown(BDInputSettingsFields.RADAR_RANGE_UP))
+            {
+                IncreaseRange();
+            }
+            else if (BDInputUtils.GetKeyDown(BDInputSettingsFields.RADAR_RANGE_DN))
+            {
+                DecreaseRange();
+            }
             if (BDInputUtils.GetKeyDown(BDInputSettingsFields.RADAR_TURRETS))
             {
                 if (slaveTurrets)
@@ -2403,24 +2421,6 @@ namespace BDArmory.Radar
                 {
                     SlaveTurrets();
                 }
-            }
-
-            if (BDInputUtils.GetKeyDown(BDInputSettingsFields.RADAR_RANGE_UP))
-            {
-                IncreaseRange();
-            }
-            else if (BDInputUtils.GetKeyDown(BDInputSettingsFields.RADAR_RANGE_DN))
-            {
-                DecreaseRange();
-            }
-
-            if (BDInputUtils.GetKeyDown(BDInputSettingsFields.RADAR_TARGET_NEXT))
-            {
-                TargetNext();
-            }
-            else if (BDInputUtils.GetKeyDown(BDInputSettingsFields.RADAR_TARGET_PREV))
-            {
-                TargetPrev();
             }
         }
 

@@ -66,6 +66,38 @@ namespace BDArmory.Competition.VesselSpawning
             return count;
         }
 
+        public static Dictionary<string, int> PartCrewCounts
+        {
+            get
+            {
+                if (_partCrewCounts == null)
+                {
+                    _partCrewCounts = new Dictionary<string, int>();
+                    foreach (var part in PartLoader.LoadedPartsList)
+                    {
+                        if (part == null || part.partPrefab == null || part.partPrefab.CrewCapacity < 1) continue;
+                        if (BDArmorySettings.DEBUG_SPAWNING) Debug.Log($"[BDArmory.SpawnUtils]: {part.name} has crew capacity {part.partPrefab.CrewCapacity}.");
+                        if (!_partCrewCounts.ContainsKey(part.name))
+                        { _partCrewCounts.Add(part.name, part.partPrefab.CrewCapacity); }
+                        else // Duplicate part name!
+                        {
+                            if (part.partPrefab.CrewCapacity != _partCrewCounts[part.name])
+                            {
+                                Debug.LogWarning($"[BDArmory.SpawnUtils]: Found a duplicate part {part.name} with a different crew capacity! {_partCrewCounts[part.name]} vs {part.partPrefab.CrewCapacity}, using the minimum.");
+                                _partCrewCounts[part.name] = Mathf.Min(_partCrewCounts[part.name], part.partPrefab.CrewCapacity);
+                            }
+                            else
+                            {
+                                Debug.LogWarning($"[BDArmory.SpawnUtils]: Found a duplicate part {part.name} with the same crew capacity!");
+                            }
+                        }
+                    }
+                }
+                return _partCrewCounts;
+            }
+        }
+        static Dictionary<string, int> _partCrewCounts;
+
         #region Camera
         public static void ShowSpawnPoint(int worldIndex, double latitude, double longitude, double altitude = 0, float distance = 100, bool spawning = false) => SpawnUtilsInstance.Instance.ShowSpawnPoint(worldIndex, latitude, longitude, altitude, distance, spawning); // Note: this may launch a coroutine when not spawning and there's no active vessel!
         public static void RevertSpawnLocationCamera(bool keepTransformValues = true, bool revertIfDead = false) => SpawnUtilsInstance.Instance.RevertSpawnLocationCamera(keepTransformValues, revertIfDead);
@@ -94,6 +126,7 @@ namespace BDArmory.Competition.VesselSpawning
             foreach (var engine in VesselModuleRegistry.GetModules<ModuleEngines>(vessel))
             {
                 if (ignoreModularMissileEngines && IsModularMissileEngine(engine)) continue; // Ignore modular missile engines.
+                if (BDArmorySettings.RUNWAY_PROJECT && BDArmorySettings.RUNWAY_PROJECT_ROUND == 55) engine.independentThrottle = false;
                 var mme = engine.part.FindModuleImplementing<MultiModeEngine>();
                 if (mme == null)
                 {
@@ -154,9 +187,19 @@ namespace BDArmory.Competition.VesselSpawning
         public static void HackIntakes(Vessel vessel, bool enable) => SpawnUtilsInstance.Instance.HackIntakes(vessel, enable);
         #endregion
 
+        #region ControlSurface hacks
+        public static void HackActuatorsOnNewVessels(bool enable) => SpawnUtilsInstance.Instance.HackActuatorsOnNewVessels(enable);
+        public static void HackActuators(Vessel vessel, bool enable) => SpawnUtilsInstance.Instance.HackActuators(vessel, enable);
+        #endregion
+
         #region Space hacks
         public static void SpaceFrictionOnNewVessels(bool enable) => SpawnUtilsInstance.Instance.SpaceFrictionOnNewVessels(enable);
         public static void SpaceHacks(Vessel vessel) => SpawnUtilsInstance.Instance.SpaceHacks(vessel);
+        #endregion
+
+        #region KAL
+        public static void RestoreKALGlobally(bool restore = true) { foreach (var vessel in FlightGlobals.VesselsLoaded) SpawnUtilsInstance.Instance.RestoreKAL(vessel, restore); }
+        public static void RestoreKAL(Vessel vessel, bool restore = true) => SpawnUtilsInstance.Instance.RestoreKAL(vessel, restore);
         #endregion
 
         #region Vessel Removal
@@ -239,6 +282,7 @@ namespace BDArmory.Competition.VesselSpawning
         {
             if (BDArmorySettings.HACK_INTAKES) HackIntakesOnNewVessels(true);
             if (BDArmorySettings.SPACE_HACKS) SpaceFrictionOnNewVessels(true);
+            if (BDArmorySettings.RUNWAY_PROJECT) HackActuatorsOnNewVessels(true);
         }
 
         void OnDestroy()
@@ -246,6 +290,7 @@ namespace BDArmory.Competition.VesselSpawning
             VesselSpawnerField.Save();
             Destroy(spawnLocationCamera);
             HackIntakesOnNewVessels(false);
+            HackActuatorsOnNewVessels(false);
             SpaceFrictionOnNewVessels(false);
         }
 
@@ -525,7 +570,71 @@ namespace BDArmory.Competition.VesselSpawning
             }
         }
         #endregion
+        #region Control Surface Actuator hacks
+        public void HackActuatorsOnNewVessels(bool enable)
+        {
+            if (enable)
+            {
+                GameEvents.onVesselLoaded.Add(HackActuatorsEventHandler);
+                GameEvents.OnVesselRollout.Add(HackActuators);
+            }
+            else
+            {
+                GameEvents.onVesselLoaded.Remove(HackActuatorsEventHandler);
+                GameEvents.OnVesselRollout.Remove(HackActuators);
+            }
+        }
+        void HackActuatorsEventHandler(Vessel vessel) => HackActuators(vessel, true);
 
+        public void HackActuators(Vessel vessel, bool enable)
+        {
+            if (vessel == null || !vessel.loaded) return;
+            if (enable)
+            {
+                foreach (var ctrlSrf in VesselModuleRegistry.GetModules<ModuleControlSurface>(vessel))
+                {
+                    ctrlSrf.actuatorSpeed = 30;
+                    Debug.Log($"[BDArmory.ActuatorHacks]: Setting {ctrlSrf.name} actuation speed to : {ctrlSrf.actuatorSpeed}");
+                }
+            }
+            else
+            {
+                foreach (var ctrlSrf in VesselModuleRegistry.GetModules<ModuleControlSurface>(vessel))
+                {
+                    var actuatorSpeed = ConfigNodeUtils.FindPartModuleConfigNodeValue(ctrlSrf.part.partInfo.partConfig, "ModuleControlSurface", "actuatorSpeed");
+                    if (!string.IsNullOrEmpty(actuatorSpeed)) // Use the default value from the part.
+                    {
+                        try
+                        {
+                            ctrlSrf.actuatorSpeed = float.Parse(actuatorSpeed);
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogError($"[BDArmory.BDArmorySetup]: Failed to parse actuatorSpeed configNode of {ctrlSrf.name}: {e.Message}");
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[BDArmory.BDArmorySetup]: No default value for actuatorSpeed found in partConfig for {ctrlSrf.name}, defaulting to true.");
+                        ctrlSrf.actuatorSpeed = 30;
+                    }
+                }
+            }
+        }
+        public void HackActuators(ShipConstruct ship) // This version only needs to enable the hack.
+        {
+            if (ship == null) return;
+            foreach (var part in ship.Parts)
+            {
+                var ctrlSrf = part.FindModulesImplementing<ModuleControlSurface>();
+                if (ctrlSrf.Count() > 0)
+                {
+                    foreach (var srf in ctrlSrf)
+                        srf.actuatorSpeed = 30;
+                }
+            }
+        }
+        #endregion
         #region Space hacks
         public void SpaceFrictionOnNewVessels(bool enable)
         {
@@ -555,6 +664,59 @@ namespace BDArmory.Competition.VesselSpawning
         {
             if (ship == null) return;
             ship.Parts[0].AddModule("ModuleSpaceFriction");
+        }
+        #endregion
+        #region KAL
+        public void RestoreKAL(Vessel vessel, bool restore) => StartCoroutine(RestoreKALCoroutine(vessel, restore));
+        /// <summary>
+        /// This goes through the vessel's part modules and fixes the mismatched part persistentId on the KAL's controlled axes with the correct ones in the ProtoPartModuleSnapshot then reloads the module from the ProtoPartModuleSnapshot.
+        /// </summary>
+        /// <param name="vessel">The vessel to modify.</param>
+        /// <param name="restore">Restore or wipe any KALs found.</param>
+        IEnumerator RestoreKALCoroutine(Vessel vessel, bool restore)
+        {
+            var tic = Time.time;
+            yield return new Utils.WaitUntilFixed(() => vessel == null || vessel.Parts.Count != 0 || Time.time - tic > 10); // Wait for up to 10s for the vessel's parts to be populated (usually it takes 2 frames after spawning).
+            if (vessel == null || vessel.Parts.Count == 0) yield break;
+            if (!restore) // Wipe all KAL modules on the vessel.
+            {
+                foreach (var kal in vessel.FindPartModulesImplementing<Expansions.Serenity.ModuleRoboticController>())
+                {
+                    if (kal == null) continue;
+                    kal.ControlledAxes.Clear();
+                }
+                yield break;
+            }
+            foreach (var protoPartSnapshot in vessel.protoVessel.protoPartSnapshots) // The protoVessel contains the original ProtoPartModuleSnapshots with the info we need.
+                foreach (var protoPartModuleSnapshot in protoPartSnapshot.modules)
+                    if (protoPartModuleSnapshot.moduleName == "ModuleRoboticController") // Found a KAL
+                    {
+                        var kal = protoPartModuleSnapshot.moduleRef as Expansions.Serenity.ModuleRoboticController;
+                        var controlledAxes = protoPartModuleSnapshot.moduleValues.GetNode("CONTROLLEDAXES");
+                        kal.ControlledAxes.Clear(); // Clear the existing axes (they should be clear already due to mismatching part persistent IDs, but better safe than sorry).
+                        int rowIndex = 0;
+                        foreach (var axisNode in controlledAxes.GetNodes("AXIS")) // For each axis to be controlled, locate the part in the spawned vessel that has the correct module.
+                            if (uint.TryParse(axisNode.GetValue("moduleId"), out uint moduleId)) // Get the persistentId of the module it's supposed to be affecting, which is correctly set in some part.
+                            {
+                                foreach (var part in vessel.Parts)
+                                    foreach (var partModule in part.Modules)
+                                        if (partModule.PersistentId == moduleId) // Found a corresponding part with the correct moduleId. Note: there could be multiple parts with this module due to symmetry, so we check them all.
+                                        {
+                                            var fieldName = axisNode.GetValue("axisName");
+                                            foreach (var field in partModule.Fields)
+                                                if (field.name == fieldName) // Found the axis field in a module in a part being controlled by this KAL.
+                                                {
+                                                    axisNode.SetValue("persistentId", part.persistentId.ToString()); // Update the ConfigNode in the ProtoPartModuleSnapshot
+                                                    axisNode.SetValue("partNickName", part.partInfo.title); // Set the nickname to the part title (note: this will override custom nicknames).
+                                                    axisNode.SetValue("rowIndex", rowIndex++);
+                                                    var axis = new Expansions.Serenity.ControlledAxis(part, partModule, field as BaseAxisField, kal); // Link the part, module, field and KAL together.
+                                                    axis.Load(axisNode); // Load the new config into the axis.
+                                                    kal.ControlledAxes.Add(axis); // Add the axis to the KAL.
+                                                    break;
+                                                }
+                                        }
+                            }
+                    }
         }
         #endregion
     }

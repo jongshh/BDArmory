@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 
+using BDArmory.Weapons.Missiles;
 using BDArmory.Utils;
 
 namespace BDArmory.Extensions
@@ -26,6 +27,18 @@ namespace BDArmory.Extensions
         {
             if (!v) return false;
             return v.altitude < -20; //some boats sit slightly underwater, this is only for submersibles
+        }
+
+        /// <summary>
+        /// Check for a vessel being a missile.
+        /// It's considered a missile if the root part is a missile, or it has a MMG that has fired.
+        /// </summary>
+        public static bool IsMissile(this Vessel v)
+        {
+            if (v.rootPart.IsMissile()) return true;
+            var mmg = VesselModuleRegistry.GetModule<BDModularGuidance>(v);
+            if (mmg == null) return false;
+            return mmg.HasFired;
         }
 
         /// <summary>

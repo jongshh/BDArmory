@@ -176,7 +176,7 @@ namespace BDArmory.Radar
         public void EnableRWR()
         {
             OnRadarPing += ReceivePing;
-            OnMissileLaunch += ReceiveLaunchWarning; //should the radar warning reciever be pinging for non-radar missiles? @JOSUE
+            OnMissileLaunch += ReceiveLaunchWarning;
             rwrEnabled = true;
         }
 

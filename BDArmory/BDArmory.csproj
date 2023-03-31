@@ -150,6 +150,7 @@
     <Compile Include="Competition\RemoteTournamentCoordinator.cs" />
     <Compile Include="Competition\Scoring.cs" />
     <Compile Include="Competition\TournamentCoordinator.cs" />
+    <Compile Include="Competition\VesselMover\VesselMover.cs" />
     <Compile Include="Competition\VesselSpawning\CircularSpawning.cs" />
     <Compile Include="Competition\VesselSpawning\ContinuousSpawning.cs" />
     <Compile Include="Competition\VesselSpawning\CustomSpawnTemplate.cs" />
@@ -232,6 +233,8 @@
     <Compile Include="Initialization\Bootstrapper.cs" />
     <Compile Include="Initialization\Cleanup.cs" />
     <Compile Include="Initialization\Dependencies.cs" />
+    <Compile Include="ModIntegration\MouseAimFlight.cs" />
+    <Compile Include="ModIntegration\ReflectionUtils.cs" />
     <Compile Include="Modules\CFEnable.cs" />
     <Compile Include="Modules\KerbalSafety.cs" />
     <Compile Include="Modules\ModuleMovingPart.cs" />

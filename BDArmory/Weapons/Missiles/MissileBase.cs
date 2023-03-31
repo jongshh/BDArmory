@@ -46,6 +46,11 @@ namespace BDArmory.Weapons.Missiles
             return missileName;
         }
 
+        public float GetEngageRange()
+        {
+            return GetEngagementRangeMax();
+        }
+
         public string missileName { get; set; } = "";
 
         [KSPField]
@@ -89,6 +94,14 @@ namespace BDArmory.Weapons.Missiles
         }
 
         [KSPField]
+        public float engineFailureRate = 0f;                              // How often the missile engine will fail to start (0-1), evaluated once on missile launch
+
+        [KSPField]
+        public float guidanceFailureRate = 0f;                              // Probability the missile guidance will fail per second (0-1), evaluated every frame after launch
+
+        public float guidanceFailureRatePerFrame = 0f;                      // guidanceFailureRate (per second) converted to per frame probability
+
+        [KSPField]
         public bool guidanceActive = true;
 
         [KSPField]
@@ -105,6 +118,9 @@ namespace BDArmory.Weapons.Missiles
 
         [KSPField]
         public float heatThreshold = 150;
+
+        [KSPField]
+        public float frontAspectHeatModifier = 1f;                   // Modifies heat value returned to missiles outside of ~50 deg exhaust cone from non-prop engines. Only takes affect when ASPECTED_IR_SEEKERS = true in settings.cfg
 
         [KSPField]
         public float chaffEffectivity = 1f;                            // Modifies  how the missile targeting is affected by chaff, 1 is fully affected (normal behavior), lower values mean less affected (0 is ignores chaff), higher values means more affected
@@ -254,6 +270,8 @@ namespace BDArmory.Weapons.Missiles
 
         public bool HasExploded { get; set; } = false;
 
+        public bool FuseFailed { get; set; } = false;
+
         public bool HasDied { get; set; } = false;
 
         public int clusterbomb { get; set; } = 1;
@@ -377,13 +395,10 @@ namespace BDArmory.Weapons.Missiles
         public override void OnAwake()
         {
             base.OnAwake();
-            if (reloadableRail == null)
+            var MMG = GetPart().FindModuleImplementing<BDModularGuidance>();
+            if (MMG == null)
             {
-                reloadableRail = GetPart().FindModuleImplementing<ModuleMissileRearm>();
-                if (reloadableRail == null)
-                {
-                    hasAmmo = false;
-                }
+                hasAmmo = false;
             }
         }
 
@@ -398,13 +413,14 @@ namespace BDArmory.Weapons.Missiles
                 {
                     if (craftPart.Current is null) continue;
                     if (craftPart.Current.GetPartName() != missilePartName) continue;
+                    if (craftPart.Current.engageRangeMax != engageRangeMax) continue;
                     missilecount += craftPart.Current.AmmoCount;
                 }
         }
 
         public string GetSubLabel()
         {
-            return Sublabel = $"Guidance: {Enum.GetName(typeof(TargetingModes), TargetingMode)}; Remaining: {missilecount}"; 
+            return Sublabel = $"Guidance: {Enum.GetName(typeof(TargetingModes), TargetingMode)}; Max Range: {Mathf.Round(engageRangeMax / 100) / 10} km; Remaining: {missilecount}";
         }
 
         public Part GetPart()
@@ -572,7 +588,7 @@ namespace BDArmory.Weapons.Missiles
                 DrawDebugLine(lookRay.origin, lookRay.origin + lookRay.direction * 10000, Color.magenta);
 
                 // Update heat target
-                heatTarget = BDATargetManager.GetHeatTarget(SourceVessel, vessel, lookRay, predictedHeatTarget, lockedSensorFOV / 2, heatThreshold, uncagedLock, lockedSensorFOVBias, lockedSensorVelocityBias, (SourceVessel == null ? null : SourceVessel.gameObject == null ? null : SourceVessel.gameObject.GetComponent<MissileFire>()), targetVessel);
+                heatTarget = BDATargetManager.GetHeatTarget(SourceVessel, vessel, lookRay, predictedHeatTarget, lockedSensorFOV / 2, heatThreshold, frontAspectHeatModifier, uncagedLock, lockedSensorFOVBias, lockedSensorVelocityBias, (SourceVessel == null ? null : SourceVessel.gameObject == null ? null : SourceVessel.gameObject.GetComponent<MissileFire>()), targetVessel);
 
                 if (heatTarget.exists)
                 {
@@ -971,6 +987,7 @@ namespace BDArmory.Weapons.Missiles
 
         protected bool CheckTargetEngagementEnvelope(TargetInfo ti)
         {
+            if (ti == null) return false;
             return (ti.isMissile && engageMissile) ||
                     (!ti.isMissile && ti.isFlying && engageAir) ||
                     ((ti.isLandedOrSurfaceSplashed || ti.isSplashed) && engageGround) ||
@@ -1074,11 +1091,10 @@ namespace BDArmory.Weapons.Missiles
             return VesselModuleRegistry.GetModules<BDExplosivePart>(vessel).Max(x => x.tntMass);
         }
 
-        public void CheckDetonationState()
+        public void CheckDetonationState(bool separateWarheads = false)
         {
             //Guard clauses
-            if (!TargetAcquired) return;
-
+            //if (!TargetAcquired) return;
             var targetDistancePerFrame = TargetVelocity * Time.fixedDeltaTime;
             var missileDistancePerFrame = vessel.Velocity() * Time.fixedDeltaTime;
 
@@ -1092,7 +1108,7 @@ namespace BDArmory.Weapons.Missiles
                 case DetonationDistanceStates.NotSafe:
                     {
                         //Lets check if we are at a safe distance from the source vessel
-                        var dist = GetBlastRadius() * 3f;
+                        var dist = GetBlastRadius() * 1.25f; //this is from launching vessel, which assuming is also moving forward on a similar vector, could potentially result in missiles not arming for several km for faster planes/slower missiles
                         var hitCount = Physics.OverlapSphereNonAlloc(futureMissilePosition, dist, proximityHitColliders, layerMask);
                         if (hitCount == proximityHitColliders.Length)
                         {
@@ -1126,11 +1142,13 @@ namespace BDArmory.Weapons.Missiles
 
                         //We are safe and we can continue with the cruising phase
                         DetonationDistanceState = DetonationDistanceStates.Cruising;
+                        if (!separateWarheads) SetupExplosive(this.part); //moving arming of warhead to here from launch to prevent Laser anti-missile systems zapping a missile immediately after launch and fragging the launching plane as the missile detonates
                         break;
                     }
 
                 case DetonationDistanceStates.Cruising:
                     {
+                        if (!TargetAcquired) return;
                         //if (Vector3.Distance(futureMissilePosition, futureTargetPosition) < GetBlastRadius() * 10)
                         // Replaced old proximity check with proximity check based on either detonation distance or distance traveled per frame
                         if ((futureMissilePosition - futureTargetPosition).sqrMagnitude < 100 * (relativeSpeed > DetonationDistance ? relativeSpeed*relativeSpeed : DetonationDistance*DetonationDistance))
@@ -1154,6 +1172,7 @@ namespace BDArmory.Weapons.Missiles
 
                 case DetonationDistanceStates.CheckingProximity:
                     {
+                        if (!TargetAcquired) return;
                         if (DetonationDistance == 0)
                         {
                             if (weaponClass == WeaponClasses.Bomb) return;

@@ -11,6 +11,7 @@ namespace BDArmory.Settings
         public static BDInputInfo WEAP_FIRE_MISSILE_KEY = new BDInputInfo("Fire Missile");
         public static BDInputInfo WEAP_NEXT_KEY = new BDInputInfo("Next Weapon");
         public static BDInputInfo WEAP_PREV_KEY = new BDInputInfo("Prev Weapon");
+        public static BDInputInfo WEAP_TOGGLE_ARMED_KEY = new BDInputInfo("Toggle Armed");
 
         //TGP
         public static BDInputInfo TGP_SLEW_RIGHT = new BDInputInfo("[6]", "Slew Right");
@@ -27,6 +28,7 @@ namespace BDArmory.Settings
         public static BDInputInfo TGP_COM = new BDInputInfo("CoM-Track");
         public static BDInputInfo TGP_NV = new BDInputInfo("Toggle NV");
         public static BDInputInfo TGP_RESET = new BDInputInfo("Reset");
+        public static BDInputInfo TGP_SELECT_NEXT_GPS_TARGET = new BDInputInfo("Select Next GPS Target");
 
         //RADAR
         public static BDInputInfo RADAR_LOCK = new BDInputInfo("Lock/Unlock");
