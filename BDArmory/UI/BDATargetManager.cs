@@ -322,7 +322,7 @@ namespace BDArmory.UI
                             }
                         }
                         // Set thrustTransform as heat source position for engines
-                        Vector3 heatSourcePosition = thrustTransform ? thrustTransform.position : closestPart.transform.position;
+                        Vector3 heatSourcePosition = propEngine ? closestPart.transform.position : thrustTransform ? thrustTransform.position : closestPart.transform.position;
                         Ray partRay = new Ray(heatSourcePosition, sensorPosition - heatSourcePosition); //trace from heatsource to IR sensor
 
                         // First evaluate occluded heat score, then if the closestPart is a non-prop engine, evaluate the plume temperature
@@ -330,7 +330,7 @@ namespace BDArmory.UI
                         if (thrustTransform && !propEngine)
                         {
                             // For plume, evaluate at 3m behind engine thrustTransform at 72% engine heat (based on DC-9 plume measurements)  
-                            heatSourcePosition = thrustTransform.position + thrustTransform.forward.normalized * 3f;
+                            if (afterburner) heatSourcePosition = thrustTransform.position + thrustTransform.forward.normalized * 3f;
                             partRay = new Ray(heatSourcePosition, sensorPosition - heatSourcePosition); //trace from heatsource to IR sensor
                             occludedPlumeHeatScore = GetOccludedHeatScore(v, closestPart, heatSourcePosition, 0.72f * heatScore, partRay, hits, distance, thrustTransform, true, propEngine, frontAspectModifier);
                             heatScore = Mathf.Max(occludedPartHeatScore, occludedPlumeHeatScore); // 

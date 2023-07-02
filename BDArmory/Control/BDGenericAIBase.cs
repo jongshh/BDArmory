@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using KSP.Localization;
 
 using BDArmory.Competition;
 using BDArmory.Extensions;
@@ -36,6 +35,9 @@ namespace BDArmory.Control
         /// The default is BDAirspeedControl. If you want to use something else, just override ActivatePilot  (and, potentially, DeactivatePilot), and make it use something else.
         /// </summary>
         protected BDAirspeedControl speedController;
+
+        protected bool hasAxisGroupsModule = false;
+        protected AxisGroupsModule axisGroupsModule;
 
         protected Transform vesselTransform => vessel.ReferenceTransform;
 
@@ -110,6 +112,26 @@ namespace BDArmory.Control
                                  // (this is another reason why target selection is hardcoded into the base class, so changing this later is less of a mess :) )
 
             AutoPilot(s);
+        }
+
+        /// <summary>
+        /// Set the flight control state and also the corresponding axis groups.
+        /// </summary>
+        /// <param name="s">The flight control state</param>
+        /// <param name="pitch">pitch</param>
+        /// <param name="yaw">yaw</param>
+        /// <param name="roll">roll</param>
+        protected virtual void SetFlightControlState(FlightCtrlState s, float pitch, float yaw, float roll)
+        {
+            s.pitch = pitch;
+            s.yaw = yaw;
+            s.roll = roll;
+            if (hasAxisGroupsModule)
+            {
+                axisGroupsModule.UpdateAxisGroup(KSPAxisGroup.Pitch, pitch);
+                axisGroupsModule.UpdateAxisGroup(KSPAxisGroup.Yaw, yaw);
+                axisGroupsModule.UpdateAxisGroup(KSPAxisGroup.Roll, roll);
+            }
         }
 
         #region Pilot on/off
@@ -215,6 +237,8 @@ namespace BDArmory.Control
 
                 activeVessel = vessel;
                 UpdateWeaponManager();
+                axisGroupsModule = vessel.FindVesselModuleImplementingBDA<AxisGroupsModule>(); // Look for an axis group module so we can set the axis groups when setting the flight control state.
+                if (axisGroupsModule != null) hasAxisGroupsModule = true;
 
                 if (pilotEnabled)
                 {
@@ -522,7 +546,7 @@ namespace BDArmory.Control
             var terrainAltitude = FlightGlobals.currentMainBody.TerrainAltitude(waypoint.x, waypoint.y);
             waypointPosition = FlightGlobals.currentMainBody.GetWorldSurfacePosition(waypoint.x, waypoint.y, waypoint.z + terrainAltitude);
             waypointRange = (float)(vesselTransform.position - waypointPosition).magnitude;
-            var timeToCPA = AIUtils.ClosestTimeToCPA(vessel.transform.position - waypointPosition, vessel.Velocity(), vessel.acceleration, Time.fixedDeltaTime);
+            var timeToCPA = AIUtils.TimeToCPA(vessel.transform.position - waypointPosition, vessel.Velocity(), vessel.acceleration, Time.fixedDeltaTime);
             if (waypointRange < WaypointCourses.CourseLocations[waypointCourseIndex].waypoints[activeWaypointIndex].scale && timeToCPA < Time.fixedDeltaTime) // Within waypointRadius and reaching a minimum within the next frame. Looking forwards like this avoids a frame where the fly-to direction is backwards allowing smoother waypoint traversal.
             {
                 // moving away, proceed to next point

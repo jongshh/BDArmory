@@ -17,7 +17,7 @@ namespace BDArmory.Radar
 
         public static event RadarPing OnRadarPing;
 
-        public delegate void MissileLaunchWarning(Vector3 source, Vector3 direction);
+        public delegate void MissileLaunchWarning(Vector3 source, Vector3 direction, bool radar);
 
         public static event MissileLaunchWarning OnMissileLaunch;
 
@@ -42,6 +42,8 @@ namespace BDArmory.Radar
 
         // This field may not need to be persistent.  It was combining display with active RWR status.
         [KSPField(isPersistant = true)] public bool rwrEnabled;
+        //for if the RWR should detect everything, or only be able to detect radar sources
+        [KSPField(isPersistant = true)] public bool omniDetection = true;
 
         // This field was added to separate RWR active status from the display of the RWR.  the RWR should be running all the time...
         public bool displayRWR = false;
@@ -207,14 +209,15 @@ namespace BDArmory.Radar
             launchWarnings.Remove(data);
         }
 
-        void ReceiveLaunchWarning(Vector3 source, Vector3 direction)
+        void ReceiveLaunchWarning(Vector3 source, Vector3 direction, bool radar)
         {
             if (referenceTransform == null) return;
             if (part == null || !part.isActiveAndEnabled) return;
             if (weaponManager == null) return;
+            if (!omniDetection && !radar) return;
 
             float sqrDist = (part.transform.position - source).sqrMagnitude;
-            if ((weaponManager && weaponManager.guardMode) && (sqrDist > (weaponManager.guardRange * weaponManager.guardRange))) return;
+            //if ((weaponManager && weaponManager.guardMode) && (sqrDist > (weaponManager.guardRange * weaponManager.guardRange))) return; //doesn't this clamp the RWR to visual view range, not radar/RWR range?
             if (sqrDist < BDArmorySettings.MAX_ENGAGEMENT_RANGE * BDArmorySettings.MAX_ENGAGEMENT_RANGE && sqrDist > 10000f && Vector3.Angle(direction, part.transform.position - source) < 15f)
             {
                 StartCoroutine(
@@ -225,8 +228,9 @@ namespace BDArmory.Radar
 
                 if (weaponManager && weaponManager.guardMode)
                 {
-                    weaponManager.FireAllCountermeasures(Random.Range(1, 2)); // Was 2-4, but we don't want to take too long doing this initial dump before other routines kick in
+                    //weaponManager.FireAllCountermeasures(Random.Range(1, 2)); // Was 2-4, but we don't want to take too long doing this initial dump before other routines kick in
                     weaponManager.incomingThreatPosition = source;
+                    weaponManager.missileIsIncoming = true;
                 }
             }
         }
@@ -259,7 +263,8 @@ namespace BDArmory.Radar
                 {
                     if (weaponManager && weaponManager.guardMode)
                     {
-                        weaponManager.FireChaff(); //what if it's a heater instead of a radar missile?
+                        weaponManager.FireChaff();
+                        weaponManager.missileIsIncoming = true;
                         // TODO: if torpedo inbound, also fire accoustic decoys (not yet implemented...)
                     }
                 }
@@ -359,10 +364,7 @@ namespace BDArmory.Radar
             if (audioSourceRepeatDelay > 0)
                 audioSourceRepeatDelay -= Time.fixedDeltaTime;
 
-            if (Event.current.type == EventType.MouseUp && resizingWindow)
-            {
-                resizingWindow = false;
-            }
+            if (resizingWindow && Event.current.type == EventType.MouseUp) { resizingWindow = false; }
 
             BDArmorySetup.WindowRectRwr = GUI.Window(94353, BDArmorySetup.WindowRectRwr, WindowRwr, "Radar Warning Receiver", GUI.skin.window);
             GUIUtils.UseMouseEventInRect(RwrDisplayRect);
@@ -474,9 +476,9 @@ namespace BDArmory.Radar
                 }
         }
 
-        public static void WarnMissileLaunch(Vector3 source, Vector3 direction)
+        public static void WarnMissileLaunch(Vector3 source, Vector3 direction, bool radarMissile)
         {
-            OnMissileLaunch?.Invoke(source, direction);
+            OnMissileLaunch?.Invoke(source, direction, radarMissile);
         }
     }
 }

@@ -1157,7 +1157,7 @@ namespace BDArmory.FX
                     eFx.warheadType = WarheadTypes.ShapedCharge;
                     //eFx.AngleOfEffect = 10f;
                     //eFx.AngleOfEffect = 5f;
-                    eFx.cosAngleOfEffect = Mathf.Cos(Mathf.Rad2Deg * 5f); // cos(5 degrees)
+                    eFx.cosAngleOfEffect = Mathf.Cos(Mathf.Deg2Rad * 5f); // cos(5 degrees)
                     eFx.Caliber = caliber > 0 ? caliber * 0.05f : 6f;
 
                     // Hypervelocity jet caliber determined by rule of thumb equation for the caliber based on
@@ -1170,13 +1170,13 @@ namespace BDArmory.FX
                 default:
                     eFx.warheadType = WarheadTypes.Standard;
                     eFx.cosAngleOfEffect = angle >= 0f ? Mathf.Clamp(angle, 0f, 180f) : 100f;
-                    eFx.cosAngleOfEffect = Mathf.Cos(Mathf.Rad2Deg * eFx.cosAngleOfEffect);
+                    eFx.cosAngleOfEffect = Mathf.Cos(Mathf.Deg2Rad * eFx.cosAngleOfEffect);
                     break;
             }
 
             if (type == "shapedcharge" || type == "continuousrod")
             {
-                eFx.penetration = ProjectileUtils.CalculatePenetration(eFx.Caliber, type == "shapedcharge" ? 5000f : ExplosionVelocity, type == "shapedcharge" ? tntMassEquivalent * 0.0555f : eFx.ProjMass, apMod, 940, 0.00000094776185184f, 0.6560606203f, 1.201909309f, 1.777919321f);
+                eFx.penetration = ProjectileUtils.CalculatePenetration(eFx.Caliber, type == "shapedcharge" ? 5000f : ExplosionVelocity, type == "shapedcharge" ? tntMassEquivalent * 0.0555f : eFx.ProjMass, apMod);
                 // Approximate fitting of mass to tntMass for modern shaped charges was done,
                 // giving the estimate of 0.0555*tntMass which works surprisingly well for modern
                 // warheads. 5000 m/s is around the average velocity of the jet. In reality, the

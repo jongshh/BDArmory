@@ -1,21 +1,258 @@
-﻿IMPROVEMENTS / FIXES
+﻿Motherships WIP (add this in somewhere once completed):
+	- Sort the AI and WM modules internally by distance to the root part to always select the correct AI/WM and update internal references when parasite vessels are deployed from the mothership vessel (competition scores aren't yet being updated).
+
+IMPROVEMENTS / FIXES
 - General:
-	- Restore/wipe functionality to the KAL.
+	- Make ammo consumption respect staging and priority order unless "externalAmmo = false" in the weapon config.
+	- Don't auto-switch vessels when MouseAimFlight is active.
+- AI:
+	- Make the autotuning re-centering distance customisable.
+	- Add unclamped max values for auto-tuning speed and altitude.
+	- Prevent weapon selection from choosing weapons when target is closer than the weapon's minSafeDistance.
+- Vessel Spawning:
+	- Disable gravity easing when using 'Warp Here' above 10m altitude.
+- Weapons:
+	- Fix various NREs related to missiles and multi-missile launchers.
+- Competition:
+	- Make the saving of backup tournaments optional (hidden setting TOURNAMENT_BACKUPS in settings.cfg).
+	- Added a ranked tournament mode.
+		- Ranked tournaments begin with a single shuffled round (craft assigned to heats randomly), then continues to generate ranked rounds (craft assigned to heats based on their current rank) until the number of ranked rounds run matches or exceeds the rounds slider (which can be adjusted during a tournament).
+		- Ranked tournaments only work for FFA style tournaments. nCr and gauntlet style tournaments aren't supported.
+		- For teams tournaments, the combined score for the teams is used for the ranking.
+		- Enable the score window via the "Sc" button on the Vessel Switcher window.
+		- Use the "UI" button to keep the window visible even when the rest of the UI is disabled (F2).
+		- Use the "±" buttons to adjust the font size.
+		- Use the "W" button to adjust the score weights.
+		- Left click and drag the drag handle to resize the window.
+		- Right click the drag handle to switch to auto-adjusting height.
+		- Scores update after each round (not heat) in a ranked tournament.
+	- The tournament.state file uses a new format (recursively encoded JSON due to Unity's limited JSON functionality), contains a lot more information and isn't compatible with older tournament.state files.
+		- A script (parse_tournament_state.py) can convert the tournament.state file to proper JSON (tournament.json), but can not convert it back yet.
+	- Fix a minor bug in the tournament log parsing script where wins weren't always being counted for the score.
+	- Make the saving of backup tournaments optional (hidden setting in settings.cfg).
+- Detectors
+	- Add settings toggle ASPECTED_RCS that enables real-time RCS evaluation based on the target aircraft's azimuth and elevation relative to the radar evaluating it.
+		- Enable from the BDA settings menu under Missile & CM settings: "Real-Time Aspected RCS."
+		- The real-time aspected RCS is dependent on a weighted average against overall craft RCS, so lower overall craft RCS will lead to better aspected RCS.
+		- Overall craft RCS weighting in this average is dependent on ASPECTED_RCS_OVERALL_RCS_WEIGHT = 0.25 in the settings.cfg file.
+		- Final aspected RCS will be = (1-ASPECTED_RCS_OVERALL_RCS_WEIGHT) * [Aspected RCS] + ASPECTED_RCS_OVERALL_RCS_WEIGHT * [Overall RCS].
+- RWP:
+	- S5R10 special settings.
+
+v1.6.3.0
+IMPROVEMENTS / FIXES
+- General:
+	- Archive the defunct KSPedia files, reducing the size of the BDArmory zip file by around 24MB.
+- UI:
+	- Add a button for resetting the scroll-zoom rate to 1 when "Debug Other" is enabled.
+	- Lock input to the numeric field when inputting values in custom log and semi-log sliders.
+	- Don't apply slider rounding when setting up log and semi-log sliders.
+- Vessel Spawning:
+	- Adjust intra-team spacing to scale better with distance.
+	- Fix the inward/outward facing direction when spawning teams and use the same facing direction for all members of a team.
+- Detectors:
+	- Now properly sends correct radar lock to SARH missiles when firing at multiple targets with a multi-lock radar.
+	- Properly lock SARH missiles when manually firing them.
+	- Equipping multiple lock-capable radars increases total radar locks the vessel can support.
+	- Attempting a radar lock will now check all radars capable of locking instead of just the first.
+- AI:
+	- Smoothly vary the roll target during gain alt behaviour from the surface normal to vertical to avoid clipping wings into terrain when taking off on uneven terrain.
+	- Don't store/restore fields that are reference types.
+	- Make sure Time Override gets disabled when the AI gets destroyed if auto-tuning was enabled (should prevent it from being active unintentionally during competitions).
+	- Hide the 3-axis dynamic damping button when dynamic damping is disabled.
+	- Move the dynamic damping toggles to before the sliders to stop them from jumping around when toggled.
+	- Fix the PID field ordering when the PAW is first opened.
+	- Change the localisation for "controlSurfaceDeploymentTime" to "Vessel Reaction Time" to be more representative of its function. Also increase its range when unclamped.
+	- Fixed guard mode behavior with radarLOAL = false missiles when Max Missile Targets > Max Radar Locks on fire control radar.
+	- AI will now start leading a target when a gun is equipped 2s before entering max range.
+	- Adjust AI search pattern/drift when trying to find a recently lost target.
+	- Fix AI being able to see targets beyond set visual range.
+	- Fixes AI unlocking radar lock while in-flight missiles are using it.
+- Weapons:
+	- Added (or corrected) penetration value for shaped charges to missile/gun/rocket part-menu infocards.
+	- Fixed armor penetration calculation for display in the part-menu infocards.
+	- Add an option when setting weapon groups to apply the group name to that weapon, symmetric weapons, all weapons of that type, all weapons of that class or applying to all guns/rockets/lasers.
+	- Missiles:
+		- New 'canRelock' field (default: true), sets if SARH radar-guided missiles will re-lock onto the active radar target if the original radar lock is lost.
+		- Further improvements to loft guidance, added a new field "terminalHomingType" which allows for selection of terminal homing logic.
+			- "aam"/"aamlead", "aampure", "pronav" and "augpronav" are currently supported.
+			- Both pronav options allow for user defined gains using "pronavGain" (recommended values of ~1-7).
+			- IMPORTANT: "LoftTermRange" has been renamed to "terminalHomingRange"!
+		- Fixed MultiMissileLauncher behavior with loft guidance, as well as pronav/augpronav.
+		- Added new missile field "terminalHoming", when true the missile uses its original homingType until "terminalHomingRange" is reached, then it will switch to "terminalHomingType".
+		- Fixed bug in heat seeker detonation behavior which caused some missiles to not detonate when they should.
+		- Some tweaks to multimissile decouple speed/direction and drop time.
+		- Fix DLZ NRE with multi-missile launchers.
+- Competition:
+	- Fix Laser mutators.
+- RWP:
+	- Add MAX_SAS_TORQUE setting to autoset max non-cockpit SAS torque across vessel at competiton start. 
+	- Add Runway_Round S5R10 setting to autoset necessary AI settings/fields for Space combat.
+
+v1.6.2.0
+IMPROVEMENTS / FIXES
+- General:
+	- Fix TweakScale config for Typhoon engine (again).
+	- Add Toggle/Enable/Disable pivot action groups to the Claw variants.
+	- Add an action group option to give unlimited pivot range to the Claw variants.
+	- Tweaks so that asteroids have the proper HP in flight mode.
+	- Optimisation of some vector operations.
+	- Adds variant texture for ground radars.
+	- Fix SIDAM texture variants for standard brown or greyscale.
+- Armor:
+	- Make the adjustable armor 'clamped' and 'triangle type' options persistent and initialised correctly in the PAW.
+- UI:
+	- Adjust formatting of some debug telemetry.
+	- Fix EMP Hellfire texture URL.
+	- Add an indent for missile and CM settings.
+- Vessel Mover:
+	- Don't apply "Don't Avoid Collisions" while lowering vessels.
+- Vessel Spawning:
+	- Re-register EVA Kerbals in spawned vessels as active, since KSP de-registers this for some reason.
+	- Add a default text for the custom template name field.
+	- Automatically add the current custom template to the list if it's not already there when clicking 'save' without requiring clicking 'new' first. (I.e., don't require 'new'→'save' for the initial template.)
+	- When using "Fill Seats" = "Cockpits or Combat Seat", include the first command seat if neither a cockpit nor combat seat are present.
+	- Fix an issue with the spawning routine hanging when using asteroids game modes.
+	- Fix the inward/outward spawn orientation for circular spawning.
+- Detectors:
+	- Adds a new dish-only AWACS radar variant.
+- Weapons:
+	- APS turrets now function when GuardMode is off to let them work on player-operated craft.
+	- Adds new 'dualModeAPS' field (default false) for APS turrets; if true, they can also be selected and used as standard weapons.
+	- ABL/GoalKeepers/Oerlikon are now configured as dual-mode anti-missile APS.
+	- Fixed aiming cursor remaining while turrets are slaved to a GPS target.
+	- Missiles:
+		- Fix AI not selecting laser missiles.
+		- SARH missiles now properly follow whatever the active locked radar target is.
+		- Added new loft guidance logic under the homingType "aamloft".
+			- Enables longer ranged engagements at high altitude by enabling higher terminal speeds.
+			- Added various tuning parameters accessible in the hangar (as well as in part configs) to tweak performance as desired.
+			- A more thorough explanation of the guidance law and the tuning parameters is available on the Github wiki https://github.com/BrettRyland/BDArmory/wiki/1.2.5-Missile-configuration#3-loft-guidance-missiles.
+		- Implemented missing pure pursuit guidance ("aampure").
+		- Add new 'boosterFuelMass' and 'cruiseFuelMass' fields to missile config that allow missiles to have a fuel usage that can affect mass when the new field 'useFuel' is true.
+- Competition:
+	- Add some checks for lacking an AI or an airborne AI being landed/splashed to the scoring for being considered as wrecked (MIA).
+	- Add competition messages about vessels colliding with asteroids.
+- RWP:
+	- Use the current planetary body, not Kerbin for remote orchestration.
+
+v1.6.1.0
+IMPROVEMENTS / FIXES
+ - General:
+	- Fix TweakScale config for Typhoon engine.
+	- Reduce min size, scaling increment for procArmor panels.
+	- Internal refactor of vessel spawning/moving.
+	- EAS-2 External Combat Seat now has a unique model(credit: Eclipse) to help differentiate it from the stock EAS-1. 
+- UI:
+	- Maintain the camera angle and distance when switching vessels with the Vessel Switcher (page up/down).
+- Vessel Mover:
+	- Abort vessel selection and reset state when closing/hiding the VM window.
+- Vessel Spawning:
+	- Use the better Vessel Mover lowering routines to lower spawned craft to the terrain. 'Ease-in Speed' is now the same as 'Min Lower Speed' in VM.
+	- Fix the black screen caused by an invalid camera target during custom template spawning.
+	- Maintain the camera angle when switching to spawn locations.
+	- Also maintain the camera distance if bringing the current vessel with us when switching to spawn locations.
+- AI:
+	- Lower the minimum extend abort time to 1s.
+	- Set the main throttle axis group for the VTOL AI and the wheel throttle axis group for ground AI. (pitch, roll, yaw axis groups are already being set.)
+- Detectors:
+	- Adjust IRST display implementation.
+	- Adds new 'omniDetection' field to RadarWarningReciever (default true). If false, RWR will only detect Radar missiles immediately, some changes to missile detection and CM response.
+	- Adds 'VARIABLE_MISSILE_VISIBILITY (default False) BDA setting for setting visual detection range of missiles based on their boost/cruise/post-thrust state.
+	- Add 'irstRanging' field (default false) to IRSTs to let them determine range and work like 'heat radar'.
+- CounterMeasures:
+	- Add optional 'cooldownInterval' field for jammers/thermoptic CMs to add a cooldown before they can be used again.
+	- Implements smoke CM triggers, so the AI will actually use these now.
+- Weapons:
+	- Adds 'minSafeDistanceDistance' field (default 0) to ModuleWeapon, for setting default weapon min ranges; AI will no longer fire if within min range. ADJUST AT OWN RISK.
+	- Fix ground Vees from firing wildly into the dirt if they lose sight of engaged ground target.
+	- Adds LoS check to direct-fire weapons.
+	- Missiles:
+		- Heatseeking missiles no longer home in on engine plume of engines that have turned off their Afterburner.
+		- Fix targeting offset for CR missiles.
+		- Fix NRE with jettisoning Multimissile Launchers.
+		- Adds ModularMissile ground target weapon selection logic.
+		- Give unguided/GPS missiles without coords/Radar missiles sans Radar/Laser missiles without Targeting Pod a dumbfire reticle.
+		- AI can now use dumbfired missiles (Targeting Mode = None / Radar/Laser missile without the necessary sensor), if no better option available.
+		- Add new 'radarTimeout' field to missile configs to permit dumbfired inertial guidance LOAL radar missiles.
+		- AI can now attampt to use guided bombs against air targets if engage Air = true and nothing else available.
+	- Fixed turret manual fire behavior, guns should now no longer fire unless they are correctly aligned with the point of aim.
+	- Fixed explosive erroneous cone-of-effect calculations for standard and shaped charge warheads. Should now function correctly.
+- Competition:
+	- Pinata mode now temporarily disables Camera AutoSwitch, switches camera to Pinata until it is destroyed.
+	- Update the tournament parser to compute non-negative scores per round for waypoint races.
+  
+v1.6.0.2
+IMPROVEMENTS / FIXES
+- UI:
+	- Add a toggle for aim assist mode (Target = reticle placed at the closest point of approach of the projectile to the target, Aimer = reticle placed at the aiming position).
+	- Add localisation for 'Multiple' ammo type.
+- Missiles:
+	- Fix missiles being able to fire.
+
+v1.6.0.1
+IMPROVEMENTS / FIXES
+- General:
+	- Restore compatibility with KSP 1.9.1.
+	- Cleaned up some lingering issues with repulsor functionality when used outside of the 'Enable Repulsors' gamemode.
+- UI:
+	- Expand 'Edit Inputs' scrollview enough to show all the shortcuts.
+- AI:
+	- Don't turn on peace mode when auto-tuning.
+- Gamemodes:
+	- Add BD_PART_STRENGTH BattleDamage option to have part/joint strength weaken as parts take damage.
+- Weapons:
+	- Fix clustermissiles being non-functional.
+
+v1.6.0.0
+IMPROVEMENTS / FIXES
+- General:
+	- Add restore/wipe functionality to the controlled axes of the KAL.
 		- Toggling the "Restore KAL" toggle in the GamePlay section of the settings will restore or wipe the controlled axes from KALs on all loaded vessels.
 		- Vessels spawned via BDA+'s spawning routines will automatically have this applied.
 		- The KALs on all loaded vessels will also be restored/wiped on competition start.
+	- Update the defaults for a number of BDA+ settings.
+- UI:
+	- Auto-switch UI focus to new input text fields in Vessel Mover and Custom Spawn Templates.
+	- Move the "Auto-Disable UI" toggle to the UI section of the settings.
+	- Fix the AIR-2 Genie manufacturer localization tag.
 - AI:
-	- Set the main throttle, pitch, yaw and roll axis groups when setting the flight control state. This allows use of axis groups in BDA+ with these axes.
+	- Axis groups: set the various axis groups when setting the flight control state, allowing the BDA+ AIs to use these axis groups.
+		- Pilot and VTOL AI set the main throttle, pitch, yaw and roll axis groups.
+		- Surface AI, additionally, sets the wheel steer axis group.
+	- Battledamage is automatically disabled when Autotuning; no more craft setting themselves on fire from fueltank fires.
+- Detectors:
+	- IRST now properly returns data to heatseeking missiles.
+- Countermeasures:
+	- rcsReductionFactor in ECMJammers can now be set > 1 for making radar reflectors and similar.
+- Weapons:
+	- Gun recoil now properly takes propellant mass into account.
+	- Multiple fireanim support for single barrel weapons.
+	- Fix impulse for lasers.
+	- In light of the increased damage following the HE damage calc fix in 1.5.9.0, the Explosive Damage Multiplier default has changed from 0.65 to 0.55. Note: this needs to be reset by the user.
+		- FireAngle default reduced from 1.4 to 1.0.
+		- Gun accuracy refactored across the board.
+		- Browning accuracy changed to 0.32.
+		- Vulcan accuracy changed to 0.88.
+		- Vulcan Turret accuracy changed to 1.02.
+		- GAU-8 & GAU-22 accuracy changed to 0.6405.
+		- Goalkeeper accuracy changed to 0.675.
+		- Chaingun accuracy changed to 0.45.
+		- Sidam accuracy changed to 0.42.
+- Missiles:
+	- Fix issue that had broken MultiMissileLauncher parts last update.
+	- Add ability to jettison Multi-Missile rails via 'permitJettison = true' in their .cfg.
+	- Add 'displayOrdinance' bool for MultiMissileLaunchers for missilepods/bomb dispensers or similar where ordinance does not need to be visible.
+	- Add 'OverrideDropSettings' bool for MultiMissileLaunchers for reloadable rails and similar to fix missile settings getting overwritten on launch.
+	- Fix issue with detonation distance and heat seekers targeting the engine exhaust plume.
+- GameModes:
+	- Add 'RepulsorOverride' bool to ModuleSpaceFriction, to allow Repulsors to be used outside of the SpaceHacks Gamemode (for making repulsor wheels and similar).
+- Competition:
+	- Add sorting and "scores" for waypoint runs in the Vessel Switcher for waypoints game mode.
 - VesselMover:
 	- Add option to immediately place the vessel after spawning.
 	- Adjustments to movement in map mode.
 	- Safer placement-lower.
-	- Sort the AI and WM modules internally by distance to the root part to always select the correct AI/WM and update internal references when parasite vessels are deployed from the mothership vessel (competition scores aren't yet being updated).
-- UI:
-	- Auto-switch UI focus to new input text fields in Vessel Mover and Custom Spawn Templates.
-	- Move the "Auto-Disable UI" toggle to the UI section of the settings.
-- Competition:
-	- Add sorting and "scores" for waypoint runs in the Vessel Switcher for waypoints game mode.
 
 v1.5.9.4
 IMPROVEMENTS / FIXES

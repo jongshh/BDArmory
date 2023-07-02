@@ -211,7 +211,8 @@ namespace BDArmory.Utils
                         if ((BDArmorySettings.RUNWAY_PROJECT || !BDArmorySettings.PWING_EDGE_LIFT) && !ctrlSrf) //if RunwayProject and part !controlsurface, remove lift/mass from edges to bring inline with stock boards
                         {
                             bool isLiftingSurface = (float)PWType.GetField("stockLiftCoefficient", BindingFlags.Public | BindingFlags.Instance).GetValue(module) > 0f;
-                            liftCoeff = (length * (width / 2f)) / 3.52f;
+							liftCoeff = (length * (width / 2f)) / 3.52f;
+                            if (BDArmorySettings.RUNWAY_PROJECT) liftCoeff = Mathf.Clamp(liftCoeff, 0, BDArmorySettings.MAX_PWING_LIFT);
                             PWType.GetField("stockLiftCoefficient", BindingFlags.Public | BindingFlags.Instance).SetValue(module, isLiftingSurface ? liftCoeff : 0f); //adjust PWing GUI lift readout
                             part.Modules.GetModule<ModuleLiftingSurface>().deflectionLiftCoeff = (length * (width / 2f) / 3.52f); //adjust lift to be inline with stock wings
                         }

@@ -41,7 +41,7 @@ namespace BDArmory.Weapons.Missiles
         /// <param name="targetVelocity">Target velocity.</param>
         /// <param name="targetPosition">Target position.</param>
         /// <param name="maxAngleOffTarget">If non-negative, restrict the calculations to assuming the launcher velocity is at most this angle off-target. Avoids extreme extending ranges.</param>
-        public static MissileLaunchParams GetDynamicLaunchParams(MissileBase missile, Vector3 targetVelocity, Vector3 targetPosition, float maxAngleOffTarget = -1)
+        public static MissileLaunchParams GetDynamicLaunchParams(MissileBase missile, Vector3 targetVelocity, Vector3 targetPosition, float maxAngleOffTarget = -1, bool unguidedGuidedMissile = false)
         {
             if (missile == null || missile.part == null) return new MissileLaunchParams(0, 0); // Safety check in case the missile part is being destroyed at the same time.
             Vector3 launcherVelocity = missile.vessel.Velocity();
@@ -53,6 +53,7 @@ namespace BDArmory.Weapons.Missiles
             float launcherSpeed = (float)missile.vessel.srfSpeed;
             float minLaunchRange = missile.minStaticLaunchRange;
             float maxLaunchRange = missile.maxStaticLaunchRange;
+            if (unguidedGuidedMissile) maxLaunchRange /= 10;
             float bodyGravity = (float)PhysicsGlobals.GravitationalAcceleration * (float)missile.vessel.orbit.referenceBody.GeeASL; // Set gravity for calculations;
             float missileActiveTime = 2f;
             float rangeAddMax = 0;

@@ -142,6 +142,13 @@ namespace BDArmory.Damage
         [KSPField(isPersistant = true)]
         public float HEATEquiv;
 
+        [KSPField(isPersistant = true)]
+        public float maxForce;
+        [KSPField(isPersistant = true)]
+        public float maxTorque;
+        [KSPField(isPersistant = true)]
+        public double maxG;
+
         private bool startsArmored = false;
         public bool ArmorPanel = false;
 
@@ -320,7 +327,7 @@ namespace BDArmory.Damage
             {
                 HullTypeNum = HullInfo.materials.FindIndex(t => t.name == hullType) + 1;
             }
-            if (SelectedArmorType == "Legacy Armor") 
+            if (SelectedArmorType == "Legacy Armor")
                 ArmorTypeNum = ArmorInfo.armors.FindIndex(t => t.name == "None");
             else
                 ArmorTypeNum = ArmorInfo.armors.FindIndex(t => t.name == SelectedArmorType) + 1;
@@ -519,6 +526,17 @@ namespace BDArmory.Damage
         {
             yield return new WaitForFixedUpdate();
             if (part == null) yield break;
+            if (part.GetComponent<ModuleAsteroid>())
+            {
+                var tic = Time.time;
+                yield return new WaitUntilFixed(() => part == null || part.mass > 0 || Time.time - tic > 5); // Give it 5s to get the part info.
+                if (part != null)
+                {
+                    partMass = part.mass;
+                    calcPartSize(); // Re-calculate the size.
+                    SetupPrefab(); // Re-setup the prefab.
+                }
+            }
             if (part.partInfo != null && part.partInfo.partPrefab != null) partMass = part.partInfo.partPrefab.mass;
             _updateMass = true;
             _armorModified = true;
@@ -967,8 +985,16 @@ namespace BDArmory.Damage
                                         {
                                             var lift = part.FindModuleImplementing<ModuleLiftingSurface>();
                                             if (lift != null) lift.deflectionLiftCoeff = 0;
+                                            DragCube DragCube = DragCubeSystem.Instance.RenderProceduralDragCube(part);
+                                            part.DragCubes.ClearCubes();
+                                            part.DragCubes.Cubes.Add(DragCube);
+                                            part.DragCubes.ResetCubeWeights();
+                                            part.DragCubes.ForceUpdate(true, true, false);
+                                            part.DragCubes.SetDragWeights();
+                                            if (HighLogic.LoadedSceneIsEditor) GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
                                         }
                                     }
+                                    if (BDArmorySettings.RUNWAY_PROJECT_ROUND == 60) hitpoints = Mathf.Min(500, hitpoints);
                                 }
                             }
                             if (hitpoints < 0) //sanity checks
@@ -1066,6 +1092,12 @@ namespace BDArmory.Damage
 
             partdamage = Mathf.Max(partdamage, 0f) * -1;
             Hitpoints += (partdamage / defenseMutator); //why not just go -= partdamage?
+            if (BDArmorySettings.BATTLEDAMAGE && BDArmorySettings.BD_PART_STRENGTH)
+            {
+                part.breakingForce = maxForce * (Hitpoints / maxHitPoints);
+                part.breakingTorque = maxTorque * (Hitpoints / maxHitPoints);
+                part.gTolerance = maxG * (Hitpoints / maxHitPoints);
+            }
             if (Hitpoints <= 0)
             {
                 DestroyPart();
@@ -1497,6 +1529,12 @@ namespace BDArmory.Damage
             }
             ignitionTemp = hullInfo.ignitionTemp;
             part.crashTolerance = part.partInfo.partPrefab.crashTolerance * hullInfo.ImpactMod;
+            maxForce = part.partInfo.partPrefab.breakingForce * hullInfo.ImpactMod;
+            part.breakingForce = maxForce;
+            maxTorque = part.partInfo.partPrefab.breakingTorque * hullInfo.ImpactMod;
+            part.breakingTorque = maxTorque;
+            maxG = part.partInfo.partPrefab.gTolerance * hullInfo.ImpactMod;
+            part.gTolerance = maxG;
             hullType = hullInfo.name;
             float partCost = part.partInfo.cost + part.partInfo.variant.Cost;
             if (hullInfo.costMod < 1) HullCostAdjust = Mathf.Max((partCost - (float)resourceCost) * hullInfo.costMod, partCost - (1000 - (hullInfo.costMod * 1000))) - (partCost - (float)resourceCost);//max of 1000 funds discount on cheaper materials

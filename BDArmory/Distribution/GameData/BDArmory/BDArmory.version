@@ -11,9 +11,9 @@
     "VERSION":
     {
         "MAJOR":1,
-        "MINOR":5,
-        "PATCH":9,
-        "BUILD":4
+        "MINOR":6,
+        "PATCH":3,
+        "BUILD":0
     },
     "KSP_VERSION":
     {

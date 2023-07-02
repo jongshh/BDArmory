@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using BDArmory.UI;
+using System.Collections;
 using System.Text;
 using UnityEngine;
 
@@ -25,6 +26,8 @@ namespace BDArmory.CounterMeasure
 
         [KSPField] public bool alwaysOn = false;
 
+        [KSPField] public float cooldownInterval = -1;
+
         [KSPField(isPersistant = true, guiActive = true, guiName = "#LOC_BDArmory_Enabled")]//Enabled 
         public bool cloakEnabled = false;
 
@@ -33,6 +36,10 @@ namespace BDArmory.CounterMeasure
         bool disabling = false;
 
         float cloakTimer = 0;
+
+        float cooldownTimer = 0;
+
+        private BDStagingAreaGauge gauge;
 
         private int resourceID;
 
@@ -86,6 +93,7 @@ namespace BDArmory.CounterMeasure
             if (!HighLogic.LoadedSceneIsFlight) return;
             part.force_activate();
 
+            gauge = (BDStagingAreaGauge)part.AddModule("BDStagingAreaGauge");
             GameEvents.onVesselCreate.Add(OnVesselCreate);
             EnsureVesselCloak();
         }
@@ -111,9 +119,8 @@ namespace BDArmory.CounterMeasure
         public void EnableCloak()
         {
             if (enabling || cloakEnabled) return;
+            if (cooldownTimer > 0) return;
             EnsureVesselCloak();
-            vesselCloak.AddCloak(this);
-            cloakEnabled = true;
 
             StopCloakDecloakRoutines();
             cloakTimer = 0;
@@ -204,6 +211,8 @@ namespace BDArmory.CounterMeasure
                 yield return wait;
             }
             enabling = false;
+            vesselCloak.AddCloak(this);
+            cloakEnabled = true;
         }
 
         IEnumerator DecloakRoutine()
@@ -215,11 +224,14 @@ namespace BDArmory.CounterMeasure
                 yield return wait;
             }
             disabling = false;
+            cooldownTimer = cooldownInterval;
         }
 
         void FixedUpdate()
         {
             if (!HighLogic.LoadedSceneIsFlight) return;
+            if (BDArmorySetup.GameIsPaused) return;
+
             if (enabling || disabling)
             {
                 if (opticalReductionFactor < 1)
@@ -240,6 +252,14 @@ namespace BDArmory.CounterMeasure
                     }
                 }
                 //Debug.Log("[CloakingDevice] " + (enabling ? "cloaking" : "decloaking") + ": cloakTimer: " + cloakTimer);
+            }
+            if (cooldownTimer > 0)
+            {
+                cooldownTimer -= TimeWarp.fixedDeltaTime;
+                if (vessel.isActiveVessel)
+                {
+                    gauge.UpdateHeatMeter(cooldownTimer / cooldownInterval);
+                }
             }
         }
 

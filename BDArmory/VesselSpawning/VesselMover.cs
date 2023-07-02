@@ -6,15 +6,14 @@ using System.IO;
 using System.Linq;
 using KSP.UI.Screens;
 
-using BDArmory.Competition.VesselSpawning;
 using BDArmory.Extensions;
 using BDArmory.Settings;
 using BDArmory.UI;
 using BDArmory.Utils;
 
-using static BDArmory.Competition.VesselSpawning.CustomTemplateSpawning;
+using static BDArmory.VesselSpawning.CustomTemplateSpawning; // For the CustomCraftBrowserDialog
 
-namespace BDArmory.Competition.VesselMover
+namespace BDArmory.VesselSpawning
 {
     [KSPAddon(KSPAddon.Startup.Flight, false)]
     public class VesselMover : VesselSpawnerBase
@@ -203,9 +202,9 @@ namespace BDArmory.Competition.VesselMover
 
         #region Moving
         Vector3d geoCoords;
-        bool IsValid(Vessel vessel) => vessel != null && vessel.loaded && !vessel.packed;
-        bool IsMoving(Vessel vessel) => IsValid(vessel) && movingVessels.Contains(vessel);
-        bool IsLowering(Vessel vessel) => IsValid(vessel) && loweringVessels.Contains(vessel);
+        public bool IsValid(Vessel vessel) => vessel != null && vessel.loaded && !vessel.packed;
+        public bool IsMoving(Vessel vessel) => IsValid(vessel) && movingVessels.Contains(vessel);
+        public bool IsLowering(Vessel vessel) => IsValid(vessel) && loweringVessels.Contains(vessel);
         IEnumerator MoveVessel(Vessel vessel)
         {
             if (!IsValid(vessel)) { state = State.None; yield break; }
@@ -252,6 +251,7 @@ namespace BDArmory.Competition.VesselMover
                     vessel.Landed = false;
                     vessel.Splashed = false;
                     vessel.IgnoreGForces(240);
+                    vessel.IgnoreSpeed(240);
                     position += count * (startingAltitude - safeAlt) / 55f * up;
                     vessel.SetPosition(position);
                     vessel.SetWorldVelocity(Vector3d.zero);
@@ -281,11 +281,11 @@ namespace BDArmory.Competition.VesselMover
                         }
                         if (MapView.MapIsEnabled)
                         {
-                            forward = Vector3.ProjectOnPlane(-Math.Sign(vessel.latitude) * (vessel.mainBody.GetWorldSurfacePosition(vessel.latitude - Math.Sign(vessel.latitude), vessel.longitude, vessel.altitude) - vessel.GetWorldPos3D()), up).normalized;
+                            forward = -Math.Sign(vessel.latitude) * (vessel.mainBody.GetWorldSurfacePosition(vessel.latitude - Math.Sign(vessel.latitude), vessel.longitude, vessel.altitude) - vessel.GetWorldPos3D()).ProjectOnPlanePreNormalized(up).normalized;
                         }
                         else
                         {
-                            forward = Vector3.ProjectOnPlane(vessel.transform.position - FlightCamera.fetch.mainCamera.transform.position, up).normalized;
+                            forward = (vessel.transform.position - FlightCamera.fetch.mainCamera.transform.position).ProjectOnPlanePreNormalized(up).normalized;
                         }
                         right = Vector3.Cross(up, forward);
                     }
@@ -321,6 +321,7 @@ namespace BDArmory.Competition.VesselMover
                     if (rotating)
                     {
                         vessel.IgnoreGForces(240);
+                        vessel.IgnoreSpeed(240);
                         var previousLowerBound = lowerBound;
                         vessel.SetRotation(rotation);
                         lowerBound = GetLowerBound(vessel);
@@ -395,6 +396,7 @@ namespace BDArmory.Competition.VesselMover
                 }
 
                 vessel.IgnoreGForces(240);
+                vessel.IgnoreSpeed(240);
                 vessel.SetPosition(position);
                 vessel.SetWorldVelocity(Vector3d.zero);
                 vessel.SetRotation(rotation); // Reset the rotation to prevent any angular momentum from messing with the orientation.
@@ -434,7 +436,7 @@ namespace BDArmory.Competition.VesselMover
             position -= BDKrakensbane.FloatingOriginOffsetNonKrakensbane;
         }
 
-        IEnumerator PlaceVessel(Vessel vessel, bool skipMovingCheck = false)
+        public IEnumerator PlaceVessel(Vessel vessel, bool skipMovingCheck = false)
         {
             if (IsLowering(vessel)) yield break; // We're already doing this.
             if (!skipMovingCheck && !IsMoving(vessel)) { state = State.None; yield break; } // The vessel isn't moving, abort.
@@ -497,6 +499,7 @@ namespace BDArmory.Competition.VesselMover
                 var startTime = Time.time;
                 var stationaryStartTime = startTime;
                 vessel.IgnoreGForces(0);
+                vessel.IgnoreSpeed(0);
                 while (IsLowering(vessel) && Time.time - startTime < 10f && Time.time - stationaryStartTime <= 0.1f) // Damp movement for up to 10s.
                 {
                     // if ((float)vessel.verticalSpeed < -0.1f * BDArmorySettings.VESSEL_MOVER_MIN_LOWER_SPEED)
@@ -561,7 +564,7 @@ namespace BDArmory.Competition.VesselMover
         float SafeAltitude(Vessel vessel, float lowerBound = -1f, Vector3 offset = default) // Get the safe altitude range we can adjust by.
         {
             var altitude = RadarAltitude(vessel);
-            if (BDArmorySettings.VESSEL_MOVER_DONT_WORRY_ABOUT_COLLISIONS) return altitude;
+            if (BDArmorySettings.VESSEL_MOVER_DONT_WORRY_ABOUT_COLLISIONS && state == State.Moving) return altitude;
             var position = vessel.transform.position + offset;
             var up = (position - FlightGlobals.currentMainBody.transform.position).normalized;
             var radius = vessel.GetRadius(up, vessel.GetBounds());
@@ -589,31 +592,32 @@ namespace BDArmory.Competition.VesselMover
         int crewCapacity = -1;
         string vesselNameToSpawn = "";
         CustomCraftBrowserDialog craftBrowser;
+        bool abortCraftSelection = false;
         IEnumerator SpawnVessel()
         {
             state = State.Spawning;
 
             // Open craft selection
             string craftFile = "";
-            bool abort = false;
+            abortCraftSelection = false;
             messageState = Messages.OpeningCraftBrowser;
             if (BDArmorySettings.VESSEL_MOVER_CLASSIC_CRAFT_CHOOSER)
             {
-                var craftBrowser = CraftBrowserDialog.Spawn(EditorFacility.SPH, HighLogic.SaveFolder, (path, loadType) => { craftFile = path; }, () => { abort = true; }, false);
-                while (!abort && string.IsNullOrEmpty(craftFile)) yield return wait;
+                var craftBrowser = CraftBrowserDialog.Spawn(EditorFacility.SPH, HighLogic.SaveFolder, (path, loadType) => { craftFile = path; }, () => { abortCraftSelection = true; }, false);
+                while (!abortCraftSelection && string.IsNullOrEmpty(craftFile)) yield return wait;
+                if (craftBrowser != null) craftBrowser.Dismiss();
                 craftBrowser = null;
             }
             else
             {
-                ShowVesselSelection((path) => { craftFile = path; }, () => { abort = true; });
-                while (!abort && string.IsNullOrEmpty(craftFile)) yield return wait;
+                ShowVesselSelection((path) => { craftFile = path; }, () => { abortCraftSelection = true; });
+                while (!abortCraftSelection && string.IsNullOrEmpty(craftFile)) yield return wait;
             }
             messageState = Messages.None;
-            if (abort || string.IsNullOrEmpty(craftFile)) { state = State.None; yield break; }
+            if (abortCraftSelection || string.IsNullOrEmpty(craftFile)) { state = State.None; yield break; }
             if (BDArmorySettings.DEBUG_SPAWNING) Debug.Log($"[BDArmory.VesselMover]: {craftFile} selected for spawning.");
 
             // Choose crew
-            KerbalNames.Clear();
             crewCapacity = GetCrewCapacity(craftFile, out vesselNameToSpawn);
             if (BDArmorySettings.VESSEL_MOVER_CHOOSE_CREW)
             { yield return ChooseCrew(); }
@@ -714,6 +718,7 @@ namespace BDArmory.Competition.VesselMover
         IEnumerator ChooseCrew()
         {
             messageState = Messages.ChoosingCrew;
+            KerbalNames.Clear();
             ShowCrewSelection(new Vector2(Screen.width / 2, Screen.height / 2));
             while (showCrewSelection)
             {
@@ -747,7 +752,7 @@ namespace BDArmory.Competition.VesselMover
             Ray ray;
             bool altitudeCorrection = false;
             var currentMainBody = FlightGlobals.currentMainBody;
-            while (true)
+            while (BDArmorySetup.showVesselMoverGUI)
             {
                 if (Input.GetKeyDown(KeyCode.Escape))
                 {
@@ -808,7 +813,7 @@ namespace BDArmory.Competition.VesselMover
             var spawnPoint = FlightGlobals.currentMainBody.GetWorldSurfacePosition(latitude, longitude, altitude);
             var radialUnitVector = (spawnPoint - FlightGlobals.currentMainBody.transform.position).normalized;
             var north = VectorUtils.GetNorthVector(spawnPoint, FlightGlobals.currentMainBody);
-            var direction = Vector3.ProjectOnPlane(Quaternion.AngleAxis(initialHeading, radialUnitVector) * north, radialUnitVector).normalized;
+            var direction = (Quaternion.AngleAxis(initialHeading, radialUnitVector) * north).ProjectOnPlanePreNormalized(radialUnitVector).normalized;
             var crew = new List<ProtoCrewMember>();
             if (kerbalNames != null)
             {
@@ -1068,7 +1073,15 @@ namespace BDArmory.Competition.VesselMover
 
         public void SetVisible(bool visible)
         {
-            if (!visible && craftBrowser != null) craftBrowser = null; // Clean up the craft browser.
+            if (!visible)
+            {
+                if (state == State.Spawning)
+                {
+                    abortCraftSelection = true;
+                    state = State.None;
+                }
+                craftBrowser = null; // Make sure the craft browser is cleaned up.
+            }
             BDArmorySetup.showVesselMoverGUI = visible;
             GUIUtils.SetGUIRectVisible(guiCheckIndex, visible);
             if (button != null)
@@ -1291,7 +1304,6 @@ namespace BDArmory.Competition.VesselMover
                 if (!notThisFrame && focusKerbalNameField)
                 {
                     GUI.FocusControl("kerbalNameField");
-                    Debug.Log($"DEBUG Focus on kerbal name field");
                     focusKerbalNameField = false;
                 }
                 if (notThisFrame) notThisFrame = false;

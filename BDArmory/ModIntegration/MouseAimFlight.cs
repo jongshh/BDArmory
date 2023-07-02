@@ -101,6 +101,6 @@ namespace BDArmory.ModIntegration
             return mouseAimActive;
         }
 
-        public static bool IsMouseAimActive() => hasMouseAimFlight && Instance != null && Instance.IsMouseAimFlightActive();
+        public static bool IsMouseAimActive => hasMouseAimFlight && Instance != null && Instance.IsMouseAimFlightActive();
     }
 }

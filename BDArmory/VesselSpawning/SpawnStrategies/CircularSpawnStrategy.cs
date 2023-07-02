@@ -6,7 +6,7 @@ using UnityEngine;
 using BDArmory.Competition.RemoteOrchestration;
 using BDArmory.Settings;
 
-namespace BDArmory.Competition.VesselSpawning.SpawnStrategies
+namespace BDArmory.VesselSpawning.SpawnStrategies
 {
     public class CircularSpawnStrategy : SpawnStrategy
     {
@@ -41,7 +41,6 @@ namespace BDArmory.Competition.VesselSpawning.SpawnStrategies
                     latitude,
                     longitude,
                     altitude,
-                    BDArmorySettings.VESSEL_SPAWN_EASE_IN_SPEED,
                     true,
                     craftFiles: new List<string>(craftUrls)
                 ),

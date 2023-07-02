@@ -6,8 +6,8 @@ using System.Linq;
 using UnityEngine;
 
 using BDArmory.Competition;
-using BDArmory.Competition.VesselSpawning;
 using BDArmory.Settings;
+using BDArmory.VesselSpawning;
 
 namespace BDArmory.Evolution
 {
@@ -191,7 +191,6 @@ namespace BDArmory.Evolution
                     BDArmorySettings.VESSEL_SPAWN_GEOCOORDS.x,
                     BDArmorySettings.VESSEL_SPAWN_GEOCOORDS.y,
                     BDArmorySettings.VESSEL_SPAWN_ALTITUDE,
-                    BDArmorySettings.VESSEL_SPAWN_EASE_IN_SPEED,
                     true,
                     true,
                     0,

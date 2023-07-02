@@ -4,9 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 
-using BDArmory.Utils;
-
-namespace BDArmory.Competition.VesselSpawning
+namespace BDArmory.VesselSpawning
 {
     /// <summary>
     /// Configuration for spawning groups of vessels.
@@ -18,13 +16,12 @@ namespace BDArmory.Competition.VesselSpawning
     [Serializable]
     public class SpawnConfig
     {
-        public SpawnConfig(int worldIndex, double latitude, double longitude, double altitude, float easeInSpeed = 1f, bool killEverythingFirst = true, bool assignTeams = true, int numberOfTeams = 0, List<int> teamCounts = null, List<List<string>> teamsSpecific = null, string folder = "", List<string> craftFiles = null)
+        public SpawnConfig(int worldIndex, double latitude, double longitude, double altitude, bool killEverythingFirst = true, bool assignTeams = true, int numberOfTeams = 0, List<int> teamCounts = null, List<List<string>> teamsSpecific = null, string folder = "", List<string> craftFiles = null)
         {
             this.worldIndex = worldIndex;
             this.latitude = latitude;
             this.longitude = longitude;
             this.altitude = altitude;
-            this.easeInSpeed = easeInSpeed;
             this.killEverythingFirst = killEverythingFirst;
             this.assignTeams = assignTeams;
             this.numberOfTeams = numberOfTeams;
@@ -39,7 +36,6 @@ namespace BDArmory.Competition.VesselSpawning
             this.latitude = other.latitude;
             this.longitude = other.longitude;
             this.altitude = other.altitude;
-            this.easeInSpeed = other.easeInSpeed;
             this.killEverythingFirst = other.killEverythingFirst;
             this.assignTeams = other.assignTeams;
             this.numberOfTeams = other.numberOfTeams;
@@ -52,7 +48,6 @@ namespace BDArmory.Competition.VesselSpawning
         public double latitude;
         public double longitude;
         public double altitude;
-        public float easeInSpeed;
         public bool killEverythingFirst = true;
         public bool assignTeams = true;
         public int numberOfTeams = 0; // Number of teams (or FFA, Folders or Inf). For evenly (as possible) splitting vessels into teams.
@@ -110,7 +105,7 @@ namespace BDArmory.Competition.VesselSpawning
             this.distance = other.distance;
             this.absDistanceOrFactor = other.absDistanceOrFactor;
         }
-        public CircularSpawnConfig(int worldIndex, double latitude, double longitude, double altitude, float distance, bool absDistanceOrFactor, float easeInSpeed = 1f, bool killEverythingFirst = true, bool assignTeams = true, int numberOfTeams = 0, List<int> teamCounts = null, List<List<string>> teamsSpecific = null, string folder = "", List<string> craftFiles = null) : this(new SpawnConfig(worldIndex, latitude, longitude, altitude, easeInSpeed, killEverythingFirst, assignTeams, numberOfTeams, teamCounts, teamsSpecific, folder, craftFiles), distance, absDistanceOrFactor) { } // Constructor for legacy SpawnConfigs that should be CircularSpawnConfigs.
+        public CircularSpawnConfig(int worldIndex, double latitude, double longitude, double altitude, float distance, bool absDistanceOrFactor, bool killEverythingFirst = true, bool assignTeams = true, int numberOfTeams = 0, List<int> teamCounts = null, List<List<string>> teamsSpecific = null, string folder = "", List<string> craftFiles = null) : this(new SpawnConfig(worldIndex, latitude, longitude, altitude, killEverythingFirst, assignTeams, numberOfTeams, teamCounts, teamsSpecific, folder, craftFiles), distance, absDistanceOrFactor) { } // Constructor for legacy SpawnConfigs that should be CircularSpawnConfigs.
         public float distance;
         public bool absDistanceOrFactor; // If true, the distance value is used as-is, otherwise it is used as a factor giving the actual distance: (N+1)*distance, where N is the number of vessels.
     }

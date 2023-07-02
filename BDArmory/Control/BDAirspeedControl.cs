@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
+using BDArmory.Extensions;
 using BDArmory.Utils;
 
 namespace BDArmory.Control
@@ -39,7 +40,7 @@ namespace BDArmory.Control
 
         void Start()
         {
-            axisGroupsModule = vessel.FindVesselModuleImplementing<AxisGroupsModule>(); // Look for an axis group module.
+            axisGroupsModule = vessel.FindVesselModuleImplementingBDA<AxisGroupsModule>(); // Look for an axis group module.
             if (axisGroupsModule != null) hasAxisGroupsModule = true;
         }
 
@@ -263,11 +264,20 @@ namespace BDArmory.Control
         public Vessel vessel;
         public bool preventNegativeZeroPoint = false;
 
+        AxisGroupsModule axisGroupsModule;
+        bool hasAxisGroupsModule = false; // To avoid repeated null checks
+
         private float lastThrottle;
         public float zeroPoint { get; private set; }
 
         private const float gain = 0.5f;
         private const float zeroMult = 0.02f;
+
+        void Start()
+        {
+            axisGroupsModule = vessel.FindVesselModuleImplementingBDA<AxisGroupsModule>(); // Look for an axis group module.
+            if (axisGroupsModule != null) hasAxisGroupsModule = true;
+        }
 
         public void Activate()
         {
@@ -285,11 +295,11 @@ namespace BDArmory.Control
         void SpeedControl(FlightCtrlState s)
         {
             if (!vessel.LandedOrSplashed)
-                s.wheelThrottle = 0;
+                SetThrottle(s, 0);
             else if (targetSpeed == 0)
             {
                 vessel.ActionGroups.SetGroup(KSPActionGroup.Brakes, true);
-                s.wheelThrottle = 0;
+                SetThrottle(s, 0);
             }
             else
             {
@@ -297,8 +307,22 @@ namespace BDArmory.Control
                 lastThrottle = Mathf.Clamp(throttle, -1, 1);
                 zeroPoint = (zeroPoint + lastThrottle * zeroMult) * (1 - zeroMult);
                 if (preventNegativeZeroPoint && zeroPoint < 0) zeroPoint = 0;
-                s.wheelThrottle = lastThrottle;
+                SetThrottle(s, lastThrottle);
                 vessel.ActionGroups.SetGroup(KSPActionGroup.Brakes, throttle < -5f);
+            }
+        }
+
+        /// <summary>
+        /// Set the wheel throttle and the corresponding axis group.
+        /// </summary>
+        /// <param name="s">The flight control state</param>
+        /// <param name="value">The throttle value</param>
+        public void SetThrottle(FlightCtrlState s, float value)
+        {
+            s.wheelThrottle = value;
+            if (hasAxisGroupsModule)
+            {
+                axisGroupsModule.UpdateAxisGroup(KSPAxisGroup.MainThrottle, 2f * value - 1f); // Throttle is full-axis: 0—1 throttle maps to -1—1 axis.
             }
         }
     }
@@ -309,6 +333,9 @@ namespace BDArmory.Control
         public Vessel vessel;
         public bool preventNegativeZeroPoint = false;
 
+        AxisGroupsModule axisGroupsModule;
+        bool hasAxisGroupsModule = false; // To avoid repeated null checks
+
         private float altIntegral;
         public float zeroPoint { get; private set; }
 
@@ -316,6 +343,11 @@ namespace BDArmory.Control
         private const float Kd = 0.55f;
         private const float Ki = 0.03f;
 
+        void Start()
+        {
+            axisGroupsModule = vessel.FindVesselModuleImplementingBDA<AxisGroupsModule>(); // Look for an axis group module.
+            if (axisGroupsModule != null) hasAxisGroupsModule = true;
+        }
 
         public void Activate()
         {
@@ -335,7 +367,7 @@ namespace BDArmory.Control
             if (targetAltitude == 0)
             {
                 vessel.ActionGroups.SetGroup(KSPActionGroup.Brakes, true);
-                s.mainThrottle = 0;
+                SetThrottle(s, 0);
             }
             else
             {
@@ -345,9 +377,23 @@ namespace BDArmory.Control
                 altIntegral = Ki * Mathf.Clamp(altIntegral + altError * Time.deltaTime, -1f, 1f);
 
                 float throttle = altP + altIntegral - altD;
-                s.mainThrottle = Mathf.Clamp01(throttle);
+                SetThrottle(s, Mathf.Clamp01(throttle));
 
                 vessel.ActionGroups.SetGroup(KSPActionGroup.Brakes, throttle < -5f);
+            }
+        }
+
+        /// <summary>
+        /// Set the main throttle and the corresponding axis group.
+        /// </summary>
+        /// <param name="s">The flight control state</param>
+        /// <param name="value">The throttle value</param>
+        public void SetThrottle(FlightCtrlState s, float value)
+        {
+            s.mainThrottle = value;
+            if (hasAxisGroupsModule)
+            {
+                axisGroupsModule.UpdateAxisGroup(KSPAxisGroup.MainThrottle, 2f * value - 1f); // Throttle is full-axis: 0—1 throttle maps to -1—1 axis.
             }
         }
     }

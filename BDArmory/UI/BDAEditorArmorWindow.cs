@@ -111,7 +111,7 @@ namespace BDArmory.UI
             float newCaliber = ProjectileUtils.CalculateDeformation(yieldStrength, bulletEnergy, 30, 1109, 1176, 7850, 0.19f, 0.8f, false);
             */
             //steelValue = ProjectileUtils.CalculatePenetration(30, newCaliber, 0.388f, 1109, 0.15f, 7850, 940, 30, 0.8f, false);
-            steelValue = ProjectileUtils.CalculatePenetration(30, 1109, 0.388f, 0.8f, 940, 8.45001135e-07f, 0.656060636f, 1.20190930f, 1.77791929f);
+            steelValue = ProjectileUtils.CalculatePenetration(30, 1109, 0.388f, 0.8f);
             exploValue = 940 * 1.15f * 7.85f;
             listStyle = new GUIStyle(BDArmorySetup.BDGuiSkin.button);
             listStyle.fixedHeight = 18; //make list contents slightly smaller
@@ -382,6 +382,23 @@ namespace BDArmory.UI
                 line++;
                 GUI.Label(new Rect(10, line * lineHeight, 300, lineHeight), $"{StringUtils.Localize("#LOC_BDArmory_ArmorLiftStacking")}: {totalLiftStackRatio:0%}", style);
                 line++;
+#if DEBUG
+                if (GUI.Button(new Rect(10, line++ * lineHeight, 280, lineHeight), "Find Wings", BDArmorySetup.ButtonStyle))
+                {
+                    var wings = FindWings();
+                    foreach (var wing in wings)
+                    {
+                        Debug.Log($"DEBUG Wing: {string.Join(", ", wing.Select(w => $"{w.name}:{w.persistentId}"))}");
+                    }
+                    // Total lift stacking is the combination of inter- and intra-wing lift stacking.
+                    // Calculate inter-wing lift stacking by calculating stacking between wings.
+                    var liftStacking = CalculateInterWingLiftStacking(wings);
+                    // Calculate intra-wing lift stacking by descending down wing hierarchies and calculating the stacking between children of each node.
+                    foreach (var wing in wings)
+                        liftStacking += CalculateIntraWingLiftStacking(wing);
+                    Debug.Log($"DEBUG Lift stacking: {liftStacking}");
+                }
+#endif
             }
             float StatLines = 0;
             float armorLines = 0;
@@ -643,7 +660,7 @@ namespace BDArmory.UI
                         float lift1area = wing1.deflectionLiftCoeff * Vector3.Project(wing1.transform.forward, Vector3.up).sqrMagnitude; // Only return vertically oriented lift components
                         float lift1rad = BDAMath.Sqrt(lift1area / Mathf.PI);
                         Vector3 col1Pos = wing1.part.partTransform.TransformPoint(wing1.part.CoLOffset);
-                        Vector3 col1PosProj = Vector3.ProjectOnPlane(col1Pos, Vector3.up);
+                        Vector3 col1PosProj = col1Pos.ProjectOnPlanePreNormalized(Vector3.up);
                         liftStackedAllEval += lift1area; // Add up total lift areas
 
                         using (List<Part>.Enumerator parts2 = EditorLogic.fetch.ship.Parts.GetEnumerator())
@@ -659,7 +676,7 @@ namespace BDArmory.UI
                                     float lift2area = wing2.deflectionLiftCoeff * Vector3.Project(wing2.transform.forward, Vector3.up).sqrMagnitude; // Only return vertically oriented lift components
                                     float lift2rad = BDAMath.Sqrt(lift2area / Mathf.PI);
                                     Vector3 col2Pos = wing2.part.partTransform.TransformPoint(wing2.part.CoLOffset);
-                                    Vector3 col2PosProj = Vector3.ProjectOnPlane(col2Pos, Vector3.up);
+                                    Vector3 col2PosProj = col2Pos.ProjectOnPlanePreNormalized(Vector3.up);
 
                                     float d = Vector3.Distance(col1PosProj, col2PosProj);
                                     float R = lift1rad;
@@ -679,8 +696,8 @@ namespace BDArmory.UI
                                             0.5f * BDAMath.Sqrt((-d + r + R) * (d + r - R) * (d - r + R) * (d + r + R));
 
                                     // Calculate vertical spacing factor (0 penalty if surfaces are spaced sqrt(2*lift) apart)
-                                    float v_dist = Vector3.Distance(Vector3.Project(col1Pos, Vector3.up),Vector3.Project(col2Pos, Vector3.up));
-                                    float l_spacing = Mathf.Round(Mathf.Max(lift1area, lift2area, 0.25f)*100f)/100f; // Round lift to nearest 0.01
+                                    float v_dist = Vector3.Distance(Vector3.Project(col1Pos, Vector3.up), Vector3.Project(col2Pos, Vector3.up));
+                                    float l_spacing = Mathf.Round(Mathf.Max(lift1area, lift2area, 0.25f) * 100f) / 100f; // Round lift to nearest 0.01
                                     float v_factor = Mathf.Pow(Mathf.Clamp01((BDAMath.Sqrt(2 * l_spacing) - v_dist) / (BDAMath.Sqrt(2 * l_spacing) - BDAMath.Sqrt(l_spacing))), 0.1f);
 
                                     // Add overlapping area
@@ -693,6 +710,92 @@ namespace BDArmory.UI
             // the stacking at 100%. Also, multiply stacked lift by two for the edge case where only two parts are evaluated.
             liftStackedAll *= (evaluatedParts.Count == 2) ? 2 : 1;
             totalLiftStackRatio = Mathf.Clamp01(liftStackedAll / Mathf.Max(liftStackedAllEval, 0.01f));
+        }
+
+        /// <summary>
+        /// Get a list of all the logical wings (hierarchically connected) on a vessel beginning at (but not including) the given part.
+        /// </summary>
+        /// <param name="part">The part to start at or the root part if not specified.</param>
+        /// <param name="checkedParts"></param>
+        /// <param name="wings"></param>
+        /// <returns>A list of the logical wings where each wing is a hashset of parts with lifting surfaces.</returns>
+        List<HashSet<Part>> FindWings(Part part = null, HashSet<Part> checkedParts = null, List<HashSet<Part>> wings = null)
+        {
+            if (part == null) part = EditorLogic.RootPart;
+            if (wings == null) wings = new List<HashSet<Part>>();
+            if (part == null) return wings;
+            if (checkedParts == null) checkedParts = new HashSet<Part> { part };
+
+            foreach (var child in part.children)
+            {
+                if (child == null) continue;
+                if (child.IsMissile()) continue;
+                if (!checkedParts.Contains(child)) // If the part hasn't been checked, check it for being the start of a wing.
+                {
+                    var liftingSurface = child.GetComponent<ModuleLiftingSurface>();
+                    if (liftingSurface != null) // Start of a wing.
+                    {
+                        var wing = FindWingDescendants(child);
+                        wings.Add(wing);
+                        checkedParts.UnionWith(wing); // Mark all the wing segments as being checked already.
+                    }
+                }
+                checkedParts.Add(child);
+                FindWings(child, checkedParts, wings); // We still need to check all the children in case there's another wing lower in the hierarchy.
+            }
+
+            return wings;
+        }
+
+        /// <summary>
+        /// Find connected wing segments that are direct descendants of a part.
+        /// </summary>
+        /// <param name="wing"></param>
+        /// <returns>The parts that form the segments of the wing.</returns>
+        HashSet<Part> FindWingDescendants(Part wing)
+        {
+            HashSet<Part> segments = new HashSet<Part> { wing };
+            foreach (var child in wing.children)
+            {
+                if (child == null) continue;
+                if (child.IsMissile()) continue;
+                var liftingSurface = child.GetComponent<ModuleLiftingSurface>();
+                if (liftingSurface != null) // If the child is a lifting surface, add it and its descendants.
+                {
+                    segments.Add(child);
+                    segments.UnionWith(FindWingDescendants(child));
+                }
+            }
+            return segments;
+        }
+
+        /// <summary>
+        /// Calculate the amount of lift stacking between the wings.
+        /// </summary>
+        /// <param name="wings">The wings, each consisting of a hashset of parts.</param>
+        /// <param name="baseWing">The base part of the wing (leave as null if the base isn't a wing).</param>
+        /// <returns>The amount of stacking between the wings.</returns>
+        float CalculateInterWingLiftStacking(List<HashSet<Part>> wings, Part baseWing = null)
+        {
+            if (wings.Count < (baseWing == null ? 2 : 1)) return 0; // Not enough segments for an overlap.
+            var wingRoots = wings.Select(wing => wing.Where(p => p.parent == null || !wing.Contains(p.parent)).FirstOrDefault()).Where(p => p != null).ToList();
+            Debug.Log($"DEBUG Checking lift stacking between wings with{(baseWing != null ? $" base {baseWing.name}:{baseWing.persistentId} and" : "")} roots: {string.Join(", ", wingRoots.Select(w => $"{w.name}:{w.persistentId}"))}");
+            return 0; // FIXME Compute the lift of the base and each wing and the amount they overlap. This could potentially include non-vertical lift too.
+        }
+
+        /// <summary>
+        /// Calculate the amount of lift stacking between segments of a wing.
+        /// </summary>
+        /// <param name="wing">The parts in the wing.</param>
+        /// <returns>The amount of stacking within the wing.</returns>
+        float CalculateIntraWingLiftStacking(HashSet<Part> wing)
+        {
+            var wingRoot = wing.Where(p => p.parent == null || !wing.Contains(p.parent)).FirstOrDefault(); // The root of the wing either has no parent or the parent isn't part of the wing.
+            if (wingRoot == null) return 0;
+            var subWings = FindWings(wingRoot);
+            float liftStacking = CalculateInterWingLiftStacking(subWings, wingRoot); // Include the lift stacking between this wing segment and its sub-wings.
+            foreach (var subWing in subWings) liftStacking += CalculateIntraWingLiftStacking(subWing); // Then go deeper in the tree.
+            return liftStacking;
         }
 
         bool IsAeroBrake(Part part)

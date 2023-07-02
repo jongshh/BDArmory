@@ -150,7 +150,7 @@ namespace BDArmory.CounterMeasure
 
             if (rcsrCount > 0)
             {
-                rcsr = Mathf.Clamp((rcsrTotal * rcsrCount), 0.0f, 1); //allow for 100% stealth (cloaking device)
+                rcsr = Mathf.Max((rcsrTotal * rcsrCount), 0.0f); //allow for 100% stealth (cloaking device) or stealth malus (radar reflectors)
             }
             else
             {
