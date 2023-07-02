@@ -189,7 +189,7 @@ namespace BDArmory.Utils
             if (registryIBDAIControl.ContainsKey(vessel) && (partsAdded || registryIBDAIControl[vessel].Count > 0))
             {
                 var IBDAIControls = vessel.FindPartModulesImplementing<IBDAIControl>();
-                registryIBDAIControl[vessel] = SortByProximityToRoot2(ref IBDAIControls);
+                registryIBDAIControl[vessel] = SortByProximityToRootIBDAI(ref IBDAIControls);
                 if (BDArmorySettings.DEBUG_OTHER) Debug.Log($"[BDArmory.VesselModuleRegistry]: Specialised registry entry for {vessel.vesselName} updated to have {registryIBDAIControl[vessel].Count} modules of type {typeof(IBDAIControl).Name}.");
             }
             if (registryModuleWeapon.ContainsKey(vessel) && (partsAdded || registryModuleWeapon[vessel].Count > 0))
@@ -359,7 +359,13 @@ namespace BDArmory.Utils
             modules.Sort((m1, m2) => (ProximityToRoot(m1.part).CompareTo(ProximityToRoot(m2.part))));
             return modules;
         }
-        public static List<T> SortByProximityToRoot2<T>(ref List<T> modules) where T : IBDAIControl
+        /// <summary>
+        /// Specialisation for IBDAI due to it being an interface.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="modules"></param>
+        /// <returns></returns>
+        public static List<T> SortByProximityToRootIBDAI<T>(ref List<T> modules) where T : IBDAIControl
         {
             modules.Sort((m1, m2) => (ProximityToRoot(m1.part).CompareTo(ProximityToRoot(m2.part))));
             return modules;
@@ -493,7 +499,7 @@ namespace BDArmory.Utils
             if (!registryIBDAIControl.ContainsKey(vessel))
             {
                 var IBDAIControls = vessel.FindPartModulesImplementing<IBDAIControl>();
-                registryIBDAIControl.Add(vessel, SortByProximityToRoot2(ref IBDAIControls));
+                registryIBDAIControl.Add(vessel, SortByProximityToRootIBDAI(ref IBDAIControls));
                 vesselPartCounts[vessel] = vessel.Parts.Count;
                 if (BDArmorySettings.DEBUG_OTHER) Debug.Log($"[BDArmory.VesselModuleRegistry]: Vessel {vessel.vesselName} added to specialised {typeof(IBDAIControl).Name} registry.");
             }
