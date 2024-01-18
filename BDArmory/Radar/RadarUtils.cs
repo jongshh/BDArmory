@@ -1970,7 +1970,7 @@ namespace BDArmory.Radar
         public static bool MissileIsThreat(MissileBase missile, MissileFire mf, bool threatToMeOnly = true)
         {
             if (missile == null || missile.part == null) return false;
-            Vector3 vectorFromMissile = mf.vessel.CoM - missile.part.transform.position;      
+            Vector3 vectorFromMissile = mf.vessel.CoM - missile.part.transform.position;
             if ((vectorFromMissile.sqrMagnitude > (mf.guardRange * mf.guardRange)) && (missile.TargetingMode != MissileBase.TargetingModes.Radar)) return false;
             bool maneuverCapability = missile.vessel.InVacuum() ? true : missile.vessel.srfSpeed > missile.GetKinematicSpeed();  // Missiles with no ability to hit target are not a threat
             if (threatToMeOnly)
@@ -2060,8 +2060,8 @@ namespace BDArmory.Radar
             localPosition.y = 0;
             if (BDArmorySettings.LOGARITHMIC_RADAR_DISPLAY)
             {
-                scale = Mathf.Log(localPosition.magnitude + 1) / Mathf.Log(maxDistance + 1);
-                localPosition = localPosition.normalized * scale * scale; // Log^2 gives a nicer curve than log.
+                scale = Mathf.Log(localPosition.magnitude / scale + 1) / Mathf.Log(radarRect.height + 1);
+                localPosition = localPosition.normalized * scale;
                 return new Vector2(radarRect.width * (1 + localPosition.x) / 2, radarRect.height * (1 - localPosition.z) / 2);
             }
             else
@@ -2073,7 +2073,7 @@ namespace BDArmory.Radar
         /// <summary>
         /// Helper method: map a position onto the radar display (for non-omni radars)
         /// </summary>
-        public static Vector2 WorldToRadarRadial(Vector3 worldPosition, Transform referenceTransform, Rect radarRect, float maxDistance, float maxAngle)
+        public static Vector2 WorldToRadarRadial(Vector3 worldPosition, Transform referenceTransform, Rect radarRect, float maxDistance, float maxAngle, bool noLog = false)
         {
             if (referenceTransform == null) return new Vector2();
 
@@ -2085,10 +2085,10 @@ namespace BDArmory.Radar
             float xPos = (radarRect.width / 2) + ((angle / maxAngle) * radarRect.width / 2);
             float yPos = radarRect.height;
 
-            if (BDArmorySettings.LOGARITHMIC_RADAR_DISPLAY)
+            if (BDArmorySettings.LOGARITHMIC_RADAR_DISPLAY && !noLog)
             {
-                scale = Mathf.Log(localPosition.magnitude + 1) / Mathf.Log(maxDistance + 1);
-                yPos -= radarRect.height * scale * scale;
+                scale = Mathf.Log(localPosition.magnitude / scale + 1) / Mathf.Log(radarRect.height + 1);
+                yPos -= radarRect.height * scale * scale; // Log^2 scales better here for some reason.
             }
             else
             {

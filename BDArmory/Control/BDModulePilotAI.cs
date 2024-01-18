@@ -1094,6 +1094,7 @@ namespace BDArmory.Control
         Vector3 debugSquigglySquidDirection;
 #endif
         Vector3 angVelRollTarget;
+        Vector3 debugBreakDirection = default;
         #endregion
 
         #region Wing Command
@@ -3150,6 +3151,7 @@ namespace BDArmory.Control
             bool hasABEngines = speedController.multiModeEngines.Count > 0;
 
             collisionDetectionTicker += 2;
+            if (BDArmorySettings.DEBUG_LINES) debugBreakDirection = default;
 
             if (weaponManager)
             {
@@ -3187,7 +3189,7 @@ namespace BDArmory.Control
                         Vector3 threatDirection = -1f * weaponManager.incomingMissileVessel.Velocity();
                         threatDirection = threatDirection.ProjectOnPlanePreNormalized(upDirection);
                         float sign = Vector3.SignedAngle(threatDirection, vessel.Velocity().ProjectOnPlanePreNormalized(upDirection), upDirection);
-                        Vector3 breakDirection = Vector3.Cross(Mathf.Sign(sign) * upDirection, threatDirection).ProjectOnPlanePreNormalized(upDirection);
+                        Vector3 breakDirection = Vector3.Cross(Mathf.Sign(sign) * upDirection, threatDirection).ProjectOnPlanePreNormalized(upDirection); // Break left or right depending on which side the missile is coming in on.
 
                         // Missile kinematics check to see if alternate break directions are better (crank or turn around and run)
                         bool dive = true;
@@ -3210,10 +3212,11 @@ namespace BDArmory.Control
                             angle = Mathf.Clamp(angle - angleAdjMissile, 0, 75) * Mathf.Deg2Rad;
                             breakDirection = Vector3.RotateTowards(breakDirection, -upDirection, angle, 0);
                         }
+                        if (BDArmorySettings.DEBUG_LINES) debugBreakDirection = breakDirection;
 
                         // Rotate target direction towards break direction, starting with 15 deg, and increasing to maxAllowedAoA as missile gets closer
-                        float rotAngle = Mathf.Deg2Rad * Mathf.Lerp(maxAllowedAoA, 15f, Mathf.Clamp01(weaponManager.incomingMissileTime / weaponManager.evadeThreshold));
-                        targetDirection = Vector3.RotateTowards(vessel.Velocity(), breakDirection, rotAngle, 0).normalized;
+                        float rotAngle = Mathf.Deg2Rad * Mathf.Lerp(Mathf.Min(maxAllowedAoA, 90), 15f, Mathf.Clamp01(weaponManager.incomingMissileTime / weaponManager.evadeThreshold));
+                        targetDirection = Vector3.RotateTowards(vesselTransform.up, breakDirection, rotAngle, 0).normalized;
 
                         if (weaponManager.isFlaring)
                             if (!hasABEngines)
@@ -4191,7 +4194,7 @@ namespace BDArmory.Control
             Vector3 projectedTargetDirection = targetDirection.ProjectOnPlanePreNormalized(upDirection);
             var cosAngle = Vector3.Dot(targetDirection, forwardDirection);
             invertRollTarget = false;
-            if (cosAngle < 0)
+            if (cosAngle < -1e-8f)
             {
                 if (canExtend && targetDistance > BankedTurnDistance) // For long-range turning, do a banked turn (horizontal) instead to conserve energy, but only if extending is allowed.
                 {
@@ -4201,13 +4204,15 @@ namespace BDArmory.Control
                 {
                     if (cosAngle < ImmelmannTurnCosAngle) // Otherwise, if the target is almost directly behind, do an Immelmann turn.
                     {
+                        // FIXME This condition needs improving. For low altitude inverted oscillations, we want to do an inverted Immelmann, but for most other cases, we want a stronger bias towards a standard Immelmann.
                         targetDirection = Vector3.RotateTowards(-vesselTransform.up, vessel.angularVelocity.x < 0.1f ? -vesselTransform.forward : vesselTransform.forward, Mathf.Deg2Rad * ImmelmannTurnAngle, 0); // If the target is in our blind spot, just pitch up (or down depending on pitch angular velocity) to get a better view. (Immelmann turn.)
                         invertRollTarget = Vector3.Dot(targetDirection, vesselTransform.forward) > 0; // Target is behind and below, pitch down first then roll up.
                     }
+                    // FIXME If the target isn't within the Immelmann angle, but is when only considering the pitch direction, then the direction should be skewed upwards, i.e, treat the negative Immelmann pitch angle as the horizontal.
                     targetPosition = vesselTransform.position + Vector3.Cross(Vector3.Cross(forwardDirection, targetDirection), forwardDirection).normalized * 200; // Make the target position 90° from vesselTransform.up.
                 }
             }
-            else if (steerMode != SteerModes.Aiming)
+            else if (steerMode == SteerModes.NormalFlight)
             {
                 float distance = (targetPosition - vesselTransform.position).magnitude;
                 if (vertFactor < 0)
@@ -4557,8 +4562,9 @@ namespace BDArmory.Control
 
             GUIUtils.DrawLineBetweenWorldPositions(vesselTransform.position, vesselTransform.position + rollTarget, 2, Color.blue);
 #if DEBUG
-            if (IsEvading || IsExtending) GUIUtils.DrawLineBetweenWorldPositions(vesselTransform.position, vesselTransform.position + debugSquigglySquidDirection.normalized * 10, 5, Color.cyan);
+            if (IsEvading || IsExtending) GUIUtils.DrawLineBetweenWorldPositions(vesselTransform.position, vesselTransform.position + debugSquigglySquidDirection.normalized * 10, 1, Color.cyan);
 #endif
+            if (IsEvading && debugBreakDirection != default) GUIUtils.DrawLineBetweenWorldPositions(vesselTransform.position, vesselTransform.position + debugBreakDirection.normalized * 20, 5, Color.cyan);
             GUIUtils.DrawLineBetweenWorldPositions(vesselTransform.position + (0.05f * vesselTransform.right), vesselTransform.position + (0.05f * vesselTransform.right) + angVelRollTarget, 2, Color.green);
             if (avoidingTerrain)
             {
@@ -4687,7 +4693,7 @@ namespace BDArmory.Control
 
             public void Update()
             {
-                rollRelevance = rollRelevanceMomentum * rollRelevance + (1f - rollRelevanceMomentum) * Mathf.Min(_rollRelevance.Average(), 0.5f); // Clamp roll relevance to at most 0.5 in case of freak measurements.
+                rollRelevance = rollRelevanceMomentum * rollRelevance + (1f - rollRelevanceMomentum) * Mathf.Min(_rollRelevance.Average(), 1f); // Clamp roll relevance to at most 1 in case of freak measurements.
                 _rollRelevance.Clear();
             }
 

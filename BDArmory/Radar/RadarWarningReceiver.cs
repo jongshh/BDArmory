@@ -367,6 +367,7 @@ namespace BDArmory.Radar
 
             if (resizingWindow && Event.current.type == EventType.MouseUp) { resizingWindow = false; }
 
+            if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, BDArmorySetup.WindowRectRwr.position);
             BDArmorySetup.WindowRectRwr = GUI.Window(94353, BDArmorySetup.WindowRectRwr, WindowRwr, "Radar Warning Receiver", GUI.skin.window);
             GUIUtils.UseMouseEventInRect(RwrDisplayRect);
         }
@@ -430,28 +431,14 @@ namespace BDArmory.Radar
             {
                 if (Mouse.delta.x != 0 || Mouse.delta.y != 0)
                 {
-                    float diff = Mouse.delta.x + Mouse.delta.y;
-                    UpdateRWRScale(diff);
+                    float diff = (Mathf.Abs(Mouse.delta.x) > Mathf.Abs(Mouse.delta.y) ? Mouse.delta.x : Mouse.delta.y) / BDArmorySettings.UI_SCALE;
+                    BDArmorySettings.RWR_WINDOW_SCALE = Mathf.Clamp(BDArmorySettings.RWR_WINDOW_SCALE + diff / RwrSize, BDArmorySettings.RWR_WINDOW_SCALE_MIN, BDArmorySettings.RWR_WINDOW_SCALE_MAX);
                     BDArmorySetup.ResizeRwrWindow(BDArmorySettings.RWR_WINDOW_SCALE);
                 }
             }
             // End Resizing code.
 
             GUIUtils.RepositionWindow(ref BDArmorySetup.WindowRectRwr);
-        }
-
-        internal static void UpdateRWRScale(float diff)
-        {
-            float scaleDiff = ((diff / (BDArmorySetup.WindowRectRwr.width + BDArmorySetup.WindowRectRwr.height)) * 100 * .01f);
-            BDArmorySettings.RWR_WINDOW_SCALE += Mathf.Abs(scaleDiff) > .01f ? scaleDiff : scaleDiff > 0 ? .01f : -.01f;
-            BDArmorySettings.RWR_WINDOW_SCALE =
-              BDArmorySettings.RWR_WINDOW_SCALE > BDArmorySettings.RWR_WINDOW_SCALE_MAX
-                ? BDArmorySettings.RWR_WINDOW_SCALE_MAX
-                : BDArmorySettings.RWR_WINDOW_SCALE;
-            BDArmorySettings.RWR_WINDOW_SCALE =
-              BDArmorySettings.RWR_WINDOW_SCALE_MIN > BDArmorySettings.RWR_WINDOW_SCALE
-                ? BDArmorySettings.RWR_WINDOW_SCALE_MIN
-                : BDArmorySettings.RWR_WINDOW_SCALE;
         }
 
         public static void PingRWR(Vessel v, Vector3 source, RWRThreatTypes type, float persistTime)

@@ -366,6 +366,7 @@ namespace BDArmory.UI
                     maySavethisInstance = true;
                 }
                 WindowRectGUI = new Rect(Screen.width - toolWindowWidth - 40, 150, toolWindowWidth, toolWindowHeight);
+                if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, WindowRectGUI.position);
                 WindowRectGUI = GUI.Window(GUIUtility.GetControlID(FocusType.Passive), WindowRectGUI, TeamIconGUI, windowTitle, BDArmorySetup.BDGuiSkin.window);
             }
             title = new GUIStyle(GUI.skin.label);

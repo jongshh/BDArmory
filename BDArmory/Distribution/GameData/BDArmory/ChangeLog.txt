@@ -11,6 +11,8 @@
 	- New Opacity option in BDA Team Icons to set icon opacity.
 	- Adds CASE ammo explosion radii visualizer, enable via F3.
 	- Continuous Spawn now shows lives remaining in the Vessel Switcher GUI.
+	- Add a UI scaling option for BDA's windows.
+	- Improve the logarithmic scaling in the radar windows.
 - AI / WM:
 	- Add new "Kinematic Msl Evasion" toggle to Pilot AI under the evasion settings. When this is enabled the AI will evaluate the best maneuver to defeat a beyond-visual-range (BVR) missile using only kinematic maneuvers. The Time to Impact Before Evade setting on the weapons manager should be set to a high value when this evasion option is enabled. Maneuvers the AI will use are:
 		- Crank - Fly at an angle to the target, while still maintaining radar lock.
@@ -41,7 +43,9 @@
 		- Fix radar missiles not locking and firing until well within their max engagement range.
 		- Add new dragArea configuration variable for missiles to set reference area for drag independently from the lift area. If not set, this defaults to the liftArea setting in the missile configuration file.
 		- Fix missiles ignoring guns with priority.
-    - EMP warheads only detonate when armed and no longer do additional damage.
+		- EMP warheads only detonate when armed and no longer do additional damage.
+- Competition:
+	- Add an option for the continuous spawn central point to follow the centroid of surviving craft (biased back towards the original spawn point).
 
 v1.6.9.0
 IMPROVEMENTS / FIXES

@@ -185,13 +185,14 @@ namespace BDArmory.UI
 
             if (cam == null) return;
 
+            var guiMatrix = GUI.matrix;
             GUI.matrix = Matrix4x4.identity;
             float length = 60;
 
             Rect upRect = new Rect(Pointer.x - (width / 2), Pointer.y - length, width, length);
             GUIUtility.RotateAroundPivot(-angle + 180, Pointer);
             GUIUtils.DrawRectangle(upRect, color);
-            GUI.matrix = Matrix4x4.identity;
+            GUI.matrix = guiMatrix;
         }
         void OnGUI()
         {

@@ -404,26 +404,36 @@ namespace BDArmory.VesselSpawning
         {
             if (!HighLogic.LoadedSceneIsFlight) return;
             if (!BDArmorySetup.GAME_UI_ENABLED) return;
+            var guiMatrix = GUI.matrix;
             if (showTemplateSelection)
             {
                 if (Event.current.type == EventType.MouseDown && !templateSelectionWindowRect.Contains(Event.current.mousePosition))
                     HideTemplateSelection();
                 else
+                {
+                    if (BDArmorySettings.UI_SCALE != 1) { GUI.matrix = guiMatrix; GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, templateSelectionWindowRect.position); }
                     templateSelectionWindowRect = GUILayout.Window(GUIUtility.GetControlID(FocusType.Passive), templateSelectionWindowRect, TemplateSelectionWindow, StringUtils.Localize("#LOC_BDArmory_Settings_CustomSpawnTemplate_TemplateSelection"), BDArmorySetup.BDGuiSkin.window);
+                }
             }
             if (showCrewSelection)
             {
                 if (Event.current.type == EventType.MouseDown && !crewSelectionWindowRect.Contains(Event.current.mousePosition))
                     HideCrewSelection();
                 else
+                {
+                    if (BDArmorySettings.UI_SCALE != 1) { GUI.matrix = guiMatrix; GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, crewSelectionWindowRect.position); }
                     crewSelectionWindowRect = GUILayout.Window(GUIUtility.GetControlID(FocusType.Passive), crewSelectionWindowRect, CrewSelectionWindow, StringUtils.Localize("#LOC_BDArmory_VesselMover_CrewSelection"), BDArmorySetup.BDGuiSkin.window);
+                }
             }
             if (showVesselSelection)
             {
                 if (Event.current.type == EventType.MouseDown && !vesselSelectionWindowRect.Contains(Event.current.mousePosition))
                     HideVesselSelection();
                 else
+                {
+                    if (BDArmorySettings.UI_SCALE != 1) { GUI.matrix = guiMatrix; GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, vesselSelectionWindowRect.position); }
                     vesselSelectionWindowRect = GUILayout.Window(GUIUtility.GetControlID(FocusType.Passive), vesselSelectionWindowRect, VesselSelectionWindow, StringUtils.Localize("#LOC_BDArmory_VesselMover_VesselSelection"), BDArmorySetup.BDGuiSkin.window);
+                }
             }
         }
 
@@ -440,7 +450,7 @@ namespace BDArmory.VesselSpawning
         public void ShowTemplateSelection(Vector2 position)
         {
             HideOtherWindows("template");
-            templateSelectionWindowRect.position = position + new Vector2(-templateSelectionWindowRect.width / 2, 20); // Centred and slightly below.
+            templateSelectionWindowRect.position = position + BDArmorySettings.UI_SCALE * new Vector2(-templateSelectionWindowRect.width / 2, 20); // Centred and slightly below.
             showTemplateSelection = true;
             bringTemplateSelectionToFront = true;
             GUIUtils.SetGUIRectVisible(_templateGUICheckIndex, true);
@@ -531,7 +541,7 @@ namespace BDArmory.VesselSpawning
                 craftBrowser = new CustomCraftBrowserDialog();
                 craftBrowser.UpdateList();
             }
-            vesselSelectionWindowRect.position = position + new Vector2(-vesselSelectionWindowRect.width - 120, -vesselSelectionWindowRect.height / 2); // Centred and slightly offset to allow clicking the same spot.
+            vesselSelectionWindowRect.position = position + BDArmorySettings.UI_SCALE * new Vector2(-vesselSelectionWindowRect.width - 120, -vesselSelectionWindowRect.height / 2); // Centred and slightly offset to allow clicking the same spot.
             showVesselSelection = true;
             focusFilterField = true; // Focus the filter text field.
             bringVesselSelectionToFront = true;
@@ -677,7 +687,7 @@ namespace BDArmory.VesselSpawning
                 return;
             }
             currentVesselSpawnConfig = vesselSpawnConfig;
-            crewSelectionWindowRect.position = position + new Vector2(50, -crewSelectionWindowRect.height / 2); // Centred and slightly offset to allow clicking the same spot.
+            crewSelectionWindowRect.position = position + BDArmorySettings.UI_SCALE * new Vector2(50, -crewSelectionWindowRect.height / 2); // Centred and slightly offset to allow clicking the same spot.
             showCrewSelection = true;
             bringCrewSelectionToFront = true;
             if (ignoreActive)

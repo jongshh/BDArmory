@@ -593,11 +593,9 @@ namespace BDArmory.UI
             if (!stylesConfigured) ConfigureStyles();
             if (HighLogic.LoadedSceneIsFlight) BDArmorySetup.SetGUIOpacity();
             if (resizingWindow && Event.current.type == EventType.MouseUp) { resizingWindow = false; }
+            if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, BDArmorySetup.WindowRectAI.position);
             BDArmorySetup.WindowRectAI = GUI.Window(GUIUtility.GetControlID(FocusType.Passive), BDArmorySetup.WindowRectAI, WindowRectAI, "", BDArmorySetup.BDGuiSkin.window);//"BDA Weapon Manager"
             if (HighLogic.LoadedSceneIsFlight) BDArmorySetup.SetGUIOpacity(false);
-            GUIUtils.RepositionWindow(ref BDArmorySetup.WindowRectAI);
-            GUIUtils.UpdateGUIRect(BDArmorySetup.WindowRectAI, _guiCheckIndex);
-            GUIUtils.UseMouseEventInRect(BDArmorySetup.WindowRectAI);
         }
 
         void ConfigureStyles()
@@ -2795,17 +2793,18 @@ namespace BDArmory.UI
 
             if (Event.current.type == EventType.Repaint && resizingWindow)
             {
-                WindowHeight += Mouse.delta.y;
+                WindowHeight += Mouse.delta.y / BDArmorySettings.UI_SCALE;
                 WindowHeight = Mathf.Max(WindowHeight, 305);
-                GUI.Label(new Rect(WindowWidth / 2, WindowHeight - 26, WindowWidth / 2 - 26, 26), $"Resizing: {WindowHeight}", Label);
+                GUI.Label(new Rect(WindowWidth / 2, WindowHeight - 26, WindowWidth / 2 - 26, 26), $"Resizing: {WindowHeight * BDArmorySettings.UI_SCALE}", Label);
             }
             #endregion
 
             var previousWindowHeight = BDArmorySetup.WindowRectAI.height;
             BDArmorySetup.WindowRectAI.height = WindowHeight;
             BDArmorySetup.WindowRectAI.width = WindowWidth;
-            if (!resizingWindow && BDArmorySettings.STRICT_WINDOW_BOUNDARIES && WindowHeight < previousWindowHeight && Mathf.Round(BDArmorySetup.WindowRectAI.y + previousWindowHeight) == Screen.height) // Window shrunk while being at edge of screen.
-                BDArmorySetup.WindowRectAI.y = Screen.height - BDArmorySetup.WindowRectAI.height;
+            GUIUtils.RepositionWindow(ref BDArmorySetup.WindowRectAI, previousWindowHeight);
+            GUIUtils.UpdateGUIRect(BDArmorySetup.WindowRectAI, _guiCheckIndex);
+            GUIUtils.UseMouseEventInRect(BDArmorySetup.WindowRectAI);
         }
         #endregion GUI
 

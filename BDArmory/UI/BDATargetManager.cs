@@ -944,7 +944,7 @@ namespace BDArmory.UI
             debugString.AppendLine($"Radar Lockbreak Factor: " + radarSig.radarLockbreakFactor.ToString("0.0"));
             debugString.AppendLine("Visibility Modifiers: " + (cloakInfo != null ? $"Optical: {(cloakInfo.opticalReductionFactor * 100).ToString("0.00")}%, " +
                 $"Thermal: {(cloakInfo.thermalReductionFactor * 100).ToString("0.00")}%" : "N/A"));
-            debugStringLineCount += 8;
+            debugStringLineCount += 10;
         }
 
         public void SaveGPSTargets(ConfigNode saveNode = null)

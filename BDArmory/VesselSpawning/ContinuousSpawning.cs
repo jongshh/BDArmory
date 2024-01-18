@@ -100,7 +100,6 @@ namespace BDArmory.VesselSpawning
         }
 
         private Coroutine spawnVesselsContinuouslyCoroutine;
-        // HashSet<Vessel> vesselsToActivate = new HashSet<Vessel>();
         // Spawns all vessels in a downward facing ring and activates them (autopilot and AG10, then stage if no engines are firing), then respawns any that die. An altitude of 1000m should be plenty.
         // Note: initial vessel separation tends towards 2*pi*spawnDistanceFactor from above for >3 vessels.
         private IEnumerator SpawnVesselsContinuouslyCoroutine(CircularSpawnConfig spawnConfig)
@@ -137,17 +136,8 @@ namespace BDArmory.VesselSpawning
             #region Spawning
             ResetInternals();
             continuousSpawnedVesselCount = 0; // Reset our spawned vessel count.
-            // vesselsToActivate.Clear(); // Clear any pending vessel activations.
-            // Get the spawning point in world position coordinates.
-            var terrainAltitude = FlightGlobals.currentMainBody.TerrainAltitude(spawnConfig.latitude, spawnConfig.longitude);
-            var spawnPoint = FlightGlobals.currentMainBody.GetWorldSurfacePosition(spawnConfig.latitude, spawnConfig.longitude, terrainAltitude + spawnConfig.altitude);
-            var radialUnitVector = (spawnPoint - FlightGlobals.currentMainBody.transform.position).normalized;
-
             var craftURLToVesselName = new Dictionary<string, string>();
-            Vector3d craftGeoCoords;
             Vector3 craftSpawnPosition;
-            var refDirection = Math.Abs(Vector3.Dot(Vector3.up, radialUnitVector)) < 0.71f ? Vector3.up : Vector3.forward; // Avoid that the reference direction is colinear with the local surface normal.
-            var geeDirection = FlightGlobals.getGeeForceAtPosition(Vector3.zero);
             var spawnSlots = OptimiseSpawnSlots(BDArmorySettings.VESSEL_SPAWN_CONCURRENT_VESSELS > 0 ? Math.Min(spawnConfig.craftFiles.Count, BDArmorySettings.VESSEL_SPAWN_CONCURRENT_VESSELS) : spawnConfig.craftFiles.Count);
             var spawnCounts = spawnConfig.craftFiles.ToDictionary(c => c, c => 0);
             var spawnQueue = new Queue<string>();
@@ -162,9 +152,6 @@ namespace BDArmory.VesselSpawning
                 currentUpdateTick = BDACompetitionMode.Instance.nextUpdateTick;
                 if (currentlySpawningCount == 0) // Do nothing while we're spawning vessels.
                 {
-                    // Reacquire the spawn point as the local coordinate system may have changed (floating origin adjustments, local body rotation, etc.).
-                    spawnPoint = FlightGlobals.currentMainBody.GetWorldSurfacePosition(spawnConfig.latitude, spawnConfig.longitude, terrainAltitude + spawnConfig.altitude);
-                    radialUnitVector = (spawnPoint - FlightGlobals.currentMainBody.transform.position).normalized;
                     // Check if sliders have changed.
                     if (spawnSlots.Count != (BDArmorySettings.VESSEL_SPAWN_CONCURRENT_VESSELS > 0 ? Math.Min(spawnConfig.craftFiles.Count, BDArmorySettings.VESSEL_SPAWN_CONCURRENT_VESSELS) : spawnConfig.craftFiles.Count))
                     {
@@ -189,7 +176,7 @@ namespace BDArmory.VesselSpawning
                         BDACompetitionMode.Instance.StopCompetition();
                         break;
                     }
-                    { // Perform a "bubble shuffle" (randomly swap pairs of craft moving through the queue).
+                    {// Perform a "bubble shuffle" (randomly swap pairs of craft moving through the queue).
                         List<string> shufflePool = new();
                         Queue<string> bubbleShuffleQueue = new();
                         while (spawnQueue.Count > 0)
@@ -219,6 +206,20 @@ namespace BDArmory.VesselSpawning
                     {
                         VesselModuleRegistry.CleanRegistries(); // Clean out any old entries.
                         yield return new WaitForSeconds(1); // Wait 1s before spawning new vessels to give the death cam a little extra time.
+
+                        // Get the spawning point in world position coordinates.
+                        var terrainAltitude = FlightGlobals.currentMainBody.TerrainAltitude(spawnConfig.latitude, spawnConfig.longitude);
+                        var spawnPoint = FlightGlobals.currentMainBody.GetWorldSurfacePosition(spawnConfig.latitude, spawnConfig.longitude, terrainAltitude + spawnConfig.altitude);
+                        var radialUnitVector = (spawnPoint - FlightGlobals.currentMainBody.transform.position).normalized;
+                        if (BDArmorySettings.VESSEL_SPAWN_CS_FOLLOWS_CENTROID) // Allow the spawn point to drift, but bias it back to the original spawn point.
+                        {
+                            var vessels = LoadedVesselSwitcher.Instance.Vessels.Values.SelectMany(v => v).Where(v => v != null).ToList();
+                            foreach (var vessel in vessels) spawnPoint += vessel.CoM;
+                            spawnPoint /= 1 + vessels.Count;
+                            radialUnitVector = (spawnPoint - FlightGlobals.currentMainBody.transform.position).normalized;
+                            spawnPoint += (spawnConfig.altitude - BodyUtils.GetTerrainAltitudeAtPos(spawnPoint)) * radialUnitVector; // Reset the altitude to the desired spawn altitude.
+                        }
+                        var refDirection = Math.Abs(Vector3.Dot(Vector3.up, radialUnitVector)) < 0.71f ? Vector3.up : Vector3.forward; // Avoid that the reference direction is colinear with the local surface normal.
                         // Configure vessel spawn configs
                         foreach (var craftURL in craftToSpawn)
                         {
@@ -228,7 +229,6 @@ namespace BDArmory.VesselSpawning
                             continuousSpawnedVesselCount %= spawnSlots.Count;
                             var direction = (Quaternion.AngleAxis(heading, radialUnitVector) * refDirection).ProjectOnPlanePreNormalized(radialUnitVector).normalized;
                             craftSpawnPosition = spawnPoint + spawnDistance * direction;
-                            FlightGlobals.currentMainBody.GetLatLonAlt(craftSpawnPosition, out craftGeoCoords.x, out craftGeoCoords.y, out craftGeoCoords.z); // Convert spawn point to geo-coords for the actual spawning function.
                             StartCoroutine(SpawnCraft(new VesselSpawnConfig(craftURL, craftSpawnPosition, direction, (float)spawnConfig.altitude, -80f, true, spawnInOrbit, 0, true)));
                         }
                         craftURLToVesselName = spawnedVesselURLs.ToDictionary(kvp => kvp.Value, kvp => kvp.Key); // Update the vesselName-to-craftURL dictionary for the latest spawns.

@@ -303,12 +303,10 @@ namespace BDArmory.UI
                 if (BDArmorySettings.GRAVITY_HACKS)
                     windowTitle = windowTitle + " (" + BDACompetitionMode.gravityMultiplier.ToString("0.0") + "G)";
 
-                ResizeWindow();
-                // this Rect initialization ensures any save issues with height or width of the window are resolved
-                BDArmorySetup.WindowRectVesselSwitcher = new Rect(BDArmorySetup.WindowRectVesselSwitcher.x, BDArmorySetup.WindowRectVesselSwitcher.y, windowSize.x, windowSize.y);
                 BDArmorySetup.SetGUIOpacity();
+                if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, BDArmorySetup.WindowRectVesselSwitcher.position);
                 BDArmorySetup.WindowRectVesselSwitcher = GUI.Window(10293444, BDArmorySetup.WindowRectVesselSwitcher, WindowVesselSwitcher, windowTitle, BDArmorySetup.BDGuiSkin.window); //"BDA Vessel Switcher"
-                GUIUtils.UpdateGUIRect(BDArmorySetup.WindowRectVesselSwitcher, _guiCheckIndex);
+                ResizeWindow();
                 BDArmorySetup.SetGUIOpacity(false);
             }
             else
@@ -326,14 +324,10 @@ namespace BDArmory.UI
         private void ResizeWindow()
         {
             if (resizingWindow) windowSize.x = Mathf.Clamp(windowSize.x, 350, Screen.width - BDArmorySetup.WindowRectVesselSwitcher.x);
-            if (BDArmorySettings.STRICT_WINDOW_BOUNDARIES)
-            {
-                if (windowSize.y < BDArmorySetup.WindowRectVesselSwitcher.height && Mathf.RoundToInt(BDArmorySetup.WindowRectVesselSwitcher.yMax) == Screen.height) // Window shrunk while being at edge of screen.
-                    BDArmorySetup.WindowRectVesselSwitcher.y = Screen.height - windowSize.y;
-            }
+            var previousWindowHeight = BDArmorySetup.WindowRectVesselSwitcher.height;
             BDArmorySetup.WindowRectVesselSwitcher.size = windowSize;
-            GUIUtils.RepositionWindow(ref BDArmorySetup.WindowRectVesselSwitcher);
-            windowSize = BDArmorySetup.WindowRectVesselSwitcher.size;
+            GUIUtils.RepositionWindow(ref BDArmorySetup.WindowRectVesselSwitcher, previousWindowHeight);
+            GUIUtils.UpdateGUIRect(BDArmorySetup.WindowRectVesselSwitcher, _guiCheckIndex);
         }
 
         public void ResetDeadVessels() => deadVesselStrings.Clear(); // Reset the dead vessel strings so that they get recalculated.
@@ -671,7 +665,7 @@ namespace BDArmory.UI
             var resizeRect = new Rect(windowSize.x - 16, windowSize.y - 16, 16, 16);
             GUI.DrawTexture(resizeRect, GUIUtils.resizeTexture, ScaleMode.StretchToFill, true);
             if (Event.current.type == EventType.MouseDown && resizeRect.Contains(Event.current.mousePosition)) resizingWindow = true;
-            if (resizingWindow && Event.current.type == EventType.Repaint) windowSize.x += Mouse.delta.x;
+            if (resizingWindow && Event.current.type == EventType.Repaint) windowSize.x += Mouse.delta.x / BDArmorySettings.UI_SCALE;
             #endregion
         }
 

@@ -710,6 +710,7 @@ namespace BDArmory.Targeting
                     //window
                     if (activeCam == this && TargetingCamera.ReadyForUse)
                     {
+                        if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, BDArmorySetup.WindowRectTargetingCam.position);
                         BDArmorySetup.WindowRectTargetingCam = GUI.Window(125452, BDArmorySetup.WindowRectTargetingCam, WindowTargetCam, "Target Camera", GUI.skin.window);
                         GUIUtils.UseMouseEventInRect(BDArmorySetup.WindowRectTargetingCam);
                     }
@@ -755,6 +756,7 @@ namespace BDArmory.Targeting
             }
 
             windowIsOpen = true;
+            var guiMatrix = GUI.matrix;
 
             GUI.DragWindow(new Rect(0, 0, BDArmorySetup.WindowRectTargetingCam.width - 18, 30));
             if (GUI.Button(new Rect(BDArmorySetup.WindowRectTargetingCam.width - 18, 2, 16, 16), "X", GUI.skin.button))
@@ -822,15 +824,15 @@ namespace BDArmory.Targeting
             Vector3 localUp = vessel.ReferenceTransform.InverseTransformDirection(upDirection);
             localUp = localUp.ProjectOnPlanePreNormalized(Vector3.up).normalized;
             float rollAngle = -BDAMath.SignedAngle(-Vector3.forward, localUp, Vector3.right);
-            GUIUtility.RotateAroundPivot(rollAngle, rollRect.center);
+            GUIUtility.RotateAroundPivot(rollAngle, guiMatrix * rollRect.center);
             GUI.DrawTexture(rollRect, rollIndicatorTexture, ScaleMode.StretchToFill, true);
-            GUI.matrix = Matrix4x4.identity;
+            GUI.matrix = guiMatrix;
 
             //target direction indicator
             float angleToTarget = BDAMath.SignedAngle(hForward, (targetPointPosition - transform.position).ProjectOnPlanePreNormalized(upDirection), Vector3.Cross(upDirection, hForward));
-            GUIUtility.RotateAroundPivot(angleToTarget, rollRect.center);
+            GUIUtility.RotateAroundPivot(angleToTarget, guiMatrix * rollRect.center);
             GUI.DrawTexture(rollRect, BDArmorySetup.Instance.targetDirectionTexture, ScaleMode.StretchToFill, true);
-            GUI.matrix = Matrix4x4.identity;
+            GUI.matrix = guiMatrix;
 
             //resizing
             Rect resizeRect =
@@ -845,22 +847,13 @@ namespace BDArmory.Targeting
             {
                 if (Mouse.delta.x != 0 || Mouse.delta.y != 0)
                 {
-                    float diff = Mouse.delta.x + Mouse.delta.y;
-                    UpdateTargetScale(diff);
+                    float diff = (Mathf.Abs(Mouse.delta.x) > Mathf.Abs(Mouse.delta.y) ? Mouse.delta.x : Mouse.delta.y) / BDArmorySettings.UI_SCALE;
+                    BDArmorySettings.TARGET_WINDOW_SCALE = Mathf.Clamp(BDArmorySettings.TARGET_WINDOW_SCALE + diff / camImageSize, BDArmorySettings.TARGET_WINDOW_SCALE_MIN, BDArmorySettings.TARGET_WINDOW_SCALE_MAX);
                     ResizeTargetWindow();
                 }
             }
             //ResetZoomKeys();
             GUIUtils.RepositionWindow(ref BDArmorySetup.WindowRectTargetingCam);
-        }
-
-        internal static void UpdateTargetScale(float diff)
-        {
-            float scaleDiff = ((diff / (BDArmorySetup.WindowRectTargetingCam.width + BDArmorySetup.WindowRectTargetingCam.height)) * 100 * .01f);
-            BDArmorySettings.TARGET_WINDOW_SCALE += Mathf.Abs(scaleDiff) > .01f ? scaleDiff : scaleDiff > 0 ? .01f : -.01f;
-            BDArmorySettings.TARGET_WINDOW_SCALE = Mathf.Clamp(BDArmorySettings.TARGET_WINDOW_SCALE,
-                BDArmorySettings.TARGET_WINDOW_SCALE_MIN,
-                BDArmorySettings.TARGET_WINDOW_SCALE_MAX);
         }
 
         private void DrawSlewButtons()

@@ -3,9 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UniLinq;
 using UnityEngine;
-using KSP.Localization;
 
 using BDArmory.Competition;
+using BDArmory.Settings;
 using BDArmory.Targeting;
 using BDArmory.UI;
 using BDArmory.Utils;
@@ -246,6 +246,7 @@ namespace BDArmory.Control
                 // this Rect initialization ensures any save issues with height or width of the window are resolved
                 //BDArmorySetup.WindowRectWingCommander = new Rect(BDArmorySetup.WindowRectWingCommander.x, BDArmorySetup.WindowRectWingCommander.y, windowWidth, windowHeight);
                 BDArmorySetup.SetGUIOpacity();
+                if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, BDArmorySetup.WindowRectWingCommander.position);
                 BDArmorySetup.WindowRectWingCommander = GUI.Window(1293293, BDArmorySetup.WindowRectWingCommander, WingmenWindow, StringUtils.Localize("#LOC_BDArmory_WingCommander_Title"),//"WingCommander"
                     BDArmorySetup.BDGuiSkin.window);
                 BDArmorySetup.SetGUIOpacity(false);

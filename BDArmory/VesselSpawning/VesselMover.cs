@@ -862,6 +862,7 @@ namespace BDArmory.VesselSpawning
         Messages _messageState = Messages.None;
         string customMessage = "";
         float messageDisplayTime = 0;
+        float previousVesselMoverWindowHeight = 0;
 
         private void OnGUI()
         {
@@ -872,6 +873,8 @@ namespace BDArmory.VesselSpawning
             if (BDArmorySetup.showVesselMoverGUI)
             {
                 BDArmorySetup.SetGUIOpacity();
+                var guiMatrix = GUI.matrix; // Store and restore the GUI.matrix so we can apply a different scaling for the WM window.
+                if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, BDArmorySetup.WindowRectVesselMover.position);
                 BDArmorySetup.WindowRectVesselMover = GUILayout.Window(
                     GUIUtility.GetControlID(FocusType.Passive),
                     BDArmorySetup.WindowRectVesselMover,
@@ -880,8 +883,11 @@ namespace BDArmory.VesselSpawning
                     BDArmorySetup.BDGuiSkin.window,
                     GUILayout.Width(windowWidth)
                 );
+                GUI.matrix = guiMatrix;
+                previousVesselMoverWindowHeight = BDArmorySetup.WindowRectVesselMover.height;
                 if (showVesselSelection)
                 {
+                    if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, BDArmorySetup.WindowRectVesselMoverVesselSelection.position);
                     BDArmorySetup.WindowRectVesselMoverVesselSelection = GUILayout.Window(
                         GUIUtility.GetControlID(FocusType.Passive),
                         BDArmorySetup.WindowRectVesselMoverVesselSelection,
@@ -889,9 +895,11 @@ namespace BDArmory.VesselSpawning
                         StringUtils.Localize("#LOC_BDArmory_VesselMover_VesselSelection"),
                         BDArmorySetup.BDGuiSkin.window
                     );
+                    GUI.matrix = guiMatrix;
                 }
                 else if (showCrewSelection)
                 {
+                    if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, crewSelectionWindowRect.position);
                     crewSelectionWindowRect = GUILayout.Window(
                         GUIUtility.GetControlID(FocusType.Passive),
                         crewSelectionWindowRect,
@@ -899,6 +907,7 @@ namespace BDArmory.VesselSpawning
                         StringUtils.Localize("#LOC_BDArmory_VesselMover_CrewSelection"),
                         BDArmorySetup.BDGuiSkin.window
                     );
+                    GUI.matrix = guiMatrix;
                 }
                 BDArmorySetup.SetGUIOpacity(false);
                 GUIUtils.UpdateGUIRect(BDArmorySetup.WindowRectVesselMover, guiCheckIndex);
@@ -1068,7 +1077,7 @@ namespace BDArmory.VesselSpawning
                     }
             }
             GUILayout.EndVertical();
-            GUIUtils.RepositionWindow(ref BDArmorySetup.WindowRectVesselMover);
+            GUIUtils.RepositionWindow(ref BDArmorySetup.WindowRectVesselMover, previousVesselMoverWindowHeight);
             GUIUtils.UpdateGUIRect(BDArmorySetup.WindowRectVesselMover, guiCheckIndex);
             GUIUtils.UseMouseEventInRect(BDArmorySetup.WindowRectVesselMover);
         }
@@ -1078,10 +1087,8 @@ namespace BDArmory.VesselSpawning
         /// </summary>
         void ResetWindowHeight()
         {
-            bool reposition = BDArmorySetup.WindowRectVesselMover.y + BDArmorySetup.WindowRectVesselMover.height == Screen.height;
             BDArmorySetup.WindowRectVesselMover.height = 0;
-            if (reposition) BDArmorySetup.WindowRectVesselMover.y = Screen.height;
-            GUIUtils.RepositionWindow(ref BDArmorySetup.WindowRectVesselMover);
+            GUIUtils.RepositionWindow(ref BDArmorySetup.WindowRectVesselMover, previousVesselMoverWindowHeight);
         }
 
         public void SetVisible(bool visible)
@@ -1228,7 +1235,7 @@ namespace BDArmory.VesselSpawning
                 resizingSelectionWindow = true;
             }
             if (resizingSelectionWindow && Event.current.type == EventType.Repaint)
-            { BDArmorySetup.WindowRectVesselMoverVesselSelection.size += Mouse.delta; }
+            { BDArmorySetup.WindowRectVesselMoverVesselSelection.size += Mouse.delta / BDArmorySettings.UI_SCALE; }
             #endregion
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();

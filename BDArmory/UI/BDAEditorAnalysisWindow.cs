@@ -6,6 +6,7 @@ using UnityEngine;
 
 using BDArmory.CounterMeasure;
 using BDArmory.Radar;
+using BDArmory.Settings;
 using BDArmory.Utils;
 
 namespace BDArmory.UI
@@ -154,6 +155,7 @@ namespace BDArmory.UI
         {
             if (showRcsWindow)
             {
+                if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, windowRect.position);
                 windowRect = GUI.Window(GUIUtility.GetControlID(FocusType.Passive), windowRect, WindowRcs, windowTitle, BDArmorySetup.BDGuiSkin.window);
             }
 

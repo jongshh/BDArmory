@@ -14,6 +14,8 @@
 - Add thumbnails to the craft browser.
 - Figure out how to add a 0 value and 1.5 sig.fig. to UI_FloatSemiLogRange sliders.
 - Stability of the targeting cam when slewing with the mouse (jitter).
+- UI scaling
+	- Some UI's mess with the GUI.matrix, so the global scaling is breaking them: Radar and Targeting camera.
 
 - Wiki entries
 	- Auto-Tuning

@@ -1,4 +1,3 @@
-using KSP.Localization;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -211,7 +210,6 @@ namespace BDArmory.UI
                 return;
 
             _windowWidth = BDArmorySettings.VESSEL_SPAWNER_WINDOW_WIDTH;
-
             SetNewHeight(_windowHeight);
             BDArmorySetup.WindowRectVesselSpawner = new Rect(
                 BDArmorySetup.WindowRectVesselSpawner.x,
@@ -220,6 +218,8 @@ namespace BDArmory.UI
                 _windowHeight
             );
             BDArmorySetup.SetGUIOpacity();
+            var guiMatrix = GUI.matrix;
+            if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, BDArmorySetup.WindowRectVesselSpawner.position);
             BDArmorySetup.WindowRectVesselSpawner = GUI.Window(
                 GUIUtility.GetControlID(FocusType.Passive),
                 BDArmorySetup.WindowRectVesselSpawner,
@@ -234,7 +234,10 @@ namespace BDArmory.UI
                 if (Event.current.type == EventType.MouseDown && !observerWindowRect.Contains(Event.current.mousePosition))
                     ShowObserverWindow(false);
                 else
+                {
+                    if (BDArmorySettings.UI_SCALE != 1) { GUI.matrix = guiMatrix; GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, observerWindowRect.position); }
                     observerWindowRect = GUILayout.Window(GUIUtility.GetControlID(FocusType.Passive), observerWindowRect, ObserverWindow, StringUtils.Localize("#LOC_BDArmory_ObserverSelection_Title"), BDArmorySetup.BDGuiSkin.window);
+                }
             }
         }
 
@@ -271,9 +274,7 @@ namespace BDArmory.UI
         {
             var previousWindowHeight = BDArmorySetup.WindowRectVesselSpawner.height;
             BDArmorySetup.WindowRectVesselSpawner.height = windowHeight;
-            if (BDArmorySettings.STRICT_WINDOW_BOUNDARIES && windowHeight < previousWindowHeight && Mathf.RoundToInt(BDArmorySetup.WindowRectVesselSpawner.y + previousWindowHeight) == Screen.height) // Window shrunk while being at edge of screen.
-                BDArmorySetup.WindowRectVesselSpawner.y = Screen.height - BDArmorySetup.WindowRectVesselSpawner.height;
-            GUIUtils.RepositionWindow(ref BDArmorySetup.WindowRectVesselSpawner);
+            GUIUtils.RepositionWindow(ref BDArmorySetup.WindowRectVesselSpawner, previousWindowHeight);
         }
 
         private void WindowVesselSpawner(int id)
@@ -433,6 +434,7 @@ namespace BDArmory.UI
                 BDArmorySettings.VESSEL_SPAWN_CONTINUE_SINGLE_SPAWNING = GUI.Toggle(SLeftRect(++line), BDArmorySettings.VESSEL_SPAWN_CONTINUE_SINGLE_SPAWNING, StringUtils.Localize("#LOC_BDArmory_Settings_SpawnContinueSingleSpawning"));  // Spawn craft again after single spawn competition finishes.
                 BDArmorySettings.VESSEL_SPAWN_INITIAL_VELOCITY = GUI.Toggle(SRightRect(line), BDArmorySettings.VESSEL_SPAWN_INITIAL_VELOCITY, StringUtils.Localize("#LOC_BDArmory_Settings_SpawnInitialVelocity")); // Planes spawn at their idle speed.
                 BDArmorySettings.VESSEL_SPAWN_DUMP_LOG_EVERY_SPAWN = GUI.Toggle(SLeftRect(++line), BDArmorySettings.VESSEL_SPAWN_DUMP_LOG_EVERY_SPAWN, StringUtils.Localize("#LOC_BDArmory_Settings_SpawnDumpLogsEverySpawn")); //Dump logs every spawn.
+                BDArmorySettings.VESSEL_SPAWN_CS_FOLLOWS_CENTROID = GUI.Toggle(SRightRect(line), BDArmorySettings.VESSEL_SPAWN_CS_FOLLOWS_CENTROID, StringUtils.Localize("#LOC_BDArmory_Settings_CSFollowsCentroid")); //CS spawn-point follows centroid.
 
                 if (GUI.Button(SRightRect(++line), StringUtils.Localize("#LOC_BDArmory_Settings_SpawnSpawnProbeHere"), BDArmorySetup.BDGuiSkin.button))
                 {
@@ -484,7 +486,7 @@ namespace BDArmory.UI
                 }
                 if (GUI.Button(SThirdRect(line, 2), StringUtils.Localize("#LOC_BDArmory_Settings_Observers"), BDArmorySetup.BDGuiSkin.button))
                 {
-                    ShowObserverWindow(true, Event.current.mousePosition + BDArmorySetup.WindowRectVesselSpawner.position);
+                    ShowObserverWindow(true, BDArmorySettings.UI_SCALE * Event.current.mousePosition + BDArmorySetup.WindowRectVesselSpawner.position);
                 }
                 line += 0.3f;
             }
@@ -735,7 +737,7 @@ namespace BDArmory.UI
                     spawnTemplate.name = GUIUtils.TextField(spawnTemplate.name, "Specify a name then save the template.", rect: SQuarterRect(++line, 0, 2)); // Writing in the text field updates the name of the current template.
                     if (GUI.Button(SQuarterRect(line, 2), StringUtils.Localize("#LOC_BDArmory_Generic_Load"), BDArmorySetup.BDGuiSkin.button))
                     {
-                        CustomTemplateSpawning.Instance.ShowTemplateSelection(Event.current.mousePosition + BDArmorySetup.WindowRectVesselSpawner.position);
+                        CustomTemplateSpawning.Instance.ShowTemplateSelection(BDArmorySettings.UI_SCALE * Event.current.mousePosition + BDArmorySetup.WindowRectVesselSpawner.position);
                     }
                     if (GUI.Button(SEighthRect(line, 6), StringUtils.Localize("#LOC_BDArmory_Generic_Save"), BDArmorySetup.BDGuiSkin.button)) // Save overwrites the current template with the current vessel positions in the LoadedVesselSwitcher.
                     {
@@ -759,14 +761,14 @@ namespace BDArmory.UI
                                 if (Event.current.button == 1)//Right click
                                     CustomTemplateSpawning.Instance.HideVesselSelection(member);
                                 else
-                                    CustomTemplateSpawning.Instance.ShowVesselSelection(Event.current.mousePosition + BDArmorySetup.WindowRectVesselSpawner.position, member, team);
+                                    CustomTemplateSpawning.Instance.ShowVesselSelection(BDArmorySettings.UI_SCALE * Event.current.mousePosition + BDArmorySetup.WindowRectVesselSpawner.position, member, team);
                             }
                             if (GUI.Button(SQuarterRect(line, 3, 1), string.IsNullOrEmpty(member.kerbalName) ? "random" : member.kerbalName, BDArmorySetup.BDGuiSkin.button))
                             {
                                 if (Event.current.button == 1) // Right click
                                     CustomTemplateSpawning.Instance.HideCrewSelection(member);
                                 else
-                                    CustomTemplateSpawning.Instance.ShowCrewSelection(Event.current.mousePosition + BDArmorySetup.WindowRectVesselSpawner.position, member);
+                                    CustomTemplateSpawning.Instance.ShowCrewSelection(BDArmorySettings.UI_SCALE * Event.current.mousePosition + BDArmorySetup.WindowRectVesselSpawner.position, member);
                             }
                         }
                         ++teamName;
@@ -1064,7 +1066,7 @@ namespace BDArmory.UI
         {
             if (show)
             {
-                observerWindowRect.position = position + new Vector2(50, -observerWindowRect.height / 2); // Centred and slightly offset to allow clicking the same spot.
+                observerWindowRect.position = position + new Vector2(50, -BDArmorySettings.UI_SCALE * observerWindowRect.height / 2); // Centred and slightly offset to allow clicking the same spot.
                 RefreshObservers();
                 bringObserverWindowToFront = true;
             }

@@ -1,9 +1,9 @@
 ﻿using System.Collections;
 using UnityEngine;
-using KSP.Localization;
 
 using BDArmory.Competition;
 using BDArmory.Control;
+using BDArmory.Settings;
 using BDArmory.Utils;
 
 namespace BDArmory.UI
@@ -141,6 +141,7 @@ namespace BDArmory.UI
                         Mathf.Min(windowLocation.y, Screen.height - height),
                         width,
                         scrollable ? Screen.height / 2 + buttonHeight + buttonGap + 2 * margin : height);
+                    if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, clientRect.position);
                     window = GUI.Window(10591029, clientRect, TeamSelectorWindow, "", BDArmorySetup.BDGuiSkin.window);
                     GUIUtils.UpdateGUIRect(window, guiCheckIndex);
                 }

@@ -33,6 +33,8 @@ namespace BDArmory.Settings
         [BDAPersistentSettingsField] public static float VESSEL_SPAWNER_WINDOW_WIDTH = 480f;
         [BDAPersistentSettingsField] public static float EVOLUTION_WINDOW_WIDTH = 350f;
         [BDAPersistentSettingsField] public static float GUI_OPACITY = 1f;                   // Modify the GUI opacity.
+        [BDAPersistentSettingsField] public static float UI_SCALE = 1f; // Global UI scaling
+        public static float PREVIOUS_UI_SCALE = 1f; // For tracking changes
         #endregion
 
         #region General toggle settings
@@ -308,6 +310,7 @@ namespace BDArmory.Settings
         [BDAPersistentSettingsField] public static bool SHOW_WAYPOINTS_OPTIONS = true;             // Waypoint section of Vessel Spawner Window.
         [BDAPersistentSettingsField] public static bool VESSEL_SPAWN_START_COMPETITION_AUTOMATICALLY = false; // Automatically start a competition after spawning succeeds.
         [BDAPersistentSettingsField] public static bool VESSEL_SPAWN_INITIAL_VELOCITY = false;     // Set planes at their idle speed after dropping them at the start of a competition.
+        [BDAPersistentSettingsField] public static bool VESSEL_SPAWN_CS_FOLLOWS_CENTROID = false;  // The continuous spawning spawn point follows the brawl centroid with bias back to the original spawn point.
         #endregion
 
         #region Vessel Mover settings
