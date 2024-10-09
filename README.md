@@ -1,7 +1,7 @@
-BDArmory Plus
+BDArmory Plus + Sound Enhancement
 =============
 
-Gun turrets and other weapon systems for KSP
+Gun turrets and other weapon systems for KSP 
 
 Original Author [BahamutoD](https://github.com/BahamutoD)
 
