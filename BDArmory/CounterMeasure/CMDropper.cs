@@ -48,8 +48,12 @@ namespace BDArmory.CounterMeasure
         Transform effectsTransform;
 
         AudioSource audioSource;
+        AudioSource cmWarningSource;
         AudioClip cmSound;
         AudioClip smokePoofSound;
+        AudioClip cmWarning;
+        AudioClip cmlowWarning;
+        AudioClip cmoutWarning;
 
         string resourceName;
 
@@ -105,6 +109,15 @@ namespace BDArmory.CounterMeasure
                 audioSource.maxDistance = 1000;
                 audioSource.spatialBlend = 1;
 
+                cmWarningSource = gameObject.AddComponent<AudioSource>();
+                cmWarningSource.minDistance = 1;
+                cmWarningSource.maxDistance = 1000;
+                cmWarningSource.spatialBlend = 1;
+
+                cmWarning = SoundUtils.GetAudioClip("BDArmory/Sounds/bettyChaffFlare");
+                cmlowWarning = SoundUtils.GetAudioClip("BDArmory/Sounds/bettyChaffFlareLow");
+                cmoutWarning = SoundUtils.GetAudioClip("BDArmory/Sounds/bettyChaffFlareOut");
+
                 UpdateVolume();
                 BDArmorySetup.OnVolumeChange += UpdateVolume;
 
@@ -122,6 +135,10 @@ namespace BDArmory.CounterMeasure
             if (audioSource)
             {
                 audioSource.volume = BDArmorySettings.BDARMORY_WEAPONS_VOLUME;
+            }
+            if (cmWarningSource)
+            {
+                cmWarningSource.volume = BDArmorySettings.BDARMORY_WEAPONS_VOLUME;
             }
         }
 
@@ -152,6 +169,17 @@ namespace BDArmory.CounterMeasure
                 else
                 {
                     audioSource.dopplerLevel = 1;
+                }
+            }
+            if (cmWarningSource)
+            {
+                if (vessel.isActiveVessel)
+                {
+                    cmWarningSource.dopplerLevel = 0;
+                }
+                else
+                {
+                    cmWarningSource.dopplerLevel = 1;
                 }
             }
         }
@@ -272,10 +300,28 @@ namespace BDArmory.CounterMeasure
         bool DropFlare()
         {
             PartResource cmResource = GetCMResource();
-            if (cmResource == null || !(cmResource.amount >= 1)) return false;
+            if (cmResource == null) return false;
+            if (!(cmResource.amount >= 1))
+            {
+                cmWarningSource.PlayOneShot(cmoutWarning);
+                return false;
+            }
             cmResource.amount--;
             audioSource.pitch = UnityEngine.Random.Range(0.9f, 1.1f);
             audioSource.PlayOneShot(cmSound);
+
+            if (cmResource.amount < 1)
+            {
+                cmWarningSource.PlayOneShot(cmoutWarning);
+            }
+            else if (cmResource.amount < 10 && cmResource.amount % 3 == 0)
+            {
+                cmWarningSource.PlayOneShot(cmlowWarning);
+            }
+            else if (cmResource.amount > 10 && cmResource.amount % 5 == 0)
+            {
+                cmWarningSource.PlayOneShot(cmWarning);
+            }
 
             GameObject cm = flarePool.GetPooledObject();
             cm.transform.position = transform.position;
@@ -296,10 +342,28 @@ namespace BDArmory.CounterMeasure
         bool DropChaff()
         {
             PartResource cmResource = GetCMResource();
-            if (cmResource == null || !(cmResource.amount >= 1)) return false;
+            if (cmResource == null) return false;
+            if (!(cmResource.amount >= 1))
+            {
+                cmWarningSource.PlayOneShot(cmoutWarning);
+                return false;
+            }
             cmResource.amount--;
             audioSource.pitch = UnityEngine.Random.Range(0.9f, 1.1f);
             audioSource.PlayOneShot(cmSound);
+
+            if (cmResource.amount < 1)
+            {
+                cmWarningSource.PlayOneShot(cmoutWarning);
+            }
+            else if (cmResource.amount < 20 && cmResource.amount % 3 == 0)
+            {
+                cmWarningSource.PlayOneShot(cmlowWarning);
+            }
+            else if (cmResource.amount > 20 && cmResource.amount % 5 == 0)
+            {
+                cmWarningSource.PlayOneShot(cmWarning);
+            }
 
             if (!vci)
             {
