@@ -48,8 +48,12 @@ namespace BDArmory.CounterMeasure
         Transform effectsTransform;
 
         AudioSource audioSource;
+        AudioSource cmWarningSource;
         AudioClip cmSound;
         AudioClip smokePoofSound;
+        AudioClip cmWarning;
+        AudioClip cmlowWarning;
+        AudioClip cmoutWarning;
 
         string resourceName;
 
@@ -105,6 +109,16 @@ namespace BDArmory.CounterMeasure
                 audioSource.maxDistance = 1000;
                 audioSource.spatialBlend = 1;
 
+                cmWarningSource = gameObject.AddComponent<AudioSource>();
+                cmWarningSource.minDistance = 1;
+                cmWarningSource.maxDistance = 250;
+                cmWarningSource.dopplerLevel = 0;
+                cmWarningSource.spatialBlend = 1;
+
+                cmWarning = SoundUtils.GetAudioClip("BDArmory/Sounds/bettyChaffFlare");
+                cmlowWarning = SoundUtils.GetAudioClip("BDArmory/Sounds/bettyChaffFlareLow");
+                cmoutWarning = SoundUtils.GetAudioClip("BDArmory/Sounds/bettyChaffFlareOut");
+
                 UpdateVolume();
                 BDArmorySetup.OnVolumeChange += UpdateVolume;
 
@@ -122,6 +136,10 @@ namespace BDArmory.CounterMeasure
             if (audioSource)
             {
                 audioSource.volume = BDArmorySettings.BDARMORY_WEAPONS_VOLUME;
+            }
+            if (cmWarningSource)
+            {
+                cmWarningSource.volume = BDArmorySettings.BDARMORY_WEAPONS_VOLUME;
             }
         }
 
@@ -274,8 +292,27 @@ namespace BDArmory.CounterMeasure
             if (!BDArmorySettings.INFINITE_ORDINANCE)
             {
                 PartResource cmResource = GetCMResource();
-                if (cmResource == null || !(cmResource.amount >= 1)) return false;
+                if (cmResource == null) return false;
+                if (!(cmResource.amount >= 1))
+                {
+                    cmWarningSource.PlayOneShot(cmoutWarning);
+                    return false;
+                }
+                if (cmResource.amount < 1)
+                {
+                    cmWarningSource.PlayOneShot(cmoutWarning);
+                }
+                else if (cmResource.amount < 10 && cmResource.amount % 3 == 0)
+                {
+                    cmWarningSource.PlayOneShot(cmlowWarning);
+                }
+                else if (cmResource.amount > 10 && cmResource.amount % 5 == 0)
+                {
+                    cmWarningSource.PlayOneShot(cmWarning);
+                }
+
                 cmResource.amount--;
+
             }
             audioSource.pitch = UnityEngine.Random.Range(0.9f, 1.1f);
             audioSource.PlayOneShot(cmSound);
@@ -301,7 +338,25 @@ namespace BDArmory.CounterMeasure
             if (!BDArmorySettings.INFINITE_ORDINANCE)
             {
                 PartResource cmResource = GetCMResource();
-                if (cmResource == null || !(cmResource.amount >= 1)) return false;
+                if (cmResource == null) return false;
+                if (!(cmResource.amount >= 1))
+                {
+                    cmWarningSource.PlayOneShot(cmoutWarning);
+                    return false;
+                }
+                if (cmResource.amount < 1)
+                {
+                    cmWarningSource.PlayOneShot(cmoutWarning);
+                }
+                else if (cmResource.amount < 20 && cmResource.amount % 3 == 0)
+                {
+                    cmWarningSource.PlayOneShot(cmlowWarning);
+                }
+                else if (cmResource.amount > 20 && cmResource.amount % 5 == 0)
+                {
+                    cmWarningSource.PlayOneShot(cmWarning);
+                }
+
                 cmResource.amount--;
             }
             audioSource.pitch = UnityEngine.Random.Range(0.9f, 1.1f);

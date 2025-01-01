@@ -319,6 +319,10 @@ namespace BDArmory.Control
         float targetListTimer;
 
         //sounds
+
+        public bool isantiRadlockSoundPlayed = false;
+        public float antiRadlocktimer;
+
         AudioSource audioSource;
         public AudioSource warningAudioSource;
         AudioSource targetingAudioSource;
@@ -326,6 +330,8 @@ namespace BDArmory.Control
         AudioClip warningSound;
         AudioClip armOnSound;
         AudioClip armOffSound;
+        AudioClip lockRadarSound;
+        AudioClip antiRadSound;
         AudioClip heatGrowlSound;
         bool warningSounding;
 
@@ -1214,6 +1220,8 @@ namespace BDArmory.Control
             armOnSound = SoundUtils.GetAudioClip("BDArmory/Sounds/armOn");
             armOffSound = SoundUtils.GetAudioClip("BDArmory/Sounds/armOff");
             heatGrowlSound = SoundUtils.GetAudioClip("BDArmory/Sounds/heatGrowl");
+            lockRadarSound = SoundUtils.GetAudioClip("BDArmory/Sounds/rdrlock");
+            antiRadSound = SoundUtils.GetAudioClip("BDArmory/Sounds/antiRadlock"); 
 
             //HEAT LOCKING
             heatTarget = TargetSignatureData.noTarget;
@@ -3113,22 +3121,265 @@ namespace BDArmory.Control
                     }
                     return;
                 }
-                if (ml.TargetingMode == MissileBase.TargetingModes.Heat)
+                // Handle different targeting modes
+                switch (ml.TargetingMode)
                 {
-                    if (targetingAudioSource.clip != heatGrowlSound)
-                    {
-                        targetingAudioSource.clip = heatGrowlSound;
-                    }
+                    case MissileBase.TargetingModes.Heat:
+                        if (targetingAudioSource.clip != heatGrowlSound)
+                        {
+                            targetingAudioSource.clip = heatGrowlSound;
+                        }
 
-                    if (heatTarget.exists && CurrentMissile && CurrentMissile.heatThreshold < heatTarget.signalStrength)
-                    {
-                        targetingAudioSource.pitch = Mathf.MoveTowards(targetingAudioSource.pitch, 2, 8 * Time.deltaTime);
-                    }
-                    else
-                    {
-                        targetingAudioSource.pitch = Mathf.MoveTowards(targetingAudioSource.pitch, 1, 8 * Time.deltaTime);
-                    }
+                        if (heatTarget.exists && CurrentMissile && CurrentMissile.heatThreshold < heatTarget.signalStrength)
+                        {
+                            targetingAudioSource.pitch = Mathf.MoveTowards(targetingAudioSource.pitch, 2, 8 * Time.deltaTime);
+                        }
+                        else
+                        {
+                            targetingAudioSource.pitch = Mathf.MoveTowards(targetingAudioSource.pitch, 1, 8 * Time.deltaTime);
+                        }
 
+                        if (!targetingAudioSource.isPlaying)
+                        {
+                            targetingAudioSource.Play();
+                        }
+                        break;
+
+                    case MissileBase.TargetingModes.Radar:
+                        if (targetingAudioSource.clip != lockRadarSound)
+                        {
+                            targetingAudioSource.clip = lockRadarSound;
+                        }
+
+                        if (vesselRadarData && vesselRadarData.locked)
+                        {
+                            if (targetingAudioSource.pitch != 1)
+                            {
+                                targetingAudioSource.pitch = 1;
+                            }
+                            if (!targetingAudioSource.isPlaying)
+                            {
+                                targetingAudioSource.Play();
+                            }
+                        }
+                        else
+                        {
+                            if (targetingAudioSource.isPlaying)
+                            {
+                                targetingAudioSource.Stop();
+                            }
+                        }
+                        break;
+
+                    case MissileBase.TargetingModes.Laser:
+                        if (targetingAudioSource.clip != lockRadarSound)
+                        {
+                            targetingAudioSource.clip = lockRadarSound;
+                        }
+
+                        if (vesselRadarData && vesselRadarData.locked)
+                        {
+                            if (targetingAudioSource.pitch != 1)
+                            {
+                                targetingAudioSource.pitch = 1;
+                            }
+                            if (!targetingAudioSource.isPlaying)
+                            {
+                                targetingAudioSource.Play();
+                            }
+                        }
+                        else
+                        {
+                            if (targetingAudioSource.isPlaying)
+                            {
+                                targetingAudioSource.Stop();
+                            }
+                        }
+                        break;
+
+                    case MissileBase.TargetingModes.Gps:
+                        if (targetingAudioSource.clip != lockRadarSound)
+                        {
+                            targetingAudioSource.clip = lockRadarSound;
+                        }
+
+                        if (vesselRadarData && vesselRadarData.locked)
+                        {
+                            if (targetingAudioSource.pitch != 1)
+                            {
+                                targetingAudioSource.pitch = 1;
+                            }
+                            if (!targetingAudioSource.isPlaying)
+                            {
+                                targetingAudioSource.Play();
+                            }
+                        }
+                        else
+                        {
+                            if (targetingAudioSource.isPlaying)
+                            {
+                                targetingAudioSource.Stop();
+                            }
+                        }
+                        break;
+
+                    case MissileBase.TargetingModes.AntiRad:
+
+                        float antiRadlocksoundCooldown = 3f;
+
+                        if (vesselRadarData && vesselRadarData.locked)
+                        {
+                            if (targetingAudioSource.clip != lockRadarSound)
+                            {
+                                targetingAudioSource.clip = lockRadarSound;
+                            }
+
+                            if (antiRadTargetAcquired)
+                            {
+                                if (!isantiRadlockSoundPlayed)
+                                {
+                                    if (targetingAudioSource.pitch != 1)
+                                    {
+                                        targetingAudioSource.pitch = 1;
+                                    }
+                                    isantiRadlockSoundPlayed = true;
+                                    targetingAudioSource.Play();
+                                }
+                                antiRadlocktimer = 0;
+                            }
+                            else
+                            {
+                                if (isantiRadlockSoundPlayed)
+                                {
+                                    antiRadlocktimer += Time.deltaTime;
+
+                                    if (antiRadlocktimer >= antiRadlocksoundCooldown)
+                                    {
+                                        isantiRadlockSoundPlayed = false;
+                                    }
+                                    if (targetingAudioSource.clip != antiRadSound)
+                                    {
+                                        targetingAudioSource.clip = antiRadSound;
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if (targetingAudioSource.clip != antiRadSound)
+                            {
+                                targetingAudioSource.clip = antiRadSound;
+                            }
+                            if (targetingAudioSource.pitch != 1)
+                            {
+                                targetingAudioSource.pitch = 1;
+                            }
+                            if (!targetingAudioSource.isPlaying)
+                            {
+                                targetingAudioSource.Play();
+                            }
+                        }
+                        break;
+
+                    case MissileBase.TargetingModes.Inertial:
+                        if (targetingAudioSource.clip != lockRadarSound)
+                        {
+                            targetingAudioSource.clip = lockRadarSound;
+                        }
+
+                        if (vesselRadarData && vesselRadarData.locked)
+                        {
+                            if (targetingAudioSource.pitch != 1)
+                            {
+                                targetingAudioSource.pitch = 1;
+                            }
+                            if (!targetingAudioSource.isPlaying)
+                            {
+                                targetingAudioSource.Play();
+                            }
+                        }
+                        else
+                        {
+                            if (targetingAudioSource.isPlaying)
+                            {
+                                targetingAudioSource.Stop();
+                            }
+                        }
+                        break;
+
+                    case MissileBase.TargetingModes.None:
+                        if (targetingAudioSource.clip != lockRadarSound)
+                        {
+                            targetingAudioSource.clip = lockRadarSound;
+                        }
+
+                        if (vesselRadarData && vesselRadarData.locked)
+                        {
+                            if (targetingAudioSource.pitch != 1)
+                            {
+                                targetingAudioSource.pitch = 1;
+                            }
+                            if (!targetingAudioSource.isPlaying)
+                            {
+                                targetingAudioSource.Play();
+                            }
+                        }
+                        else
+                        {
+                            if (targetingAudioSource.isPlaying)
+                            {
+                                targetingAudioSource.Stop();
+                            }
+                        }
+                        break;
+
+                    default:
+                        if (targetingAudioSource.isPlaying)
+                        {
+                            targetingAudioSource.Stop();
+                        }
+                        break;
+                }
+            }
+            else if (vessel.isActiveVessel && selectedWeapon != null && selectedWeapon.GetWeaponClass() == WeaponClasses.Gun)
+            {
+                if (targetingAudioSource.clip != lockRadarSound)
+                {
+                    targetingAudioSource.clip = lockRadarSound;
+                }
+
+                if (vesselRadarData && vesselRadarData.locked)
+                {
+                    if (targetingAudioSource.pitch != 0.8F)
+                    {
+                        targetingAudioSource.pitch = 0.8F;
+                    }
+                    if (!targetingAudioSource.isPlaying)
+                    {
+                        targetingAudioSource.Play();
+                    }
+                }
+                else
+                {
+                    if (targetingAudioSource.isPlaying)
+                    {
+                        targetingAudioSource.Stop();
+                    }
+                }
+            }
+            else if (vessel.isActiveVessel && selectedWeapon == null)
+            {
+                if (targetingAudioSource.clip != lockRadarSound)
+                {
+                    targetingAudioSource.clip = lockRadarSound;
+                }
+
+                if (vesselRadarData && vesselRadarData.locked)
+                {
+                    if (targetingAudioSource.pitch != 0.5F)
+                    {
+                        targetingAudioSource.pitch = 0.5F;
+                    }
                     if (!targetingAudioSource.isPlaying)
                     {
                         targetingAudioSource.Play();
@@ -3144,7 +3395,10 @@ namespace BDArmory.Control
             }
             else
             {
-                targetingAudioSource.pitch = 1;
+                if (targetingAudioSource.pitch != 1)
+                {
+                    targetingAudioSource.pitch = 1;
+                }
                 if (targetingAudioSource.isPlaying)
                 {
                     targetingAudioSource.Stop();
@@ -3163,10 +3417,10 @@ namespace BDArmory.Control
                 warningSounding = true;
                 BDArmorySetup.Instance.missileWarningTime = Time.time;
                 BDArmorySetup.Instance.missileWarning = true;
-                warningAudioSource.pitch = distance < 800 ? 1.45f : 1f;
+                warningAudioSource.pitch = distance < 3000 ? 1.0f : 1.0f;
                 warningAudioSource.PlayOneShot(warningSound);
 
-                float waitTime = distance < 800 ? .25f : 1.5f;
+                float waitTime = distance < 3000 ? .1f : 1.0f;
 
                 yield return new WaitForSecondsFixed(waitTime);
 
