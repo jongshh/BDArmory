@@ -119,23 +119,17 @@ namespace BDArmory.Targeting
         private static float adjCamImageSize = 360;
         internal static bool ResizingWindow;
         internal static bool SlewingMouseCam;
-        internal static bool ZoomKeysSet;
-        internal static bool isZooming;
-        internal static bool wasZooming;
 
         internal static bool SlewingButtonCam;
         float finalSlewSpeed;
         Vector2 slewInput = Vector2.zero;
+        public static bool IsSlewing => SlewingMouseCam;
 
         private static float gap = 2;
         private static float buttonHeight = 18;
         private static float controlsStartY = 22;
         private static float windowWidth = adjCamImageSize + (3 * buttonHeight) + 16 + 2 * gap;
         private static float windowHeight = adjCamImageSize + 23;
-        private AxisBinding_Single ZoomKeyP;
-        private AxisBinding_Single ZoomKeyS;
-        private AxisBinding_Single NoZoomKeyP;
-        private AxisBinding_Single NoZoomKeyS;
 
         Texture2D riTex;
 
@@ -288,7 +282,7 @@ namespace BDArmory.Targeting
             {
                 if (!TargetingCamera.Instance)
                 {
-                    (new GameObject("TargetingCameraObject")).AddComponent<TargetingCamera>();
+                    new GameObject("TargetingCameraObject").AddComponent<TargetingCamera>();
                 }
             }
         }
@@ -296,10 +290,6 @@ namespace BDArmory.Targeting
         public override void OnStart(StartState state)
         {
             base.OnStart(state);
-            ZoomKeyP = GameSettings.AXIS_MOUSEWHEEL.primary;
-            ZoomKeyS = GameSettings.AXIS_MOUSEWHEEL.secondary;
-            NoZoomKeyP = new AxisBinding_Single();
-            NoZoomKeyS = new AxisBinding_Single();
 
             if (HighLogic.LoadedSceneIsFlight)
             {
@@ -684,18 +674,6 @@ namespace BDArmory.Targeting
                 if (SlewingMouseCam) SlewingMouseCam = false;
             }
 
-            if (!wasZooming && isZooming)
-            {
-                wasZooming = true;
-                SetZoomKeys();
-            }
-
-            if (!isZooming && wasZooming)
-            {
-                wasZooming = false;
-                ResetZoomKeys();
-            }
-
             if (HighLogic.LoadedSceneIsFlight && !MapView.MapIsEnabled && BDArmorySetup.GAME_UI_ENABLED && !delayedEnabling)
             {
                 if (cameraEnabled && vessel.isActiveVessel && FlightGlobals.ready)
@@ -703,7 +681,7 @@ namespace BDArmory.Targeting
                     //window
                     if (activeCam == this && TargetingCamera.ReadyForUse)
                     {
-                        if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, BDArmorySetup.WindowRectTargetingCam.position);
+                        if (BDArmorySettings._UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings._UI_SCALE * Vector2.one, BDArmorySetup.WindowRectTargetingCam.position);
                         BDArmorySetup.WindowRectTargetingCam = GUI.Window(125452, BDArmorySetup.WindowRectTargetingCam, WindowTargetCam, "Target Camera", GUI.skin.window);
                         GUIUtils.UseMouseEventInRect(BDArmorySetup.WindowRectTargetingCam);
                     }
@@ -778,24 +756,15 @@ namespace BDArmory.Targeting
             }
             if (Event.current.type == EventType.Repaint && SlewingMouseCam)
             {
-                if (Mouse.delta.x != 0 && Mouse.delta.y != 0)
+                if (Mouse.delta.x != 0 || Mouse.delta.y != 0)
                 {
                     SlewRoutine(Mouse.delta);
                 }
             }
 
-            if (Event.current.type == EventType.Repaint && imageRect.Contains(Event.current.mousePosition))
-            {
-                if (!wasZooming) isZooming = true;
-            }
-
             if (Event.current.type == EventType.ScrollWheel && imageRect.Contains(Event.current.mousePosition))
             {
                 ZoomRoutine(Input.mouseScrollDelta);
-            }
-            if (Event.current.type == EventType.Repaint && !imageRect.Contains(Event.current.mousePosition))
-            {
-                if (wasZooming) isZooming = false;
             }
 
             float indicatorSize = Mathf.Clamp(64 * (adjCamImageSize / camImageSize), 48, 128);
@@ -840,12 +809,11 @@ namespace BDArmory.Targeting
             {
                 if (Mouse.delta.x != 0 || Mouse.delta.y != 0)
                 {
-                    float diff = (Mathf.Abs(Mouse.delta.x) > Mathf.Abs(Mouse.delta.y) ? Mouse.delta.x : Mouse.delta.y) / BDArmorySettings.UI_SCALE;
+                    float diff = (Mathf.Abs(Mouse.delta.x) > Mathf.Abs(Mouse.delta.y) ? Mouse.delta.x : Mouse.delta.y) / BDArmorySettings._UI_SCALE;
                     BDArmorySettings.TARGET_WINDOW_SCALE = Mathf.Clamp(BDArmorySettings.TARGET_WINDOW_SCALE + diff / camImageSize, BDArmorySettings.TARGET_WINDOW_SCALE_MIN, BDArmorySettings.TARGET_WINDOW_SCALE_MAX);
                     ResizeTargetWindow();
                 }
             }
-            //ResetZoomKeys();
             GUIUtils.RepositionWindow(ref BDArmorySetup.WindowRectTargetingCam);
         }
 
@@ -1193,11 +1161,11 @@ namespace BDArmory.Targeting
             lockedVessel = null;
             if (!BDArmorySettings.TARGET_WINDOW_INVERT_MOUSE_X) direction.x = -direction.x; // Invert the x-axis by default (original defaults).
             if (BDArmorySettings.TARGET_WINDOW_INVERT_MOUSE_Y) direction.y = -direction.y;
-            float velocity = Mathf.Abs(direction.x) > Mathf.Abs(direction.y) ? Mathf.Abs(direction.x) : Mathf.Abs(direction.y);
             Vector3 rotationAxis = Matrix4x4.TRS(Vector3.zero, Quaternion.LookRotation(cameraParentTransform.forward, vessel.upAxis), Vector3.one)
                 .MultiplyVector(Quaternion.AngleAxis(90, Vector3.forward) * direction);
+            float velocity = Mathf.Max(Mathf.Abs(direction.x), Mathf.Abs(direction.y)) + 0.1f * direction.sqrMagnitude;
             float angle = velocity / (1 + currentFovIndex) * Time.deltaTime;
-            if (angle / (1f + currentFovIndex) < .05f / (1f + currentFovIndex)) angle = .05f / ((1f + currentFovIndex) / 2f);
+            if (angle / (1f + currentFovIndex) < .01f / (1f + currentFovIndex)) angle = .01f / ((1f + currentFovIndex) / 2f);
             Vector3 lookVector = Quaternion.AngleAxis(angle, rotationAxis) * cameraParentTransform.forward;
 
             PointCameraModel(lookVector);
@@ -1238,20 +1206,6 @@ namespace BDArmory.Targeting
             {
                 StartCoroutine(PointToPositionRoutine(VectorUtils.GetWorldSurfacePostion(weaponManager.designatedGPSCoords, vessel.mainBody)));
             }
-        }
-
-        private void ResetZoomKeys()
-        {
-            ZoomKeysSet = false;
-            GameSettings.AXIS_MOUSEWHEEL.primary = ZoomKeyP;
-            GameSettings.AXIS_MOUSEWHEEL.secondary = ZoomKeyS;
-        }
-
-        private void SetZoomKeys()
-        {
-            ZoomKeysSet = true;
-            GameSettings.AXIS_MOUSEWHEEL.primary = NoZoomKeyP;
-            GameSettings.AXIS_MOUSEWHEEL.secondary = NoZoomKeyS;
         }
 
         private void SlewRoutine(Vector2 direction)
@@ -1551,6 +1505,7 @@ namespace BDArmory.Targeting
                 }
             }
             GameEvents.onVesselCreate.Remove(Disconnect);
+            SlewingMouseCam = false;
         }
 
         Vector2 TargetAzimuthElevationScreenPos(Rect screenRect, Vector3 targetPosition, float textureSize)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEngine;
 
@@ -9,7 +10,6 @@ using BDArmory.Extensions;
 using BDArmory.FX;
 using BDArmory.GameModes;
 using BDArmory.Settings;
-using System.IO;
 
 namespace BDArmory.Utils
 {

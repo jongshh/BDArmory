@@ -985,6 +985,7 @@ namespace BDArmory.VesselSpawning
                 if (BDArmorySettings.MUTATOR_MODE) SpawnUtils.ApplyMutators(vessel, true);
                 if (BDArmorySettings.ENABLE_HOS) SpawnUtils.ApplyHOS(vessel);
                 if (BDArmorySettings.RUNWAY_PROJECT) SpawnUtils.ApplyRWP(vessel);
+                if (BDArmorySettings.COMP_CONVENIENCE_CHECKS) SpawnUtils.ApplyCompSettingsChecks(vessel);
             }
 
             // Update the ramming information for the new vessel.

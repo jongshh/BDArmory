@@ -19,7 +19,6 @@ namespace BDArmory.Guidances
             targetPosition += targetVelocity * leadTime;
 
             Vector3 upDirection = missileVessel.up;
-            //-FlightGlobals.getGeeForceAtPosition(targetPosition).normalized;
             Vector3 surfacePos = missileVessel.CoM +
                                  Vector3.Project(targetPosition - missileVessel.CoM, upDirection);
             //((float)missileVessel.altitude*upDirection);
@@ -200,7 +199,7 @@ namespace BDArmory.Guidances
             {
                 Vector3 planarDirectionToTarget = ((predictedImpactPoint - ml.vessel.CoM).ProjectOnPlanePreNormalized(upDirection)).normalized;
 
-                if (BDArmorySettings.DEBUG_MISSILES) Debug.Log("[BDArmory.MissileGuidance]: Lofting");
+                //if (BDArmorySettings.DEBUG_MISSILES) Debug.Log("[BDArmory.MissileGuidance]: Lofting");
 
                 float altitudeClamp = Mathf.Clamp(targetAlt + 10f * rangeFac * Mathf.Pow(Vector3.Dot(targetPosition - ml.vessel.CoM, planarDirectionToTarget), Mathf.Abs(vertVelComp)), targetAlt, Mathf.Max(maxAltitude, targetAlt));
 
@@ -304,7 +303,7 @@ namespace BDArmory.Guidances
                 gLimit = (accel).magnitude / (float)PhysicsGlobals.GravitationalAcceleration;
 
                 // Debug output, useful for tuning
-                if (BDArmorySettings.DEBUG_MISSILES) Debug.Log($"[BDArmory.MissileGuidance]: Kappa Guidance K1: {K1}, K2: {K2}, accel: {accel}, vF-currVel: {vF-currVel}, posError: {predictedImpactPoint- ml.vessel.CoM - currVel*ttgo}, g: {gLimit}, ttgo: {ttgo}");
+                //if (BDArmorySettings.DEBUG_MISSILES) Debug.Log($"[BDArmory.MissileGuidance]: Kappa Guidance K1: {K1}, K2: {K2}, accel: {accel}, vF-currVel: {vF-currVel}, posError: {predictedImpactPoint- ml.vessel.CoM - currVel*ttgo}, g: {gLimit}, ttgo: {ttgo}");
 
                 return ml.vessel.CoM + currVel * Mathf.Min(leadTime, 3f) + accel * Mathf.Min(leadTime * leadTime, 9f);
             }
@@ -344,7 +343,7 @@ namespace BDArmory.Guidances
             // If loft is not terminal
             if ((loftState < MissileBase.LoftStates.Terminal) && (targetDistance > termDist))
             {
-                if (BDArmorySettings.DEBUG_MISSILES) Debug.Log("[BDArmory.MissileGuidance]: Lofting");
+                //if (BDArmorySettings.DEBUG_MISSILES) Debug.Log("[BDArmory.MissileGuidance]: Lofting");
 
                 // Get up direction
                 Vector3 upDirection = missileVessel.upAxis; //VectorUtils.GetUpDirection(missileVessel.CoM);
@@ -395,7 +394,7 @@ namespace BDArmory.Guidances
                 float velForwards = (velDirection - upDirection * velUp).magnitude;
                 float angle = Mathf.Atan2(velUp, velForwards);
 
-                if (BDArmorySettings.DEBUG_MISSILES) Debug.Log($"[BDArmory.MissileGuidance]: Loft Angle: [{(angle * Mathf.Rad2Deg):G3}]");
+                //if (BDArmorySettings.DEBUG_MISSILES) Debug.Log($"[BDArmory.MissileGuidance]: Loft Angle: [{(angle * Mathf.Rad2Deg):G3}]");
 
                 // Use simple lead compensation to minimize over-compensation
                 // Get planar direction to target
@@ -448,7 +447,7 @@ namespace BDArmory.Guidances
 
                     gLimit = 6f;
 
-                    if (BDArmorySettings.DEBUG_MISSILES) Debug.Log($"[BDArmory.MissileGuidance]: AAM Loft altitudeClamp: [{altitudeClamp:G6}] COS: [{Mathf.Cos(loftAngle * turnFactor * Mathf.Deg2Rad):G3}], SIN: [{Mathf.Sin(loftAngle * turnFactor * Mathf.Deg2Rad):G3}], turnFactor: [{turnFactor:G3}].");
+                    //if (BDArmorySettings.DEBUG_MISSILES) Debug.Log($"[BDArmory.MissileGuidance]: AAM Loft altitudeClamp: [{altitudeClamp:G6}] COS: [{Mathf.Cos(loftAngle * turnFactor * Mathf.Deg2Rad):G3}], SIN: [{Mathf.Sin(loftAngle * turnFactor * Mathf.Deg2Rad):G3}], turnFactor: [{turnFactor:G3}].");
                     return missileVessel.CoM + (float)missileVessel.srfSpeed * ((Mathf.Cos(loftAngle * turnFactor * Mathf.Deg2Rad) * planarDirectionToTarget) + (Mathf.Sin(loftAngle * turnFactor * Mathf.Deg2Rad) * upDirection));
 
                     /*
@@ -553,7 +552,7 @@ namespace BDArmory.Guidances
             {
                 // If terminal just go straight for target + lead
                 loftState = MissileBase.LoftStates.Terminal;
-                if (BDArmorySettings.DEBUG_MISSILES) Debug.Log("[BDArmory.MissileGuidance]: Terminal");
+                //if (BDArmorySettings.DEBUG_MISSILES) Debug.Log("[BDArmory.MissileGuidance]: Terminal");
 
                 if (targetDistance < 2f * termDist)
                 {
@@ -838,7 +837,7 @@ namespace BDArmory.Guidances
 
         public static Vector3 GetTerminalManeuveringTarget(Vector3 targetPosition, Vessel missileVessel, float radarAlt)
         {
-            Vector3 upDirection = -FlightGlobals.getGeeForceAtPosition(missileVessel.GetWorldPos3D()).normalized;
+            Vector3 upDirection = missileVessel.upAxis;
             Vector3 planarVectorToTarget = (targetPosition - missileVessel.CoM).ProjectOnPlanePreNormalized(upDirection);
             Vector3 planarDirectionToTarget = planarVectorToTarget.normalized;
             Vector3 crossAxis = Vector3.Cross(planarDirectionToTarget, upDirection).normalized;
@@ -1305,7 +1304,7 @@ namespace BDArmory.Guidances
 
         public static float GetRaycastRadarAltitude(Vector3 position)
         {
-            Vector3 upDirection = -FlightGlobals.getGeeForceAtPosition(position).normalized;
+            Vector3 upDirection = VectorUtils.GetUpDirection(position);
 
             float altAtPos = FlightGlobals.getAltitudeAtPos(position);
             if (altAtPos < 0)

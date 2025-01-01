@@ -109,7 +109,7 @@ namespace BDArmory.VesselSpawning
         #endregion
 
         #region Teams
-        public static Dictionary<string, string> originalTeams = new Dictionary<string, string>();
+        public static Dictionary<string, string> originalTeams = [];
         public static void SaveTeams()
         {
             originalTeams.Clear();
@@ -165,6 +165,10 @@ namespace BDArmory.VesselSpawning
                 }
             }
             FireSpitter.ActivateFSEngines(vessel, activate);
+            foreach (var repulsor in VesselModuleRegistry.GetModules<ModuleSpaceFriction>(vessel))
+            {
+                repulsor.ToggleRepulsor();
+            }
         }
 
         public static bool IsModularMissilePart(Part part)
@@ -209,6 +213,11 @@ namespace BDArmory.VesselSpawning
         #region RWP Stuff
         public static void ApplyRWPonNewVessels(bool enable) => SpawnUtilsInstance.Instance.ApplyRWPonNewVessels(enable);
         public static void ApplyRWP(Vessel vessel) => SpawnUtilsInstance.Instance.ApplyRWP(vessel); // Applying RWP can't be undone
+        #endregion
+        #region FJRT Stuff
+        public static void ApplyCompCheckonNewVessels(bool enable) => SpawnUtilsInstance.Instance.ApplyCompCheckOnNewVessels(enable);
+        public static void ApplyCompSettingsChecks(Vessel vessel) => SpawnUtilsInstance.Instance.ApplyCompSettingsChecks(vessel); // Applying these can't be undone
+
         #endregion
 
         #region HallOfShame
@@ -256,6 +265,10 @@ namespace BDArmory.VesselSpawning
                     ++count;
                 };
                 if (count > 0) message += (count > 1 ? " are" : " is") + " not attached to its root part";
+            }
+            if (!(vessel.rootPart.IsKerbalSeat() || vessel.rootPart.protoModuleCrew.Any(crew => crew != null)))
+            {
+                message += $"{(message.Length > 0 ? " and its" : "'s")} cockpit isn't the root part";
             }
 
             if (!string.IsNullOrEmpty(message))
@@ -1081,6 +1094,81 @@ namespace BDArmory.VesselSpawning
                             armor.maxHitPoints = BDArmorySettings.MAX_ACTIVE_RADAR_RANGE; //not used by RWP, so can be hacked to serve as a asteroid Hp value
                             armor.SetupPrefab();
                         }
+                    }
+                }
+            }
+        }
+        #endregion
+
+        #region Competition AI/WM Settings Compliance
+        public void ApplyCompCheckOnNewVessels(bool enable)
+        {
+            if (enable)
+            {
+                GameEvents.onVesselLoaded.Add(ApplyCompCheckEventHandler);
+            }
+            else
+            {
+                GameEvents.onVesselLoaded.Remove(ApplyCompCheckEventHandler);
+            }
+        }
+        void ApplyCompCheckEventHandler(Vessel vessel) => ApplyCompSettingsChecks(vessel);
+
+        public void ApplyCompSettingsChecks(Vessel vessel)
+        {
+            if (vessel == null || !vessel.loaded) return;
+            if (BDArmorySettings.COMP_CONVENIENCE_CHECKS)
+            {
+                int cockpitSeatCount = 0;
+
+                using (List<Part>.Enumerator part = vessel.Parts.GetEnumerator())
+                    while (part.MoveNext())
+                    {
+                        if (CompSettings.CompOverrides.TryGetValue("DISABLE_SAS", out float dSAS) && dSAS > 0)
+                        {
+                            if (part.Current.GetComponent<ModuleReactionWheel>() != null)
+                            {
+                                ModuleReactionWheel SAS;
+                                SAS = part.Current.GetComponent<ModuleReactionWheel>();
+                                if (part.Current.CrewCapacity == 0)
+                                    SAS.authorityLimiter = 0;
+                            }
+                        }
+                        if (part.Current.GetComponent<ModuleCommand>() != null)
+                        {
+                            if (part.Current.CrewCapacity > 0 && part.Current.CrewCapacity > cockpitSeatCount) cockpitSeatCount = part.Current.CrewCapacity;
+                        }
+                    }
+                var AI = VesselModuleRegistry.GetModule<BDModulePilotAI>(vessel);
+                if (AI != null)
+                {                    
+                    if (CompSettings.CompOverrides.TryGetValue("extendDistanceAirToAir", out float dATA) && dATA > 0)
+                        AI.extendDistanceAirToAir = Mathf.Min(AI.extendDistanceAirToAir, dATA);
+                    if (CompSettings.CompOverrides.TryGetValue("collisionAvoidanceThreshold", out float cAT) && cAT >= 0)
+                        AI.collisionAvoidanceThreshold = Mathf.Max(AI.collisionAvoidanceThreshold, cAT);
+                    if (CompSettings.CompOverrides.TryGetValue("vesselCollisionAvoidanceLookAheadPeriod", out float vCAL) && vCAL >= 0)
+                        AI.vesselCollisionAvoidanceLookAheadPeriod = Mathf.Max(AI.vesselCollisionAvoidanceLookAheadPeriod, vCAL);
+                    if (CompSettings.CompOverrides.TryGetValue("vesselCollisionAvoidanceStrength", out float vCAS) && vCAS >= 0)
+                        AI.vesselCollisionAvoidanceStrength = Mathf.Max(AI.vesselCollisionAvoidanceStrength, vCAS);
+                    if (CompSettings.CompOverrides.TryGetValue("idleSpeed", out float iS) && iS > 0)
+                        AI.idleSpeed = Mathf.Max(AI.idleSpeed, iS);
+                    if (CompSettings.CompOverrides.TryGetValue("extensionCutoffTime", out float eCT) && eCT > 0)
+                        AI.extensionCutoffTime = Mathf.Max(AI.extensionCutoffTime, eCT);
+                }
+                var WM = VesselModuleRegistry.GetModule<MissileFire>(vessel);
+                if (WM != null)
+                {
+                    if (cockpitSeatCount == 1)
+                    {
+                        if (CompSettings.CompOverrides.TryGetValue("MONOCOCKPIT_VIEWRANGE", out float gR1) && gR1 > 0)
+                            WM.guardRange = Mathf.Min(WM.guardRange, gR1);
+                        if (CompSettings.CompOverrides.TryGetValue("guardAngle", out float gA) && gA > 0)
+                            WM.guardAngle = Mathf.Min(WM.guardAngle, gA);
+                    }
+                    else //this would cause dual-seat visual range to also apply to dronecore controlled craft, but those should be caught by overall building rules...
+                    {
+                        if (CompSettings.CompOverrides.TryGetValue("DUALCOCKPIT_VIEWRANGE", out float gR2) && gR2 > 0)
+                                WM.guardRange = Mathf.Min(WM.guardRange, gR2);
                     }
                 }
             }

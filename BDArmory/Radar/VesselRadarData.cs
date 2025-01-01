@@ -307,25 +307,8 @@ namespace BDArmory.Radar
         public bool rangeCapabilityDirty;
         public bool radarsReady;
 
-        public bool isLockcheckSoundPlayed = false;
-        public float lockchecktimer;
-
-        AudioSource scanAudioSource;
-        AudioSource AlertAudioSource;
-        AudioSource emptyAudioSource;
-
-        AudioClip ScanSound;
-        AudioClip lockCheckSound;
-
-        public static AudioSource deadAudioSource;
-        public static AudioClip deadSound; // lego yoda death sound
-
         private void Awake()
         {
-            ScanSound = SoundUtils.GetAudioClip("BDArmory/Sounds/scan");
-            lockCheckSound = SoundUtils.GetAudioClip("BDArmory/Sounds/lockcheck");
-            deadSound = SoundUtils.GetAudioClip("BDArmory/Sounds/deadSound");
-
             availableRadars = new List<ModuleRadar>();
             availableIRSTs = new List<ModuleIRST>();
             externalRadars = new List<ModuleRadar>();
@@ -387,37 +370,6 @@ namespace BDArmory.Radar
                 rangeIndex--;
             }
 
-            scanAudioSource = gameObject.AddComponent<AudioSource>();
-            scanAudioSource.clip = ScanSound;
-            scanAudioSource.minDistance = 1;
-            scanAudioSource.maxDistance = 500;
-            scanAudioSource.dopplerLevel = 0;
-            scanAudioSource.spatialBlend = 1;
-
-
-            AlertAudioSource = gameObject.AddComponent<AudioSource>();
-            AlertAudioSource.clip = lockCheckSound;
-            AlertAudioSource.minDistance = 1;
-            AlertAudioSource.maxDistance = 250;
-            AlertAudioSource.dopplerLevel = 0;
-            AlertAudioSource.spatialBlend = 1;
-
-            deadAudioSource = gameObject.AddComponent<AudioSource>();
-            deadAudioSource.clip = deadSound;
-            deadAudioSource.minDistance = 1;
-            deadAudioSource.maxDistance = 250;
-            deadAudioSource.dopplerLevel = 0;
-            deadAudioSource.spatialBlend = 1;
-
-            emptyAudioSource = gameObject.AddComponent<AudioSource>();
-            emptyAudioSource.minDistance = 1;
-            emptyAudioSource.maxDistance = 250;
-            emptyAudioSource.dopplerLevel = 0;
-            emptyAudioSource.spatialBlend = 1;
-
-            BDArmorySetup.OnVolumeChange += UpdateVolume;
-
-            UpdateVolume();
             UpdateLockedTargets();
             using (var mf = VesselModuleRegistry.GetModules<MissileFire>(vessel).GetEnumerator())
                 while (mf.MoveNext())
@@ -708,16 +660,24 @@ namespace BDArmory.Radar
                 : 0;
         }
 
-        private void UpdateSlaveData()
+        private bool UpdateSlaveData()
         {
-            if (!slaveTurrets || !weaponManager) return;
+            if (!weaponManager)
+            {
+                return false;
+            }
+            if (!slaveTurrets || !locked)
+            {
+                weaponManager.slavedTarget = TargetSignatureData.noTarget;
+                return false;
+            }
             weaponManager.slavingTurrets = true;
-            if (!locked) return;
             TargetSignatureData lockedTarget = lockedTargetData.targetData;
             weaponManager.slavedPosition = lockedTarget.predictedPositionWithChaffFactor(lockedTargetData.detectedByRadar.radarChaffClutterFactor);
             weaponManager.slavedVelocity = lockedTarget.velocity;
             weaponManager.slavedAcceleration = lockedTarget.acceleration;
             weaponManager.slavedTarget = lockedTarget;
+            return true;
             //This is only slaving turrets if there's a radar lock on the WM's guardTarget
             //no radar-guided gunnery for scan radars?
             //what about multiple turret multitarget tracking?
@@ -756,7 +716,10 @@ namespace BDArmory.Radar
 
                 CleanDisplayedContacts();
 
-                UpdateSlaveData();
+                if (!UpdateSlaveData() && slaveTurrets)
+                {
+                    UnslaveTurrets();
+                }
             }
             else
             {
@@ -1019,48 +982,6 @@ namespace BDArmory.Radar
             }
         }
 
-        public static void PlayDeathSound()
-        {
-            if (deadAudioSource != null && deadAudioSource.clip != null)
-            {
-                deadAudioSource.PlayOneShot(deadSound);
-                //Debug.Log("yoda sings!");
-            }
-        }
-
-        void UpdateVolume()
-        {
-            if (scanAudioSource)
-            {
-                scanAudioSource.volume = BDArmorySettings.BDARMORY_UI_VOLUME;
-            }
-            if (AlertAudioSource)
-            {
-                AlertAudioSource.volume = BDArmorySettings.BDARMORY_UI_VOLUME;
-            }
-            if (emptyAudioSource)
-            {
-                emptyAudioSource.volume = BDArmorySettings.BDARMORY_UI_VOLUME;
-            }
-
-            if (BDArmorySetup.GameIsPaused)
-            {
-                if (scanAudioSource.isPlaying)
-                {
-                    scanAudioSource.Stop();
-                }
-                if (AlertAudioSource.isPlaying)
-                {
-                    AlertAudioSource.Stop();
-                }
-                if (emptyAudioSource.isPlaying)
-                {
-                    emptyAudioSource.Stop();
-                }
-                return;
-            }
-        }
-
         private void OnGUI()
         {
             if (!drawGUI) return;
@@ -1108,7 +1029,7 @@ namespace BDArmory.Radar
 
             if (resizingWindow && Event.current.type == EventType.MouseUp) { resizingWindow = false; }
             const string windowTitle = "Radar";
-            if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, BDArmorySetup.WindowRectRadar.position);
+            if (BDArmorySettings._UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings._UI_SCALE * Vector2.one, BDArmorySetup.WindowRectRadar.position);
             BDArmorySetup.WindowRectRadar = GUI.Window(524141, BDArmorySetup.WindowRectRadar, WindowRadar, windowTitle, GUI.skin.window);
             GUIUtils.UseMouseEventInRect(BDArmorySetup.WindowRectRadar);
 
@@ -1409,7 +1330,7 @@ namespace BDArmory.Radar
             {
                 if (Mouse.delta.x != 0 || Mouse.delta.y != 0)
                 {
-                    float diff = (Mathf.Abs(Mouse.delta.x) > Mathf.Abs(Mouse.delta.y) ? Mouse.delta.x : Mouse.delta.y) / BDArmorySettings.UI_SCALE;
+                    float diff = (Mathf.Abs(Mouse.delta.x) > Mathf.Abs(Mouse.delta.y) ? Mouse.delta.x : Mouse.delta.y) / BDArmorySettings._UI_SCALE;
                     BDArmorySettings.RADAR_WINDOW_SCALE = Mathf.Clamp(BDArmorySettings.RADAR_WINDOW_SCALE + diff / RadarScreenSize, BDArmorySettings.RADAR_WINDOW_SCALE_MIN, BDArmorySettings.RADAR_WINDOW_SCALE_MAX);
                     BDArmorySetup.ResizeRadarWindow(BDArmorySettings.RADAR_WINDOW_SCALE);
                 }
@@ -1824,7 +1745,6 @@ namespace BDArmory.Radar
         public void AddRadarContact(ModuleRadar radar, TargetSignatureData contactData, bool _locked, bool receivedData = false)
         {
             bool addContact = true;
-            float lockchecksoundCooldown = 1;
 
             RadarDisplayData rData = new RadarDisplayData();
             rData.vessel = contactData.vessel;
@@ -1845,64 +1765,13 @@ namespace BDArmory.Radar
             rData.signalPersistTime = radar.signalPersistTime;
             rData.detectedByRadar = radar;
             rData.locked = _locked;
-            rData.targetData = contactData;
             contactData.lockedByRadar = radar;
+            rData.targetData = contactData;
             rData.pingPosition = UpdatedPingPosition(contactData.position, radar);
 
             if (_locked)
             {
                 radar.UpdateLockedTargetInfo(contactData);
-            }
-            if (vessel.isActiveVessel)
-            {
-                if (!_locked)
-                {
-                    if (!scanAudioSource.isPlaying)
-                    {
-                        scanAudioSource.Play();
-                    }
-                }
-                else
-                {
-                    if (scanAudioSource.isPlaying)
-                    {
-                        scanAudioSource.Stop();
-                    }
-                }
-
-                if (locked)
-                {
-                    if (!isLockcheckSoundPlayed)
-                    {
-                        AlertAudioSource.Play();
-                        isLockcheckSoundPlayed = true;
-                    }
-                    lockchecktimer = 0;
-                }
-                else
-                {
-                    if (isLockcheckSoundPlayed)
-                    {
-                        lockchecktimer++;
-
-                        if (lockchecktimer >= lockchecksoundCooldown)
-                        {
-                            AlertAudioSource.Stop();
-                            isLockcheckSoundPlayed = false;
-                        }
-                    }
-                }
-
-                if (!emptyAudioSource.isPlaying) // For Cockpit parts hhich contains weapon, Prevent sound channel conflict.
-                {
-                    emptyAudioSource.Play();
-                }
-
-                if (emptyAudioSource.isPlaying)
-                {
-                    emptyAudioSource.Stop();
-                }
-
             }
 
             bool dontOverwrite = false;

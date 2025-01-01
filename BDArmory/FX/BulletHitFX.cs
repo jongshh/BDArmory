@@ -116,8 +116,7 @@ namespace BDArmory.FX
     {
         KSPParticleEmitter[] pEmitters;
         AudioSource audioSource;
-
-        enum AudioClipType { Ricochet1, Ricochet2, Ricochet3, Ricochet4, BulletHit1, BulletHit2, BulletHit3, BulletHit4, BulletHit5, BulletHit6, Artillery_Shot };
+        enum AudioClipType { Ricochet1, Ricochet2, Ricochet3, BulletHit1, BulletHit2, BulletHit3, Artillery_Shot };
         static Dictionary<AudioClipType, AudioClip> audioClips;
         AudioClip hitSound;
         float startTime;
@@ -329,13 +328,9 @@ namespace BDArmory.FX
                     {AudioClipType.Ricochet1, SoundUtils.GetAudioClip("BDArmory/Sounds/ricochet1")},
                     {AudioClipType.Ricochet2, SoundUtils.GetAudioClip("BDArmory/Sounds/ricochet1")},
                     {AudioClipType.Ricochet3, SoundUtils.GetAudioClip("BDArmory/Sounds/ricochet3")},
-                    {AudioClipType.Ricochet4, SoundUtils.GetAudioClip("BDArmory/Sounds/ricochet4")},
                     {AudioClipType.BulletHit1, SoundUtils.GetAudioClip("BDArmory/Sounds/bulletHit1")},
                     {AudioClipType.BulletHit2, SoundUtils.GetAudioClip("BDArmory/Sounds/bulletHit2")},
                     {AudioClipType.BulletHit3, SoundUtils.GetAudioClip("BDArmory/Sounds/bulletHit3")},
-                    {AudioClipType.BulletHit4, SoundUtils.GetAudioClip("BDArmory/Sounds/bulletHit4")},
-                    {AudioClipType.BulletHit5, SoundUtils.GetAudioClip("BDArmory/Sounds/bulletHit5")},
-                    {AudioClipType.BulletHit6, SoundUtils.GetAudioClip("BDArmory/Sounds/bulletHit6")},
                     {AudioClipType.Artillery_Shot, SoundUtils.GetAudioClip("BDArmory/Sounds/Artillery_Shot")},
                 };
             }
@@ -372,9 +367,6 @@ namespace BDArmory.FX
                         case 3:
                             hitSound = audioClips[AudioClipType.Ricochet3];
                             break;
-                        case 4:
-                            hitSound = audioClips[AudioClipType.Ricochet4];
-                            break;
                     }
                 }
                 else
@@ -396,15 +388,6 @@ namespace BDArmory.FX
                             break;
                         case 3:
                             hitSound = audioClips[AudioClipType.BulletHit3];
-                            break;
-                        case 4:
-                            hitSound = audioClips[AudioClipType.BulletHit4];
-                            break;
-                        case 5:
-                            hitSound = audioClips[AudioClipType.BulletHit5];
-                            break;
-                        case 6:
-                            hitSound = audioClips[AudioClipType.BulletHit6];
                             break;
                     }
                 }
@@ -440,7 +423,6 @@ namespace BDArmory.FX
                 disabled = true;
             }
         }
-
 
         public static void CreateBulletHit(Part hitPart, Vector3 position, RaycastHit hit, Vector3 normalDirection, bool ricochet, float caliber, float penetrationfactor, string team)
         {

@@ -89,7 +89,7 @@ namespace BDArmory.Extensions
             var normalisationFactor = BDAMath.Sqrt(v1.sqrMagnitude * v2.sqrMagnitude);
             return normalisationFactor > 0 ? Vector3.Dot(v1, v2) / normalisationFactor : 0;
         }
-    
+
         /// <summary>
         /// Efficient replacement for Vector3.Distance(from, to) < distance.
         /// Intel and AMD appear to support sqrt in hardware, but M1 Macs don't.
@@ -115,6 +115,31 @@ namespace BDArmory.Extensions
         public static bool FurtherFromThan(this Vector3 v, Vector3 from, float distance)
         {
             return (v - from).sqrMagnitude > distance * distance;
+        }
+
+        /// <summary>
+        /// Decompose a vector into a magnitude and normalized direction.
+        /// This performs the same operations as v.normalized but also returns the magnitude, which is often needed.
+        /// </summary>
+        /// <param name="v">The vector to decompose.</param>
+        /// <returns>The magnitude and normalized unit vector.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static (float, Vector3) MagNorm(this Vector3 v)
+        {
+            float mag = v.magnitude;
+            if (mag > Vector3.kEpsilon)
+                return (mag, v / mag);
+            else
+                return (mag, Vector3.zero);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static (double, Vector3d) MagNorm(this Vector3d v)
+        {
+            double mag = v.magnitude;
+            if (mag > Vector3.kEpsilon)
+                return (mag, v / mag);
+            else
+                return (mag, Vector3.zero);
         }
     }
 }

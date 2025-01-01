@@ -378,8 +378,7 @@ namespace BDArmory.FX
             { // Explosion centre velocity depends on atmospheric density relative to Kerbin sea level.
                 var atmDensity = (float)FlightGlobals.getAtmDensity(FlightGlobals.getStaticPressure(Position), FlightGlobals.getExternalTemperature(Position));
                 Velocity /= 1 + atmDensity / KerbinSeaLevelAtmDensity;
-                var deltaPos = Velocity * TimeWarp.fixedDeltaTime; // Krakensbane is already accounted for above.
-                Position += deltaPos;
+                Position += Velocity * TimeWarp.fixedDeltaTime; // Krakensbane is already accounted for above.
             }
             if (Time.time - startTime > detonationTimer)
             {

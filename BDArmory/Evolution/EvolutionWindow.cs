@@ -83,7 +83,7 @@ namespace BDArmory.Evolution
                 _windowHeight
             );
             BDArmorySetup.SetGUIOpacity();
-            if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, BDArmorySetup.WindowRectEvolution.position);
+            if (BDArmorySettings._UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings._UI_SCALE * Vector2.one, BDArmorySetup.WindowRectEvolution.position);
             BDArmorySetup.WindowRectEvolution = GUI.Window(
                 8008135,
                 BDArmorySetup.WindowRectEvolution,

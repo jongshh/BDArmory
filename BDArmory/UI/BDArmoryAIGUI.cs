@@ -98,7 +98,22 @@ namespace BDArmory.UI
 
         public void AddToolbarButton()
         {
+            if (!HighLogic.LoadedSceneIsFlight && !HighLogic.LoadedSceneIsEditor) return;
             StartCoroutine(ToolbarButtonRoutine());
+        }
+        IEnumerator ToolbarButtonRoutine()
+        {
+            if (buttonSetup) // Reconfigure the callbacks to use the current instance.
+            {
+                button.onTrue = ShowAIGUI;
+                button.onFalse = HideAIGUI;
+                yield break;
+            }
+            yield return new WaitUntil(() => ApplicationLauncher.Ready && BDArmorySetup.toolbarButtonAdded); // Wait until after the main BDA toolbar button.
+            Texture buttonTexture = GameDatabase.Instance.GetTexture(BDArmorySetup.textureDir + "icon_ai", false);
+            button = ApplicationLauncher.Instance.AddModApplication(ShowAIGUI, HideAIGUI, Dummy, Dummy, Dummy, Dummy, ApplicationLauncher.AppScenes.SPH | ApplicationLauncher.AppScenes.VAB | ApplicationLauncher.AppScenes.FLIGHT, buttonTexture);
+            buttonSetup = true;
+            if (windowBDAAIGUIEnabled) button.SetTrue(false);
         }
 
         public void RemoveToolbarButton()
@@ -108,21 +123,6 @@ namespace BDArmory.UI
             ApplicationLauncher.Instance.RemoveModApplication(button);
             button = null;
             buttonSetup = false;
-        }
-
-        IEnumerator ToolbarButtonRoutine()
-        {
-            if (buttonSetup) yield break;
-            if (!HighLogic.LoadedSceneIsFlight && !HighLogic.LoadedSceneIsEditor) yield break;
-            yield return new WaitUntil(() => ApplicationLauncher.Ready && BDArmorySetup.toolbarButtonAdded); // Wait until after the main BDA toolbar button.
-
-            if (!buttonSetup)
-            {
-                Texture buttonTexture = GameDatabase.Instance.GetTexture(BDArmorySetup.textureDir + "icon_ai", false);
-                button = ApplicationLauncher.Instance.AddModApplication(ShowAIGUI, HideAIGUI, Dummy, Dummy, Dummy, Dummy, ApplicationLauncher.AppScenes.SPH | ApplicationLauncher.AppScenes.VAB | ApplicationLauncher.AppScenes.FLIGHT, buttonTexture);
-                buttonSetup = true;
-                if (windowBDAAIGUIEnabled) button.SetTrue(false);
-            }
         }
 
         public void ToggleAIGUI()
@@ -135,17 +135,29 @@ namespace BDArmory.UI
         {
             windowBDAAIGUIEnabled = true;
             GUIUtils.SetGUIRectVisible(_guiCheckIndex, windowBDAAIGUIEnabled);
-            if (HighLogic.LoadedSceneIsFlight) Instance.GetAI(); // Call via Instance to avoid issue with the toolbar button holding a reference to a null gameobject causing an NRE when starting a coroutine.
-            else Instance.GetAIEditor();
+            if (HighLogic.LoadedSceneIsFlight) GetAI();
+            else GetAIEditor();
             if (button != null) button.SetTrue(false);
         }
 
-        public void HideAIGUI()
+        // Doing it this way prevents OnGUI events from below the window from being triggered by the window disappearing.
+        public void HideAIGUI() => StartCoroutine(HideAIGUIAtEndOfFrame());
+        bool waitingForEndOfFrame = false;
+        IEnumerator HideAIGUIAtEndOfFrame()
+        {
+            if (waitingForEndOfFrame) yield break;
+            waitingForEndOfFrame = true;
+            yield return new WaitForEndOfFrame();
+            waitingForEndOfFrame = false;
+            HideAIGUINow();
+        }
+        void HideAIGUINow()
         {
             windowBDAAIGUIEnabled = false;
             GUIUtils.SetGUIRectVisible(_guiCheckIndex, windowBDAAIGUIEnabled);
             BDAWindowSettingsField.Save(); // Save window settings.
             if (button != null) button.SetFalse(false);
+            if (HighLogic.LoadedSceneIsEditor) GUIUtils.PreventClickThrough(BDArmorySetup.WindowRectAI, "AIGUI lock", true);
         }
 
         void Dummy()
@@ -497,6 +509,7 @@ namespace BDArmory.UI
                             nameof(AI.extendTargetAngle),
                             nameof(AI.extendTargetDist),
                             nameof(AI.extendAbortTime),
+                            nameof(AI.extendMinGainRate),
 
                             nameof(AI.turnRadiusTwiddleFactorMin),
                             nameof(AI.turnRadiusTwiddleFactorMax),
@@ -716,7 +729,7 @@ namespace BDArmory.UI
             if (!stylesConfigured) ConfigureStyles();
             if (HighLogic.LoadedSceneIsFlight) BDArmorySetup.SetGUIOpacity();
             if (resizingWindow && Event.current.type == EventType.MouseUp) { resizingWindow = false; }
-            if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, BDArmorySetup.WindowRectAI.position);
+            if (BDArmorySettings._UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings._UI_SCALE * Vector2.one, BDArmorySetup.WindowRectAI.position);
             BDArmorySetup.WindowRectAI = GUI.Window(GUIUtility.GetControlID(FocusType.Passive), BDArmorySetup.WindowRectAI, WindowRectAI, "", BDArmorySetup.BDGuiSkin.window);//"BDA Weapon Manager"
             if (HighLogic.LoadedSceneIsFlight) BDArmorySetup.SetGUIOpacity(false);
         }
@@ -753,7 +766,7 @@ namespace BDArmory.UI
         }
 
         enum Section { UpToEleven, PID, Altitude, Speed, Control, Evasion, Terrain, Ramming, Combat, Misc, FixedAutoTuneFields, VehicleType }; // Sections and other important toggles.
-        readonly Dictionary<Section, bool> showSection = Enum.GetValues(typeof(Section)).Cast<Section>().ToDictionary(s => s, s => false);
+        static Dictionary<Section, bool> showSection = Enum.GetValues(typeof(Section)).Cast<Section>().ToDictionary(s => s, s => false);
         readonly Dictionary<Section, float> sectionHeights = [];
         const float contentBorder = 0.2f * entryHeight;
         const float contentMargin = 10;
@@ -881,6 +894,7 @@ namespace BDArmory.UI
         readonly Dictionary<string, (float, float)[]> cacheSemiLogLimits = [];
         void WindowRectAI(int windowID)
         {
+            if (HighLogic.LoadedSceneIsEditor) GUIUtils.PreventClickThrough(BDArmorySetup.WindowRectAI, "AIGUI lock");
             float windowColumns = 2;
             float contentIndent = contentMargin + columnIndent;
             float contentWidth = 2 * ColumnWidth - 2 * contentMargin - columnIndent;
@@ -890,7 +904,10 @@ namespace BDArmory.UI
             GUI.Label(new Rect(100, contentTop, contentWidth, entryHeight), StringUtils.Localize("#LOC_BDArmory_AIWindow_title"), Title);
 
             if (GUI.Button(TitleButtonRect(1), "X", windowBDAAIGUIEnabled ? BDArmorySetup.BDGuiSkin.button : BDArmorySetup.BDGuiSkin.box)) //Exit Button
-            { ToggleAIGUI(); }
+            {
+                if (button) button.SetFalse();
+                else HideAIGUI(); // In case the button is disabled.
+            }
             if (GUI.Button(TitleButtonRect(2), "i", infoLinkEnabled ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button)) //Infolink button
             { infoLinkEnabled = !infoLinkEnabled; }
             if (GUI.Button(TitleButtonRect(3), "?", contextTipsEnabled ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button)) //Context labels button
@@ -1253,6 +1270,7 @@ namespace BDArmory.UI
                                         evadeLines = ContentEntry(ContentType.FloatSlider, evadeLines, contentWidth, ref AI.extendTargetAngle, nameof(AI.extendTargetAngle), "ExtendTargetAngle", $"{AI.extendTargetAngle:0}°");
                                         evadeLines = ContentEntry(ContentType.FloatSlider, evadeLines, contentWidth, ref AI.extendTargetDist, nameof(AI.extendTargetDist), "ExtendTargetDist", $"{AI.extendTargetDist:0}m");
                                         evadeLines = ContentEntry(ContentType.FloatSlider, evadeLines, contentWidth, ref AI.extendAbortTime, nameof(AI.extendAbortTime), "ExtendAbortTime", $"{AI.extendAbortTime:0}s");
+                                        evadeLines = ContentEntry(ContentType.FloatSlider, evadeLines, contentWidth, ref AI.extendMinGainRate, nameof(AI.extendMinGainRate), "ExtendMinGainRate", $"{AI.extendMinGainRate:0}m/s");
                                     }
                                     AI.canExtend = GUI.Toggle(ToggleButtonRect(evadeLines, contentWidth), AI.canExtend, StringUtils.Localize("#LOC_BDArmory_AI_ExtendToggle"), AI.canExtend ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button);//"Dynamic pid"
                                     evadeLines += 1.25f;
@@ -1875,7 +1893,7 @@ namespace BDArmory.UI
                                 float line = 1.5f;
                                 showSection[Section.PID] = GUI.Toggle(SubsectionRect(line), showSection[Section.PID], StringUtils.Localize("#LOC_BDArmory_AIWindow_PID"), showSection[Section.PID] ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button);//"PiD"
 
-                                line += 1.5f; 
+                                line += 1.5f;
                                 showSection[Section.Combat] = GUI.Toggle(SubsectionRect(line), showSection[Section.Combat], StringUtils.Localize("#LOC_BDArmory_AIWindow_Combat"), showSection[Section.Combat] ? BDArmorySetup.BDGuiSkin.box : BDArmorySetup.BDGuiSkin.button);//"Combat"
 
                                 line += 1.5f;
@@ -2160,9 +2178,9 @@ namespace BDArmory.UI
 
             if (Event.current.type == EventType.Repaint && resizingWindow)
             {
-                WindowHeight += Mouse.delta.y / BDArmorySettings.UI_SCALE;
+                WindowHeight += Mouse.delta.y / BDArmorySettings._UI_SCALE;
                 WindowHeight = Mathf.Max(WindowHeight, 305);
-                if (BDArmorySettings.DEBUG_OTHER) GUI.Label(new Rect(WindowWidth / 2, WindowHeight - 26, WindowWidth / 2 - 26, 26), $"Resizing: {Mathf.Round(WindowHeight * BDArmorySettings.UI_SCALE)}", Label);
+                if (BDArmorySettings.DEBUG_OTHER) GUI.Label(new Rect(WindowWidth / 2, WindowHeight - 26, WindowWidth / 2 - 26, 26), $"Resizing: {Mathf.Round(WindowHeight * BDArmorySettings._UI_SCALE)}", Label);
             }
             #endregion
 
@@ -2183,6 +2201,7 @@ namespace BDArmory.UI
             GameEvents.onEditorLoad.Remove(OnEditorLoad);
             GameEvents.onEditorPartPlaced.Remove(OnEditorPartPlacedEvent);
             GameEvents.onEditorPartDeleted.Remove(OnEditorPartDeletedEvent);
+            if (HighLogic.LoadedSceneIsEditor) GUIUtils.PreventClickThrough(BDArmorySetup.WindowRectAI, "AIGUI lock", true);
         }
     }
 }

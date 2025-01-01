@@ -5,11 +5,12 @@ using System.Linq;
 using UnityEngine;
 
 using BDArmory.Competition;
+using BDArmory.Control;
 using BDArmory.Extensions;
+using BDArmory.ModIntegration;
 using BDArmory.Settings;
 using BDArmory.UI;
 using BDArmory.Utils;
-using BDArmory.ModIntegration;
 
 namespace BDArmory.GameModes
 {
@@ -835,7 +836,7 @@ namespace BDArmory.GameModes
                     vesselCount = 0;
                     foreach (var vessel in LoadedVesselSwitcher.Instance.WeaponManagers.SelectMany(tm => tm.Value).Where(wm => wm != null && wm.vessel != null).Select(wm => wm.vessel))
                     {
-                        averagePosition += vessel.transform.position;
+                        averagePosition += vessel.CoM;
                         averageVelocity += vessel.Velocity();
                         ++vesselCount;
                     }
@@ -854,10 +855,10 @@ namespace BDArmory.GameModes
                         if (vesselCount > 0)
                         {
                             // Attract to vessel centroid if in the outer region (90%) of the asteroid field.
-                            if ((asteroids[i].transform.position - averagePosition).sqrMagnitude > 0.81f * radiusSqr)
+                            if ((asteroids[i].CoM - averagePosition).sqrMagnitude > 0.81f * radiusSqr)
                             {
-                                float centroidFactor = TimeWarp.CurrentRate * Mathf.Min((asteroids[i].transform.position - averagePosition).sqrMagnitude - 0.81f * radiusSqr, radiusSqr) * 5e-7f;
-                                Vector3 radialDir = asteroids[i].transform.position - averagePosition;
+                                float centroidFactor = TimeWarp.CurrentRate * Mathf.Min((asteroids[i].CoM - averagePosition).sqrMagnitude - 0.81f * radiusSqr, radiusSqr) * 5e-7f;
+                                Vector3 radialDir = asteroids[i].CoM - averagePosition + 0.5f * radius * UnityEngine.Random.onUnitSphere; // Add 1/2 field radius noise to avoid clustering.
                                 Vector3 radialVel = asteroids[i].Velocity() - averageVelocity;
                                 if (Vector3.Dot(radialDir, radialVel) < 0) centroidFactor *= 0.25f; // Less of a push when heading towards the centroid to avoid pinballing.
                                 Vector3 attraction = -centroidFactor * radialDir;
@@ -869,7 +870,7 @@ namespace BDArmory.GameModes
                         for (int j = i + 1; j < asteroids.Length; ++j)
                         {
                             if (asteroids[j] == null || asteroids[j].packed || !asteroids[j].loaded || asteroids[j].rootPart.Rigidbody == null) continue;
-                            var separation = asteroids[i].transform.position - asteroids[j].transform.position;
+                            var separation = asteroids[i].CoM - asteroids[j].CoM;
                             var sepSqr = separation.sqrMagnitude;
                             var proximityFactor = asteroids[i].GetRadius() + asteroids[j].GetRadius();
                             proximityFactor *= (inOrbit ? 10 : BDArmorySettings.ASTEROID_FIELD_ANOMALOUS_ATTRACTION ? 100 : 4) * proximityFactor; // Without anomalous attraction, they don't get stirred up much, so they don't need as much repulsion. In space they don't need much repulsion either.
@@ -878,6 +879,16 @@ namespace BDArmory.GameModes
                                 var repulseAmount = TimeWarp.CurrentRate * BDAMath.Sqrt(proximityFactor - sepSqr) * separation.normalized;
                                 asteroids[i].rootPart.Rigidbody.AddForce(repulseAmount, ForceMode.Acceleration);
                                 asteroids[j].rootPart.Rigidbody.AddForce(-repulseAmount, ForceMode.Acceleration);
+                            }
+                        }
+
+                        if (BDArmorySettings.RUNWAY_PROJECT && BDArmorySettings.RUNWAY_PROJECT_ROUND == 70 && BDACompetitionMode.Instance.competitionIsActive)
+                        { // Kill off any vessels that don't have propulsion and are significantly beyond the distance to the vessel centroid.
+                            foreach (var vessel in LoadedVesselSwitcher.Instance.WeaponManagers.SelectMany(tm => tm.Value).Where(wm => wm != null && wm.vessel != null).Select(wm => wm.vessel))
+                            {
+                                var oai = VesselModuleRegistry.GetModule<BDModuleOrbitalAI>(vessel);
+                                if ((oai == null || !oai.HasPropulsion) && (vessel.CoM - averagePosition).sqrMagnitude > 2 * radiusSqr) // Beyond sqrt(2) field radius.
+                                    StartCoroutine(BDACompetitionMode.Instance.DelayedGMKill(vessel, BDArmorySettings.COMPETITION_GM_KILL_TIME, " crippled and significantly beyond asteroid field range. Terminated by GM."));
                             }
                         }
                     }
@@ -914,7 +925,7 @@ namespace BDArmory.GameModes
                 LoadedVesselSwitcher.Instance.UpdateList();
                 foreach (var vessel in LoadedVesselSwitcher.Instance.WeaponManagers.SelectMany(tm => tm.Value).Where(wm => wm != null && wm.vessel != null).Select(wm => wm.vessel))
                 {
-                    averagePosition += vessel.transform.position;
+                    averagePosition += vessel.CoM;
                     averageVelocity += vessel.Velocity();
                     ++vesselCount;
                 }
@@ -1125,7 +1136,7 @@ namespace BDArmory.GameModes
             for (int i = 0; i < asteroidPool.Count; ++i)
             {
                 if (asteroidPool[i] == null) { Debug.Log($"DEBUG asteroid at position {i} is null"); continue; }
-                Debug.Log($"DEBUG {asteroidPool[i].vesselName} has mass {asteroidPool[i].GetTotalMass()} and is {(asteroidPool[i].gameObject.activeInHierarchy ? "active" : "inactive")} at distance {(asteroidPool[i].transform.position - spawnPoint).magnitude}m from the spawn point.");
+                Debug.Log($"DEBUG {asteroidPool[i].vesselName} has mass {asteroidPool[i].GetTotalMass()} and is {(asteroidPool[i].gameObject.activeInHierarchy ? "active" : "inactive")} at distance {(asteroidPool[i].CoM - spawnPoint).magnitude}m from the spawn point.");
                 if (asteroidPool[i].gameObject != null)
                 {
                     if (asteroidPool[i].gameObject.activeInHierarchy)

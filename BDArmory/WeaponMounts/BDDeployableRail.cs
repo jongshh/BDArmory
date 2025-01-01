@@ -375,7 +375,7 @@ namespace BDArmory.WeaponMounts
             missileChildren[index].part.CoMOffset = comOffsets[missileChildren[index].part];
         }
 
-        public void FireMissile(int missileIndex) //this is causing it not to fire, determine how missileindex is assigned
+        public void FireMissile(int missileIndex, Vessel targetVessel, MissileFire.TargetData targetData = null) //this is causing it not to fire, determine how missileindex is assigned
         {
             if (!readyToFire) return;
 
@@ -385,7 +385,7 @@ namespace BDArmory.WeaponMounts
 
                 if (weaponManager)
                 {
-                    wm.SendTargetDataToMissile(missileChildren[missileIndex]);
+                    wm.SendTargetDataToMissile(missileChildren[missileIndex], targetVessel, true, targetData, true);
                     wm.PreviousMissile = missileChildren[missileIndex];
                 }
 
@@ -402,7 +402,7 @@ namespace BDArmory.WeaponMounts
             }
         }
 
-        public void FireMissile(MissileLauncher ml)
+        public void FireMissile(MissileLauncher ml, Vessel targetVessel, MissileFire.TargetData targetData = null)
         {
             if (!readyToFire)
             {
@@ -412,7 +412,7 @@ namespace BDArmory.WeaponMounts
             int index = IndexOfMissile(ml);
             if (index >= 0)
             {
-                FireMissile(index);
+                FireMissile(index, targetVessel, targetData);
             }
         }
 

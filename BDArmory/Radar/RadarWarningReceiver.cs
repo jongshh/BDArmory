@@ -45,6 +45,7 @@ namespace BDArmory.Radar
         //for if the RWR should detect everything, or only be able to detect radar sources
         [KSPField(isPersistant = true)] public bool omniDetection = true;
 
+        [KSPField] public float fieldOfView = 360; //for if making separate RWR and WM for mod competitions, etc.
         // This field was added to separate RWR active status from the display of the RWR.  the RWR should be running all the time...
         public bool displayRWR = false;
         internal static bool resizingWindow = false;
@@ -367,7 +368,7 @@ namespace BDArmory.Radar
 
             if (resizingWindow && Event.current.type == EventType.MouseUp) { resizingWindow = false; }
 
-            if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, BDArmorySetup.WindowRectRwr.position);
+            if (BDArmorySettings._UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings._UI_SCALE * Vector2.one, BDArmorySetup.WindowRectRwr.position);
             BDArmorySetup.WindowRectRwr = GUI.Window(94353, BDArmorySetup.WindowRectRwr, WindowRwr, "Radar Warning Receiver", GUI.skin.window);
             GUIUtils.UseMouseEventInRect(RwrDisplayRect);
         }
@@ -431,7 +432,7 @@ namespace BDArmory.Radar
             {
                 if (Mouse.delta.x != 0 || Mouse.delta.y != 0)
                 {
-                    float diff = (Mathf.Abs(Mouse.delta.x) > Mathf.Abs(Mouse.delta.y) ? Mouse.delta.x : Mouse.delta.y) / BDArmorySettings.UI_SCALE;
+                    float diff = (Mathf.Abs(Mouse.delta.x) > Mathf.Abs(Mouse.delta.y) ? Mouse.delta.x : Mouse.delta.y) / BDArmorySettings._UI_SCALE;
                     BDArmorySettings.RWR_WINDOW_SCALE = Mathf.Clamp(BDArmorySettings.RWR_WINDOW_SCALE + diff / RwrSize, BDArmorySettings.RWR_WINDOW_SCALE_MIN, BDArmorySettings.RWR_WINDOW_SCALE_MAX);
                     BDArmorySetup.ResizeRwrWindow(BDArmorySettings.RWR_WINDOW_SCALE);
                 }

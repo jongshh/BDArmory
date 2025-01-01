@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using KSP.Localization;
 
 using BDArmory.Control;
 using BDArmory.Damage;
@@ -17,7 +16,6 @@ using BDArmory.UI;
 using BDArmory.Utils;
 using BDArmory.VesselSpawning;
 using BDArmory.Weapons.Missiles;
-using BDArmory.Weapons;
 
 namespace BDArmory.Competition
 {
@@ -262,22 +260,25 @@ namespace BDArmory.Competition
             int shadowOffset = 2;
             if (BDArmorySetup.GAME_UI_ENABLED)
             {
-                clockRect = new Rect(10, 42, 100, 30);
-                dateRect = new Rect(100, 38, 100, 20);
-                versionRect = new Rect(200, 46, 100, 20);
-                statusRect = new Rect(30, 80, Screen.width - 130, Mathf.FloorToInt(Screen.height / 2));
-                statusStyle.fontSize = 22;
-                dateStyle.fontSize = 14;
+                float rectOffset = Mathf.Max(100, Mathf.CeilToInt(100 * BDArmorySettings.UI_SCALE));
+                clockRect = new Rect(10, Mathf.CeilToInt(42 * GameSettings.UI_SCALE), rectOffset, 30);
+                dateRect = new Rect(rectOffset, Mathf.CeilToInt(38 * GameSettings.UI_SCALE), rectOffset, 20);
+                versionRect = new Rect(rectOffset * 2, Mathf.CeilToInt(46 * GameSettings.UI_SCALE), rectOffset, 20);
+                statusRect = new Rect(30, Mathf.CeilToInt(60 * GameSettings.UI_SCALE) + rectOffset / 5, Screen.width - 130, Mathf.FloorToInt(Screen.height / 2));
+                statusStyle.fontSize = Mathf.Max(22, Mathf.CeilToInt(22 * BDArmorySettings.UI_SCALE));
+                dateStyle.fontSize = Mathf.Max(14, Mathf.CeilToInt(14 * BDArmorySettings.UI_SCALE));
             }
             else
             {
-                clockRect = new Rect(10, 6, 80, 20);
-                dateRect = new Rect(10, 26, 100, 20);
-                versionRect = new Rect(10, 48, 100, 20);
-                statusRect = new Rect(80, 6, Screen.width - 80, Mathf.FloorToInt(Screen.height / 2));
+                float RectLength = Mathf.Max(100, Mathf.CeilToInt(100 * BDArmorySettings.UI_SCALE));
+                float RectHeight = Mathf.Max(20, Mathf.CeilToInt(20 * BDArmorySettings.UI_SCALE));
+                clockRect = new Rect(10, 6, RectLength, RectHeight);
+                dateRect = new Rect(10, RectHeight + 6, RectLength, RectHeight);
+                versionRect = new Rect(10, (RectHeight * 2) + 8, RectLength, RectHeight);
+                statusRect = new Rect(RectLength, 6, Screen.width - 80, Mathf.FloorToInt(Screen.height / 2));
                 shadowOffset = 1;
-                statusStyle.fontSize = 14;
-                dateStyle.fontSize = 10;
+                statusStyle.fontSize = Mathf.Max(14, Mathf.CeilToInt(14 * BDArmorySettings.UI_SCALE));
+                dateStyle.fontSize = Mathf.Max(10, Mathf.CeilToInt(10 * BDArmorySettings.UI_SCALE));
             }
             clockRectShadow = new Rect(clockRect);
             clockRectShadow.x += shadowOffset;
@@ -537,6 +538,7 @@ namespace BDArmory.Competition
                 if (BDArmorySettings.MUTATOR_MODE) SpawnUtils.ApplyMutators(pilot.vessel, true);
                 if (BDArmorySettings.ENABLE_HOS) SpawnUtils.ApplyHOS(pilot.vessel);
                 if (BDArmorySettings.RUNWAY_PROJECT) SpawnUtils.ApplyRWP(pilot.vessel);
+                if (BDArmorySettings.COMP_CONVENIENCE_CHECKS) SpawnUtils.ApplyCompSettingsChecks(pilot.vessel);
                 /*
                 if (BDArmorySettings.MUTATOR_MODE && BDArmorySettings.MUTATOR_LIST.Count > 0)
                 {
@@ -1304,7 +1306,7 @@ namespace BDArmory.Competition
             explodingWM.Remove(vessel);
         }
 
-        IEnumerator DelayedGMKill(Vessel vessel, float delay, string killReason)
+        public IEnumerator DelayedGMKill(Vessel vessel, float delay, string killReason)
         {
             if (explodingWM.Contains(vessel)) yield break; // Already scheduled for exploding.
             explodingWM.Add(vessel);
@@ -1822,6 +1824,7 @@ namespace BDArmory.Competition
                                     if (BDArmorySettings.MUTATOR_MODE) SpawnUtils.ApplyMutators(pilot.vessel, true);
                                     if (BDArmorySettings.ENABLE_HOS) SpawnUtils.ApplyHOS(pilot.vessel);
                                     if (BDArmorySettings.RUNWAY_PROJECT) SpawnUtils.ApplyRWP(pilot.vessel);
+                                    if (BDArmorySettings.COMP_CONVENIENCE_CHECKS) SpawnUtils.ApplyCompSettingsChecks(pilot.vessel);
                                     /*
                                     if (BDArmorySettings.MUTATOR_MODE && BDArmorySettings.MUTATOR_LIST.Count > 0)
                                     {

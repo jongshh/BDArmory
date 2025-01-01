@@ -275,7 +275,7 @@ namespace BDArmory.Utils
                         if (BDArmorySettings.RUNWAY_PROJECT)
                         {
                             liftCoeff = Mathf.Clamp((float)liftCoeff, 0, BDArmorySettings.MAX_PWING_LIFT); //if Runway Project, check lift is within limit and clamp if not
-                            if (!WingctrlSrf && !ctrlSrf) PWType.GetField("sharedBaseOffsetRoot", BindingFlags.Public | BindingFlags.Instance).SetValue(module, 0); //Adjust PWing GUI mass readout
+                            //f (!WingctrlSrf && !ctrlSrf) PWType.GetField("sharedBaseOffsetRoot", BindingFlags.Public | BindingFlags.Instance).SetValue(module, 0); //irrelevant in pWing 0.46.7
                         }
                         if (BDArmorySettings.PWING_THICKNESS_AFFECT_MASS_HP)
                         {

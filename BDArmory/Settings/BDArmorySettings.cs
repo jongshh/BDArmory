@@ -35,6 +35,8 @@ namespace BDArmory.Settings
         [BDAPersistentSettingsField] public static float EVOLUTION_WINDOW_WIDTH = 350f;
         [BDAPersistentSettingsField] public static float GUI_OPACITY = 1f;                   // Modify the GUI opacity.
         [BDAPersistentSettingsField] public static float UI_SCALE = 1f; // Global UI scaling
+        [BDAPersistentSettingsField] public static bool UI_SCALE_FOLLOWS_STOCK = true; // Global UI scaling follows stock
+        public static float _UI_SCALE => UI_SCALE_FOLLOWS_STOCK ? GameSettings.UI_SCALE : UI_SCALE;
         public static float PREVIOUS_UI_SCALE = 1f; // For tracking changes
         #endregion
 
@@ -50,6 +52,7 @@ namespace BDArmory.Settings
         [BDAPersistentSettingsField] public static bool PERFORMANCE_OPTIONS = true;
         [BDAPersistentSettingsField] public static bool BULLET_HITS = true;
         [BDAPersistentSettingsField] public static bool WATER_HIT_FX = true;
+        [BDAPersistentSettingsField] public static bool WEAPONS_RESPECT_CROSSFEED = true;
         public static bool waterHitEffect => PERFORMANCE_OPTIONS && WATER_HIT_FX;
         [BDAPersistentSettingsField] public static bool EJECT_SHELLS = true;
         [BDAPersistentSettingsField] public static bool LIGHTFX = true;                       // explosions spawn a LightFX
@@ -88,6 +91,11 @@ namespace BDArmory.Settings
         [BDAPersistentSettingsField] public static bool AUTOCATEGORIZE_PARTS = true;
         [BDAPersistentSettingsField] public static bool SHOW_CATEGORIES = true;
         [BDAPersistentSettingsField] public static bool IGNORE_TERRAIN_CHECK = false;
+        [BDAPersistentSettingsField] public static bool CHECK_WATER_TERRAIN = false;
+        [BDAPersistentSettingsField] public static bool RADAR_NOTCHING = false;
+        [BDAPersistentSettingsField] public static bool RADAR_ALLOW_SURFACE_WARFARE = true;
+        [BDAPersistentSettingsField] public static float RADAR_NOTCHING_FACTOR = 1f;
+        [BDAPersistentSettingsField] public static float RADAR_NOTCHING_SCR_FACTOR = 0.01f;
         [BDAPersistentSettingsField] public static bool DISPLAY_PATHING_GRID = false;             //laggy when the grid gets large
         //[BDAPersistentSettingsField] public static bool ADVANCED_EDIT = true;                     //Used for debug fields not nomrally shown to regular users //SI - Only usage is a commented out function in BDExplosivePart
         [BDAPersistentSettingsField] public static bool DISPLAY_COMPETITION_STATUS = true;             //Display competition status
@@ -187,9 +195,11 @@ namespace BDArmory.Settings
         [BDAPersistentSettingsField] public static float EXP_IMP_MOD = 0.25f;
         [BDAPersistentSettingsField] public static float BUILDING_DMG_MULTIPLIER = 1f;
         [BDAPersistentSettingsField] public static bool EXTRA_DAMAGE_SLIDERS = false;
+        [BDAPersistentSettingsField] public static float HEAT_CONE_HALF_ANGLE = 2.5f;
         [BDAPersistentSettingsField] public static float WEAPON_FX_DURATION = 15;               //how long do weapon secondary effects(EMP/choker/gravitic/etc) last
         [BDAPersistentSettingsField] public static float ZOMBIE_DMG_MULT = 0.1f;
         [BDAPersistentSettingsField] public static float ARMOR_MASS_MOD = 1f;                   //Armor mass multiplier
+        [BDAPersistentSettingsField] public static bool KERBAL_ERA = true;
         #endregion
 
         #region FX
@@ -317,6 +327,7 @@ namespace BDArmory.Settings
         [BDAPersistentSettingsField] public static bool VESSEL_SPAWN_DISTANCE_TOGGLE = true;       // Toggle between scaling factor and absolute distance.
         [BDAPersistentSettingsField] public static float VESSEL_SPAWN_REF_HEADING = 0f;            // Reference heading for the first craft in circular spawns.
         [BDAPersistentSettingsField] public static bool VESSEL_SPAWN_REASSIGN_TEAMS = true;        // Reassign teams on spawn, overriding teams defined in the SPH.
+        [BDAPersistentSettingsField] public static bool VESSEL_SPAWN_SMART_REASSIGN_TEAMS = false; // Reassign teams on spawn, but don't override teams defined in the SPH. (Only for single-shot template spawning currently.)
         [BDAPersistentSettingsField] public static int VESSEL_SPAWN_CONCURRENT_VESSELS = 0;        // Maximum number of vessels to spawn in concurrently (continuous spawning mode).
         [BDAPersistentSettingsField] public static int VESSEL_SPAWN_LIVES_PER_VESSEL = 0;          // Maximum number of times to spawn a vessel (continuous spawning mode).
         [BDAPersistentSettingsField] public static float OUT_OF_AMMO_KILL_TIME = -1f;              // Out of ammo kill timer for continuous spawn mode.
@@ -468,6 +479,9 @@ namespace BDArmory.Settings
         [BDAPersistentSettingsField] public static float CHAFF_FACTOR = 0.65f;                       // Change this to make chaff more or less effective. Higher values will make chaff batter, lower values will make chaff worse.
         [BDAPersistentSettingsField] public static float SMOKE_DEFLECTION_FACTOR = 10f;
         [BDAPersistentSettingsField] public static int APS_THRESHOLD = 60;                           // Threshold caliber that APS will register for intercepting hostile shells/rockets
+        #endregion
+        #region ProjectShowdown Stuff
+        [BDAPersistentSettingsField] public static bool COMP_CONVENIENCE_CHECKS = false;
         #endregion
     }
 }

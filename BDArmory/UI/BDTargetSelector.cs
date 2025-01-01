@@ -186,7 +186,7 @@ namespace BDArmory.UI
                     width,
                     height);
                 BDArmorySetup.SetGUIOpacity();
-                if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, clientRect.position);
+                if (BDArmorySettings._UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings._UI_SCALE * Vector2.one, clientRect.position);
                 window = GUI.Window(10591029, clientRect, TargetingSelectorWindow, "", BDArmorySetup.BDGuiSkin.window);
                 BDArmorySetup.SetGUIOpacity(false);
                 GUIUtils.UpdateGUIRect(window, guiCheckIndex);

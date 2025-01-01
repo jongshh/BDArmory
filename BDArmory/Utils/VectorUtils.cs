@@ -325,10 +325,10 @@ namespace BDArmory.Utils
         {
             // Return true if no sphere intersections, false if sphere intersections
             // Better handling of conditions when ray origin is inside sphere or direction is away from sphere than SphereRayIntersect
-            
+
             if ((ray.origin - sphereCenter).sqrMagnitude < (sphereRadius * sphereRadius))
                 return false;
-            
+
             bool intersect = SphereRayIntersect(ray, sphereCenter, (double)sphereRadius, out double distance);
 
             if (!intersect)
@@ -341,5 +341,35 @@ namespace BDArmory.Utils
                     return true;
             }
         }
+
+        /// <summary>
+        /// Compute the 1-norm of a Vector3.
+        /// </summary>
+        /// <returns>The 1-norm.</returns>
+        public static float OneNorm(this Vector3 v)
+        {
+            return Mathf.Abs(v.x) + Mathf.Abs(v.y) + Mathf.Abs(v.z);
+        }
+
+        /// <summary>
+        /// Round the Vector3 to the given unit.
+        /// </summary>
+        /// <param name="unit">The unit to round to.</param>
+        /// <returns>The modified Vector3.</returns>
+        public static Vector3 Round(this ref Vector3 v, float unit)
+        {
+            if (unit == 0) return v;
+            v.x = Mathf.Round(v.x / unit) * unit;
+            v.y = Mathf.Round(v.y / unit) * unit;
+            v.z = Mathf.Round(v.z / unit) * unit;
+            return v;
+        }
+
+        /// <summary>
+        /// Non-modifying version of Vector3.Round.
+        /// </summary>
+        /// <param name="unit">The unit to round to.</param>
+        /// <returns>A new Vector3 rounded to the unit.</returns>
+        public static Vector3 Rounded(this Vector3 v, float unit) => v.Round(unit);
     }
 }

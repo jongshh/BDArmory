@@ -32,7 +32,7 @@ UI_FloatRange(minValue = 1f, maxValue = 4, stepIncrement = 1f, scene = UI_Scene.
         public int magazineAmmo = 0;
         public int ammoCount => magazineAmmo + (int)railAmmo;
 
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = false, guiName = "#LOC_BDArmory_OrdinanceAvailable"),//Ordinance Available
+        [KSPField(guiActive = true, guiActiveEditor = false, guiName = "#LOC_BDArmory_OrdinanceAvailable"),//Ordinance Available
 UI_ProgressBar(affectSymCounterparts = UI_Scene.None, controlEnabled = false, scene = UI_Scene.Flight, maxValue = 100, minValue = 0, requireFullControl = false)]
         public float ammoRemaining = 1;
 

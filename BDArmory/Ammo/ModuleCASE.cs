@@ -64,7 +64,7 @@ namespace BDArmory.Ammo
         UI_FloatRange(minValue = 0f, maxValue = 2f, stepIncrement = 1f, scene = UI_Scene.All, affectSymCounterparts = UI_Scene.All)]
         public float CASELevel = 0; //tier of ammo storage. 0 = nothing, ammosplosion; 1 = base, ammosplosion contained(barely), 2 = blast safely shunted outside, minimal damage to surrounding parts
 
-        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "#LOC_BDArmory_CASE_Sim"),//Cellular Ammo Storage Equipment Tier
+        [KSPField(guiActive = false, guiActiveEditor = true, guiName = "#LOC_BDArmory_CASE_Sim"),//Detonation Sim
 UI_FloatRange(minValue = 0f, maxValue = 100, stepIncrement = 0.5f, scene = UI_Scene.All, affectSymCounterparts = UI_Scene.All)]
         public float blastSim = 0;
 

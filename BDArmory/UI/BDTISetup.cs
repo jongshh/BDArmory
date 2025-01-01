@@ -195,7 +195,7 @@ namespace BDArmory.UI
             };
             IconOptionsGroup = new Rect(10, 55, toolWindowWidth - 20, 290);
             TeamColorsGroup = new Rect(10, IconOptionsGroup.height, toolWindowWidth - 20, 25);
-            WindowRectGUI = new Rect(Screen.width - BDArmorySettings.UI_SCALE * (toolWindowWidth + 40), 150, toolWindowWidth, toolWindowHeight);
+            WindowRectGUI = new Rect(Screen.width - BDArmorySettings._UI_SCALE * (toolWindowWidth + 40), 150, toolWindowWidth, toolWindowHeight);
         }
 
         private void MissileFireOnToggleTeam(MissileFire wm, BDTeam team)
@@ -275,23 +275,22 @@ namespace BDArmory.UI
             }
         }
 
-        IEnumerator ToolbarButtonRoutine()
-        {
-            if (toolbarButton || (!HighLogic.LoadedSceneIsEditor)) yield break;
-            yield return new WaitUntil(() => ApplicationLauncher.Ready && BDArmorySetup.toolbarButtonAdded); // Wait until after the main BDA toolbar button.
-            AddToolbarButton();
-        }
-
         void AddToolbarButton()
         {
-            if (HighLogic.LoadedSceneIsFlight)
+            if (!HighLogic.LoadedSceneIsFlight) return;
+            StartCoroutine(ToolbarButtonRoutine());
+        }
+        IEnumerator ToolbarButtonRoutine()
+        {
+            if (toolbarButton) // Just update the callbacks for the current instance.
             {
-                if (toolbarButton == null)
-                {
-                    Texture buttonTexture = GameDatabase.Instance.GetTexture("BDArmory/Textures/Icons/icon", false);
-                    toolbarButton = ApplicationLauncher.Instance.AddModApplication(ShowToolbarGUI, HideToolbarGUI, null, null, null, null, ApplicationLauncher.AppScenes.FLIGHT, buttonTexture);
-                }
+                toolbarButton.onTrue = ShowToolbarGUI;
+                toolbarButton.onFalse = HideToolbarGUI;
+                yield break;
             }
+            yield return new WaitUntil(() => ApplicationLauncher.Ready && BDArmorySetup.toolbarButtonAdded); // Wait until after the main BDA toolbar button.
+            Texture buttonTexture = GameDatabase.Instance.GetTexture("BDArmory/Textures/Icons/icon", false);
+            toolbarButton = ApplicationLauncher.Instance.AddModApplication(ShowToolbarGUI, HideToolbarGUI, null, null, null, null, ApplicationLauncher.AppScenes.FLIGHT, buttonTexture);
         }
 
         public void ShowToolbarGUI()
@@ -354,7 +353,7 @@ namespace BDArmory.UI
                 {
                     maySavethisInstance = true;
                 }
-                if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, WindowRectGUI.position);
+                if (BDArmorySettings._UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings._UI_SCALE * Vector2.one, WindowRectGUI.position);
                 WindowRectGUI = GUI.Window(GUIUtility.GetControlID(FocusType.Passive), WindowRectGUI, TeamIconGUI, windowTitle, BDArmorySetup.BDGuiSkin.window);
             }
             title = new GUIStyle(GUI.skin.label);

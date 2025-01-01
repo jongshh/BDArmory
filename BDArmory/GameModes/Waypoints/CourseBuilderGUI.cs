@@ -226,7 +226,7 @@ namespace BDArmory.UI
             );
             BDArmorySetup.SetGUIOpacity();
             var guiMatrix = GUI.matrix;
-            if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, BDArmorySetup.WindowRectWayPointSpawner.position);
+            if (BDArmorySettings._UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings._UI_SCALE * Vector2.one, BDArmorySetup.WindowRectWayPointSpawner.position);
             BDArmorySetup.WindowRectWayPointSpawner = GUI.Window(
                 GUIUtility.GetControlID(FocusType.Passive),
                 BDArmorySetup.WindowRectWayPointSpawner,

@@ -255,6 +255,7 @@
     <Compile Include="Settings\BDTISettings.cs" />
     <Compile Include="Settings\BDTISettingsFields.cs" />
     <Compile Include="Settings\RWPSettings.cs" />
+    <Compile Include="Settings\CompSettings.cs" />
     <Compile Include="Shaders\BDAShaderLoader.cs" />
     <Compile Include="Targeting\GPSTargetInfo.cs" />
     <Compile Include="Targeting\ModuleTargetingCamera.cs" />
@@ -339,6 +340,8 @@
     <Compile Include="WeaponMounts\MissileTurret.cs" />
     <Compile Include="WeaponMounts\ModuleTurret.cs" />
     <Compile Include="WeaponMounts\WMTurretGroup.cs" />
+    <Compile Include="Weapons\BDCustomWarhead.cs" />
+    <Compile Include="Weapons\BDWarheadBase.cs" />
     <Compile Include="Weapons\BDExplosivePart.cs" />
     <Compile Include="Weapons\BDModuleNuke.cs" />
     <Compile Include="Weapons\ClusterBomb.cs" />

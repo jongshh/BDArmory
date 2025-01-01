@@ -22,8 +22,16 @@ namespace BDArmory.GameModes
         //[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Space Friction"), UI_Toggle(disabledText = "Disabled", enabledText = "Enabled", scene = UI_Scene.All, affectSymCounterparts = UI_Scene.All)]
         //public bool FrictionEnabled = false; //global value
 
-        //[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "CounterGrav"), UI_Toggle(disabledText = "Disabled", enabledText = "Enabled", scene = UI_Scene.All, affectSymCounterparts = UI_Scene.All)]
-        //public bool AntiGravEnabled = false; //global value
+        public bool repulsorActivated = false;
+
+        [KSPEvent(guiActive = true, guiActiveEditor = false, guiName = "#LOC_BDArmory_Settings_Repulsor", active = true)]
+        public void ToggleRepulsor()
+        {
+            repulsorActivated = !repulsorActivated;
+            isLanded = this.part.vessel.LandedOrSplashed;
+            targetAlt = 0.1f;
+        }
+        bool isLanded = true;
 
         [KSPField(isPersistant = true)]
         public bool AntiGravOverride = false; //per craft override to be set in the .craft file, for things like zeppelin battles where attacking planes shouldn't be under countergrav
@@ -43,8 +51,18 @@ namespace BDArmory.GameModes
 
         public float frictMult; //engine thrust of craft
 
-        float targetAlt = 25;
+        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "#LOC_BDArmory_VesselMover_Help_AdjustAltitude"),
+    UI_FloatRange(minValue = 1f, maxValue = 100, stepIncrement = 1f, scene = UI_Scene.All)]
+        public float repulsorAlt = 10;
+
+        float targetAlt = 0.1f;
         //public float driftMult = 2; //additional drag multipler for cornering/decellerating so things don't take the same amount of time to decelerate as they do to accelerate
+
+        [KSPAction("#autoLOC_6001380")]
+        public void AGToggleRepulsor(KSPActionParam param)
+        {
+            ToggleRepulsor();
+        }
 
         List<ModuleWheelBase> repulsors;
         List<ModuleSpaceFriction> spaceFrictionModules;
@@ -221,33 +239,38 @@ namespace BDArmory.GameModes
             }
             if (this.part.vessel.situation != Vessel.Situations.ORBITING || this.part.vessel.situation != Vessel.Situations.DOCKED || this.part.vessel.situation != Vessel.Situations.ESCAPING || this.part.vessel.situation != Vessel.Situations.PRELAUNCH)
             {
-                if (BDArmorySettings.SF_REPULSOR || RepulsorOverride)
+                if ((BDArmorySettings.SF_REPULSOR || RepulsorOverride) && repulsorActivated)
                 {
                     if ((pilot != null || driver != null || flier != null || RepulsorOverride) && foundEngine != null)
                     {
-                        targetAlt = 10;
                         if (AI != null)
                         {
-                            targetAlt = AI.defaultAltitude; // Use default alt instead of min alt to keep the vessel away from 'gain alt' behaviour.
+                            repulsorAlt = AI.defaultAltitude; // Use default alt instead of min alt to keep the vessel away from 'gain alt' behaviour.
                         }
                         else if (SAI != null)
                         {
-                            targetAlt = SAI.MaxSlopeAngle * 2;
+                            repulsorAlt = SAI.MaxSlopeAngle * 2;
                         }
                         else if (VAI != null)
-                            targetAlt = VAI.defaultAltitude;
-
+                            repulsorAlt = VAI.defaultAltitude;
                         Vector3d grav = FlightGlobals.getGeeForceAtPosition(vessel.CoM);
                         var vesselMass = part.vessel.GetTotalMass();
                         if (RepulsorOverride) //Asking this first, so SPACEHACKS repulsor mode will ignore it
                         {
+                            if (isLanded)
+                            {
+                                targetAlt = Mathf.Lerp(targetAlt, repulsorAlt, 0.02f / 4);
+                                if (targetAlt >= repulsorAlt) isLanded = false;
+                            }
+                            else
+                                targetAlt = repulsorAlt;
                             float pointAltitude = BodyUtils.GetRadarAltitudeAtPos(part.transform.position);
                             if (pointAltitude <= 0 || pointAltitude > 2f * targetAlt) return;
                             if (!DrainResource()) return;
                             var factor = Mathf.Clamp(Mathf.Exp(BDArmorySettings.SF_REPULSOR_STRENGTH * (targetAlt - pointAltitude) / targetAlt - (float)vessel.verticalSpeed / targetAlt), 0f, 5f * BDArmorySettings.SF_REPULSOR_STRENGTH); // Decaying exponential balanced at the target altitude with velocity damping.
                             float repulsorForce = Mathf.Min(vesselMass * factor / spaceFrictionModules.Count, maxRepulsorMass); // Spread the force between the repulsors.
                             if (float.IsNaN(factor) || float.IsInfinity(factor)) // This should only happen if targetAlt is 0, which should never happen.
-                            Debug.LogWarning($"[BDArmory.Spacehacks]: Repulsor Force is NaN or Infinity. TargetAlt: {targetAlt}, point Alt: {pointAltitude}, VesselMass: {vesselMass}");
+                                Debug.LogWarning($"[BDArmory.Spacehacks]: Repulsor Force is NaN or Infinity. TargetAlt: {targetAlt}, point Alt: {pointAltitude}, VesselMass: {vesselMass}");
                             else
                                 part.Rigidbody.AddForce(-grav * repulsorForce, ForceMode.Force);
                         }

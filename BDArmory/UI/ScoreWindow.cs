@@ -106,7 +106,7 @@ namespace BDArmory.UI
             AdjustWindowRect(windowSize);
             BDArmorySetup.SetGUIOpacity();
             var guiMatrix = GUI.matrix;
-            if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, BDArmorySetup.WindowRectScores.position);
+            if (BDArmorySettings._UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings._UI_SCALE * Vector2.one, BDArmorySetup.WindowRectScores.position);
             BDArmorySetup.WindowRectScores = GUILayout.Window(
                 GUIUtility.GetControlID(FocusType.Passive),
                 BDArmorySetup.WindowRectScores,
@@ -116,7 +116,7 @@ namespace BDArmory.UI
             );
             if (weightsVisible)
             {
-                if (BDArmorySettings.UI_SCALE != 1) { GUI.matrix = guiMatrix; GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, weightsWindowRect.position); }
+                if (BDArmorySettings._UI_SCALE != 1) { GUI.matrix = guiMatrix; GUIUtility.ScaleAroundPivot(BDArmorySettings._UI_SCALE * Vector2.one, weightsWindowRect.position); }
                 weightsWindowRect = GUILayout.Window(
                     GUIUtility.GetControlID(FocusType.Passive),
                     weightsWindowRect,
@@ -187,7 +187,7 @@ namespace BDArmory.UI
                 }
             }
             if (resizingWindow && Event.current.type == EventType.Repaint)
-            { windowSize += Mouse.delta / BDArmorySettings.UI_SCALE; }
+            { windowSize += Mouse.delta / BDArmorySettings._UI_SCALE; }
             #endregion
             GUIUtils.UseMouseEventInRect(BDArmorySetup.WindowRectScores);
         }
@@ -224,10 +224,10 @@ namespace BDArmory.UI
             if (visible)
             {
                 weightsWindowRect.y = BDArmorySetup.WindowRectScores.y;
-                if (BDArmorySetup.WindowRectScores.x + BDArmorySettings.UI_SCALE * (windowSize.x + weightsWindowRect.width) <= Screen.width)
-                    weightsWindowRect.x = BDArmorySetup.WindowRectScores.x + BDArmorySettings.UI_SCALE * windowSize.x;
+                if (BDArmorySetup.WindowRectScores.x + BDArmorySettings._UI_SCALE * (windowSize.x + weightsWindowRect.width) <= Screen.width)
+                    weightsWindowRect.x = BDArmorySetup.WindowRectScores.x + BDArmorySettings._UI_SCALE * windowSize.x;
                 else
-                    weightsWindowRect.x = BDArmorySetup.WindowRectScores.x - BDArmorySettings.UI_SCALE * weightsWindowRect.width;
+                    weightsWindowRect.x = BDArmorySetup.WindowRectScores.x - BDArmorySettings._UI_SCALE * weightsWindowRect.width;
             }
             else
             {

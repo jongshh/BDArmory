@@ -98,11 +98,12 @@ namespace BDArmory.UI
         Dictionary<string, NumericInputField> thicknessField;
         void Awake()
         {
+            if (Instance != null) Destroy(Instance);
+            Instance = this;
         }
 
         void Start()
         {
-            Instance = this;
             AddToolbarButton();
             thicknessField = new Dictionary<string, NumericInputField>
             {
@@ -242,6 +243,7 @@ namespace BDArmory.UI
         private void OnDestroy()
         {
             GameEvents.onEditorShipModified.Remove(OnEditorShipModifiedEvent);
+            HideToolbarGUINow();
             if (toolbarButton)
             {
                 ApplicationLauncher.Instance.RemoveModApplication(toolbarButton);
@@ -249,24 +251,22 @@ namespace BDArmory.UI
             }
         }
 
-        IEnumerator ToolbarButtonRoutine()
-        {
-            if (toolbarButton || (!HighLogic.LoadedSceneIsEditor)) yield break;
-            yield return new WaitUntil(() => ApplicationLauncher.Ready && BDArmorySetup.toolbarButtonAdded); // Wait until after the main BDA toolbar button.
-
-            AddToolbarButton();
-        }
-
         void AddToolbarButton()
         {
-            if (HighLogic.LoadedSceneIsEditor && !BDArmorySettings.LEGACY_ARMOR)
+            if (!HighLogic.LoadedSceneIsEditor || BDArmorySettings.LEGACY_ARMOR) return;
+            StartCoroutine(ToolbarButtonRoutine());
+        }
+        IEnumerator ToolbarButtonRoutine()
+        {
+            if (toolbarButton) // Update the callbacks for the current instance.
             {
-                if (toolbarButton == null)
-                {
-                    Texture buttonTexture = GameDatabase.Instance.GetTexture(BDArmorySetup.textureDir + "icon_Armor", false);
-                    toolbarButton = ApplicationLauncher.Instance.AddModApplication(ShowToolbarGUI, HideToolbarGUI, Dummy, Dummy, Dummy, Dummy, ApplicationLauncher.AppScenes.SPH | ApplicationLauncher.AppScenes.VAB, buttonTexture);
-                }
+                toolbarButton.onTrue = ShowToolbarGUI;
+                toolbarButton.onFalse = HideToolbarGUI;
+                yield break;
             }
+            yield return new WaitUntil(() => ApplicationLauncher.Ready && BDArmorySetup.toolbarButtonAdded); // Wait until after the main BDA toolbar button.
+            Texture buttonTexture = GameDatabase.Instance.GetTexture(BDArmorySetup.textureDir + "icon_Armor", false);
+            toolbarButton = ApplicationLauncher.Instance.AddModApplication(ShowToolbarGUI, HideToolbarGUI, Dummy, Dummy, Dummy, Dummy, ApplicationLauncher.AppScenes.SPH | ApplicationLauncher.AppScenes.VAB, buttonTexture);
         }
 
         public void ShowToolbarGUI()
@@ -275,7 +275,17 @@ namespace BDArmory.UI
             OnEditorShipModifiedEvent(EditorLogic.fetch.ship); // Trigger updating of stuff.
         }
 
-        public void HideToolbarGUI()
+        public void HideToolbarGUI() => StartCoroutine(HideToolbarGUIAtEndOfFrame());
+        bool waitingForEndOfFrame = false;
+        IEnumerator HideToolbarGUIAtEndOfFrame()
+        {
+            if (waitingForEndOfFrame) yield break;
+            waitingForEndOfFrame = true;
+            yield return new WaitForEndOfFrame();
+            waitingForEndOfFrame = false;
+            HideToolbarGUINow();
+        }
+        void HideToolbarGUINow()
         {
             showArmorWindow = false;
             CalcArmor = false;
@@ -286,6 +296,7 @@ namespace BDArmory.UI
             TreeVisualizer = false;
             if (thicknessField != null && thicknessField.ContainsKey("Thickness")) thicknessField["Thickness"].tryParseValueNow();
             Visualize();
+            GUIUtils.PreventClickThrough(windowRect, "BDAArmorLOCK", true);
         }
 
         void Dummy()
@@ -295,7 +306,7 @@ namespace BDArmory.UI
         {
             if (showArmorWindow)
             {
-                if (BDArmorySettings.UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings.UI_SCALE * Vector2.one, windowRect.position);
+                if (BDArmorySettings._UI_SCALE != 1) GUIUtility.ScaleAroundPivot(BDArmorySettings._UI_SCALE * Vector2.one, windowRect.position);
                 windowRect = GUI.Window(GUIUtility.GetControlID(FocusType.Passive), windowRect, WindowArmor, windowTitle, BDArmorySetup.BDGuiSkin.window);
             }
             if (TreeVisualizer)
@@ -316,14 +327,14 @@ namespace BDArmory.UI
                         }
                     }
             }
-            PreventClickThrough();
         }
 
         void WindowArmor(int windowID)
         {
+            GUIUtils.PreventClickThrough(windowRect, "BDAArmorLOCK");
             if (GUI.Button(new Rect(windowRect.width - 18, 2, 16, 16), "X"))
             {
-                HideToolbarGUI();
+                toolbarButton.SetFalse();
             }
             if (CalcArmor)
             {
@@ -1110,42 +1121,6 @@ namespace BDArmory.UI
             refreshVisualizer = false;
             refreshHPvisualizer = false;
             refreshHullvisualizer = false;
-        }
-
-        /// <summary>
-        /// Lock the model if our own window is shown and has cursor focus to prevent click-through.
-        /// Code adapted from FAR Editor GUI
-        /// </summary>
-        private void PreventClickThrough()
-        {
-            bool cursorInGUI = false;
-            EditorLogic EdLogInstance = EditorLogic.fetch;
-            if (!EdLogInstance)
-            {
-                return;
-            }
-            if (showArmorWindow)
-            {
-                cursorInGUI = windowRect.Contains(GetMousePos());
-            }
-            if (cursorInGUI)
-            {
-                if (!CameraMouseLook.GetMouseLook())
-                    EdLogInstance.Lock(false, false, false, "BDAArmorLOCK");
-                else
-                    EdLogInstance.Unlock("BDAArmorLOCK");
-            }
-            else if (!cursorInGUI)
-            {
-                EdLogInstance.Unlock("BDAArmorLOCK");
-            }
-        }
-
-        private Vector3 GetMousePos()
-        {
-            Vector3 mousePos = Input.mousePosition;
-            mousePos.y = Screen.height - mousePos.y;
-            return mousePos;
         }
 
         private void CalculateArmorStats()

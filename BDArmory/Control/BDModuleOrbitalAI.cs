@@ -56,6 +56,7 @@ namespace BDArmory.Control
         private List<ModuleEngines> rcsEngines = new List<ModuleEngines>();
         private bool currentForwardThrust;
         private bool engineListsRequireUpdating = true;
+        private Dictionary<uint, Tuple<bool, float, float>> engineIndependentThrottleState = new Dictionary<uint, Tuple<bool, float, float>>();
 
         private Vector3 maxAngularAcceleration;
         private float maxAngularAccelerationMag;
@@ -204,8 +205,9 @@ namespace BDArmory.Control
             guiName = "#LOC_BDArmory_AI_FiringSpeedLimit",
             guiUnits = " m/s"),
             UI_FloatSemiLogRange(
-                minValue = 2f,
-                maxValue = 1000f,
+                minValue = 1f,
+                maxValue = 10000f,
+                reducedPrecisionAtMin = true,
                 scene = UI_Scene.All
             )]
         public float firingSpeed = 50f;
@@ -414,6 +416,13 @@ namespace BDArmory.Control
                 fc.throttleLerpRate = 3;
             }
             fc.Activate();
+            foreach (var engine in VesselModuleRegistry.GetModuleEngines(vessel)) // Save indepedent throttle settings
+            {
+                if (engine.throttleLocked || !engine.allowShutdown || !engine.allowRestart) continue; // Ignore engines that can't be throttled, shutdown, or restart
+                if (VesselSpawning.SpawnUtils.IsModularMissilePart(engine.part)) continue; // Ignore modular missile engines.
+                if (engineIndependentThrottleState.ContainsKey(engine.part.persistentId)) continue; // don't re-add engines
+                engineIndependentThrottleState.Add(engine.part.persistentId, new (engine.independentThrottle, engine.independentThrottlePercentage, engine.thrustPercentage));
+            }
             UpdateEngineLists(true); // Update engine list, turn off reverse engines if active
         }
 
@@ -426,7 +435,18 @@ namespace BDArmory.Control
                 fc.Deactivate();
                 fc = null;
             }
-
+            foreach (var engine in VesselModuleRegistry.GetModuleEngines(vessel)) // Restore indepedent throttle settings
+            {
+                if (engine.throttleLocked || !engine.allowShutdown || !engine.allowRestart) continue; // Ignore engines that can't be throttled, shutdown, or restart
+                if (VesselSpawning.SpawnUtils.IsModularMissilePart(engine.part)) continue; // Ignore modular missile engines.
+                if (engineIndependentThrottleState.ContainsKey(engine.part.persistentId))
+                {
+                    engine.independentThrottle = engineIndependentThrottleState[engine.part.persistentId].Item1;
+                    engine.independentThrottlePercentage = engineIndependentThrottleState[engine.part.persistentId].Item2;
+                    engine.thrustPercentage = engineIndependentThrottleState[engine.part.persistentId].Item3;
+                }
+            }
+            engineIndependentThrottleState.Clear();
             evadingGunfire = false;
             SetStatus("");
         }
@@ -1690,6 +1710,8 @@ namespace BDArmory.Control
             if (!hasEC && !hasRCS)
                 fc.alignmentToleranceforBurn = 180f;
         }
+
+        public bool HasPropulsion => hasPropulsion;
         #endregion
 
         #region Utils
@@ -1799,6 +1821,12 @@ namespace BDArmory.Control
                 {
                     reverseEngines.Add(engine);
                     reverseThrust += engine.MaxThrustOutputVac(true);
+                    var gimbal = engine.part.FindModuleImplementing<ModuleGimbal>();
+                    if (gimbal != null) // Disable gimbal on reverse/RCS engines since they don't work for directions other than forward
+                    {
+                        gimbal.gimbalRange = 0;
+                        gimbal.gimbalLock = true;
+                    }
                 }
                 else if (EngineRCSRotation || EngineRCSTranslation)
                 {
@@ -1814,6 +1842,12 @@ namespace BDArmory.Control
                         if (!engine.independentThrottle) engine.independentThrottle = true; //using independent throttle so these can fire while main engines are off but not shudown
                         engine.thrustPercentage = 0; //activate and set to 0 thrust so they're ready when needed
                         if (engine.independentThrottlePercentage == 0) engine.independentThrottlePercentage = 100;
+                    }
+                    var gimbal = engine.part.FindModuleImplementing<ModuleGimbal>();
+                    if (gimbal != null) // Disable gimbal on reverse/RCS engines since they don't work for directions other than forward
+                    {
+                        gimbal.gimbalRange = 0;
+                        gimbal.gimbalLock = true;
                     }
                     fc.rcsEngines = rcsEngines;
                 }
@@ -1852,17 +1886,17 @@ namespace BDArmory.Control
             if (forwardThrust == currentForwardThrust) return; // Don't bother toggling engines if desired direction matches current
             if (forwardThrust) // Activate forward engines, shutdown reverse engines
             {
-                foreach (var engine in forwardEngines)
+                foreach (var engine in forwardEngines.Where(e => e != null))
                     engine.Activate();
-                foreach (var engine in reverseEngines)
+                foreach (var engine in reverseEngines.Where(e => e != null))
                     engine.Shutdown();
                 currentForwardThrust = true;
             }
             else // Activate reverse engines, shutdown forward engines
             {
-                foreach (var engine in reverseEngines)
+                foreach (var engine in reverseEngines.Where(e => e != null))
                     engine.Activate();
-                foreach (var engine in forwardEngines)
+                foreach (var engine in forwardEngines.Where(e => e != null))
                     engine.Shutdown();
                 currentForwardThrust = false;
             }

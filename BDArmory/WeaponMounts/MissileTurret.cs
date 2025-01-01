@@ -49,6 +49,7 @@ namespace BDArmory.WeaponMounts
         Dictionary<string, Vector3> comOffsets;
 
         public bool slaved;
+        public bool manuallyControlled = false;
 
         public Vector3 slavedTargetPosition;
 
@@ -119,7 +120,7 @@ namespace BDArmory.WeaponMounts
             deployAnimState.speed = 0;
         }
 
-        public void EnableTurret(MissileBase currMissile)
+        public void EnableTurret(MissileBase currMissile, bool manualControl)
         {
             if (!HighLogic.LoadedSceneIsFlight)
             {
@@ -134,6 +135,7 @@ namespace BDArmory.WeaponMounts
 
             turretEnabled = true;
             hasReturned = false;
+            manuallyControlled = manuallyControlled |= manualControl;
 
             if (hasAttachedRadar)
             {
@@ -161,6 +163,7 @@ namespace BDArmory.WeaponMounts
         {
             turretEnabled = false;
             activeMissile = null;
+            manuallyControlled = false;
 
             if (autoReturn)
             {
@@ -339,7 +342,7 @@ namespace BDArmory.WeaponMounts
                     return;
                 }
 
-                if (mouseControllable && vessel.isActiveVessel)
+                if (mouseControllable && vessel.isActiveVessel && manuallyControlled)
                 {
                     MouseAim();
                 }
@@ -525,7 +528,7 @@ namespace BDArmory.WeaponMounts
             }
         }
 
-        public void FireMissile(int index)
+        public void FireMissile(int index, Vessel targetVessel, MissileFire.TargetData targetData = null)
         {
             if (index < missileCount && missileChildren != null && missileChildren[index] != null)
             {
@@ -533,7 +536,7 @@ namespace BDArmory.WeaponMounts
 
                 if (weaponManager)
                 {
-                    wm.SendTargetDataToMissile(missileChildren[index]);
+                    wm.SendTargetDataToMissile(missileChildren[index], targetVessel, true, targetData, true);
                     wm.PreviousMissile = missileChildren[index];
                 }
                 missileChildren[index].FireMissile();
@@ -549,13 +552,13 @@ namespace BDArmory.WeaponMounts
             }
         }
 
-        public void FireMissile(MissileLauncher ml)
+        public void FireMissile(MissileLauncher ml, Vessel targetVessel, MissileFire.TargetData targetData = null)
         {
             int index = IndexOfMissile(ml);
             if (index >= 0)
             {
                 Debug.Log("[BDArmory.MissileTurret] : Firing missile index: " + index);
-                FireMissile(index);
+                FireMissile(index, targetVessel, targetData);
             }
             else
             {

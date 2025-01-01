@@ -41,19 +41,15 @@ namespace BDArmory.CounterMeasure
         public float priority = 0;
         public int Priority => (int)priority;
 
-        [KSPField] public string ejectTransformName;
+        [KSPField] public string ejectTransformName = "cmTransform";
         Transform ejectTransform;
 
         [KSPField] public string effectsTransformName = string.Empty;
         Transform effectsTransform;
 
         AudioSource audioSource;
-        AudioSource cmWarningSource;
         AudioClip cmSound;
         AudioClip smokePoofSound;
-        AudioClip cmWarning;
-        AudioClip cmlowWarning;
-        AudioClip cmoutWarning;
 
         string resourceName;
 
@@ -109,15 +105,6 @@ namespace BDArmory.CounterMeasure
                 audioSource.maxDistance = 1000;
                 audioSource.spatialBlend = 1;
 
-                cmWarningSource = gameObject.AddComponent<AudioSource>();
-                cmWarningSource.minDistance = 1;
-                cmWarningSource.maxDistance = 1000;
-                cmWarningSource.spatialBlend = 1;
-
-                cmWarning = SoundUtils.GetAudioClip("BDArmory/Sounds/bettyChaffFlare");
-                cmlowWarning = SoundUtils.GetAudioClip("BDArmory/Sounds/bettyChaffFlareLow");
-                cmoutWarning = SoundUtils.GetAudioClip("BDArmory/Sounds/bettyChaffFlareOut");
-
                 UpdateVolume();
                 BDArmorySetup.OnVolumeChange += UpdateVolume;
 
@@ -135,10 +122,6 @@ namespace BDArmory.CounterMeasure
             if (audioSource)
             {
                 audioSource.volume = BDArmorySettings.BDARMORY_WEAPONS_VOLUME;
-            }
-            if (cmWarningSource)
-            {
-                cmWarningSource.volume = BDArmorySettings.BDARMORY_WEAPONS_VOLUME;
             }
         }
 
@@ -169,17 +152,6 @@ namespace BDArmory.CounterMeasure
                 else
                 {
                     audioSource.dopplerLevel = 1;
-                }
-            }
-            if (cmWarningSource)
-            {
-                if (vessel.isActiveVessel)
-                {
-                    cmWarningSource.dopplerLevel = 0;
-                }
-                else
-                {
-                    cmWarningSource.dopplerLevel = 1;
                 }
             }
         }
@@ -299,29 +271,14 @@ namespace BDArmory.CounterMeasure
 
         bool DropFlare()
         {
-            PartResource cmResource = GetCMResource();
-            if (cmResource == null) return false;
-            if (!(cmResource.amount >= 1))
+            if (!BDArmorySettings.INFINITE_ORDINANCE)
             {
-                cmWarningSource.PlayOneShot(cmoutWarning);
-                return false;
+                PartResource cmResource = GetCMResource();
+                if (cmResource == null || !(cmResource.amount >= 1)) return false;
+                cmResource.amount--;
             }
-            cmResource.amount--;
             audioSource.pitch = UnityEngine.Random.Range(0.9f, 1.1f);
             audioSource.PlayOneShot(cmSound);
-
-            if (cmResource.amount < 1)
-            {
-                cmWarningSource.PlayOneShot(cmoutWarning);
-            }
-            else if (cmResource.amount < 10 && cmResource.amount % 3 == 0)
-            {
-                cmWarningSource.PlayOneShot(cmlowWarning);
-            }
-            else if (cmResource.amount > 10 && cmResource.amount % 5 == 0)
-            {
-                cmWarningSource.PlayOneShot(cmWarning);
-            }
 
             GameObject cm = flarePool.GetPooledObject();
             cm.transform.position = transform.position;
@@ -341,29 +298,14 @@ namespace BDArmory.CounterMeasure
 
         bool DropChaff()
         {
-            PartResource cmResource = GetCMResource();
-            if (cmResource == null) return false;
-            if (!(cmResource.amount >= 1))
+            if (!BDArmorySettings.INFINITE_ORDINANCE)
             {
-                cmWarningSource.PlayOneShot(cmoutWarning);
-                return false;
+                PartResource cmResource = GetCMResource();
+                if (cmResource == null || !(cmResource.amount >= 1)) return false;
+                cmResource.amount--;
             }
-            cmResource.amount--;
             audioSource.pitch = UnityEngine.Random.Range(0.9f, 1.1f);
             audioSource.PlayOneShot(cmSound);
-
-            if (cmResource.amount < 1)
-            {
-                cmWarningSource.PlayOneShot(cmoutWarning);
-            }
-            else if (cmResource.amount < 20 && cmResource.amount % 3 == 0)
-            {
-                cmWarningSource.PlayOneShot(cmlowWarning);
-            }
-            else if (cmResource.amount > 20 && cmResource.amount % 5 == 0)
-            {
-                cmWarningSource.PlayOneShot(cmWarning);
-            }
 
             if (!vci)
             {
@@ -381,19 +323,19 @@ namespace BDArmory.CounterMeasure
 
         bool PopSmoke()
         {
-            PartResource smokeResource = GetCMResource();
-            if (smokeResource.amount >= 1)
+            if (!BDArmorySettings.INFINITE_ORDINANCE)
             {
+                PartResource smokeResource = GetCMResource();
+                if (smokeResource == null || !(smokeResource.amount >= 1)) return false;
                 smokeResource.amount--;
-                audioSource.pitch = UnityEngine.Random.Range(0.9f, 1.1f);
-                audioSource.PlayOneShot(cmSound);
-
-                StartCoroutine(SmokeRoutine());
-
-                FireParticleEffects();
-                return true;
             }
-            return false;
+            audioSource.pitch = UnityEngine.Random.Range(0.9f, 1.1f);
+            audioSource.PlayOneShot(cmSound);
+
+            StartCoroutine(SmokeRoutine());
+
+            FireParticleEffects();
+            return true;
         }
 
         IEnumerator SmokeRoutine()
@@ -423,9 +365,12 @@ namespace BDArmory.CounterMeasure
 
         bool LaunchDecoy()
         {
-            PartResource cmResource = GetCMResource();
-            if (cmResource == null || !(cmResource.amount >= 1)) return false;
-            cmResource.amount--;
+            if (!BDArmorySettings.INFINITE_ORDINANCE)
+            {
+                PartResource cmResource = GetCMResource();
+                if (cmResource == null || !(cmResource.amount >= 1)) return false;
+                cmResource.amount--;
+            }
             audioSource.pitch = UnityEngine.Random.Range(0.9f, 1.1f);
             audioSource.PlayOneShot(cmSound);
 
@@ -447,27 +392,27 @@ namespace BDArmory.CounterMeasure
 
         bool DropBubbles()
         {
-            PartResource smokeResource = GetCMResource();
-            if (smokeResource.amount >= 1)
+            if (!BDArmorySettings.INFINITE_ORDINANCE)
             {
-                smokeResource.amount--;
-                audioSource.pitch = UnityEngine.Random.Range(0.9f, 1.1f);
-                audioSource.PlayOneShot(cmSound);
-
-                StartCoroutine(BubbleRoutine());
-
-                FireParticleEffects();
-                return true;
+                PartResource bubbleResource = GetCMResource();
+                if (bubbleResource == null || !(bubbleResource.amount >= 1)) return false;
+                bubbleResource.amount--;
             }
-            return false;
+            audioSource.pitch = UnityEngine.Random.Range(0.9f, 1.1f);
+            audioSource.PlayOneShot(cmSound);
+
+            StartCoroutine(BubbleRoutine());
+
+            FireParticleEffects();
+            return true;
         }
 
         IEnumerator BubbleRoutine()
         {
             yield return new WaitForSecondsFixed(0.2f);
-            GameObject bubbleCMObject = decoyPool.GetPooledObject();
-            CMBubble smoke = bubbleCMObject.GetComponent<CMBubble>();
-            smoke.velocity = part.rb.velocity + (ejectVelocity * transform.up) +
+            GameObject bubbleCMObject = bubblePool.GetPooledObject();
+            CMBubble bubble = bubbleCMObject.GetComponent<CMBubble>();
+            bubble.velocity = part.rb.velocity + (ejectVelocity * transform.up) +
                              (UnityEngine.Random.Range(-3f, 3f) * transform.forward) +
                              (UnityEngine.Random.Range(-3f, 3f) * transform.right);
             bubbleCMObject.SetActive(true);
@@ -482,7 +427,6 @@ namespace BDArmory.CounterMeasure
                     if (emitter.Current.maxEnergy > longestLife) longestLife = emitter.Current.maxEnergy;
                 }
 
-            audioSource.PlayOneShot(smokePoofSound);
             yield return new WaitForSecondsFixed(longestLife);
             bubbleCMObject.SetActive(false);
         }

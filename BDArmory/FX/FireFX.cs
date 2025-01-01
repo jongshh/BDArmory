@@ -49,14 +49,6 @@ namespace BDArmory.FX
         PartResource ec;
         PartResource mp;
 
-        AudioSource DamageWarning;
-        AudioSource EngineDamageWarning;
-        AudioSource CockpitDamageWarning;
-
-        AudioClip FireWarning;
-        AudioClip EngineFireWarning;
-        AudioClip CockpitFireWarning;
-
         private KerbalSeat Seat;
         ModuleEngines engine;
         // bool lookedForEngine = false;
@@ -65,35 +57,6 @@ namespace BDArmory.FX
 
         Collider[] blastHitColliders = new Collider[100];
         bool vacuum = false;
-        void Awake()
-        {
-            FireWarning = SoundUtils.GetAudioClip("BDArmory/Sounds/FireWarning");
-            EngineFireWarning = SoundUtils.GetAudioClip("BDArmory/Sounds/EngineFireWarning");
-            CockpitFireWarning = SoundUtils.GetAudioClip("BDArmory/Sounds/CockpitFireWarning");
-        }
-        private void Start()
-        {
-            DamageWarning = gameObject.AddComponent<AudioSource>();
-            DamageWarning.minDistance = 1;
-            DamageWarning.maxDistance = 500;
-            DamageWarning.dopplerLevel = 0;
-            DamageWarning.spatialBlend = 1;
-            DamageWarning.loop = true;
-
-            EngineDamageWarning = gameObject.AddComponent<AudioSource>();
-            EngineDamageWarning.minDistance = 1;
-            EngineDamageWarning.maxDistance = 500;
-            EngineDamageWarning.dopplerLevel = 0;
-            EngineDamageWarning.spatialBlend = 1;
-            EngineDamageWarning.loop = true;
-
-            CockpitDamageWarning = gameObject.AddComponent<AudioSource>();
-            CockpitDamageWarning.minDistance = 1;
-            CockpitDamageWarning.maxDistance = 500;
-            CockpitDamageWarning.dopplerLevel = 0;
-            CockpitDamageWarning.spatialBlend = 1;
-            CockpitDamageWarning.loop = true;
-        }
         void OnEnable()
         {
             if (parentPart == null || !HighLogic.LoadedSceneIsFlight)
@@ -223,10 +186,8 @@ namespace BDArmory.FX
             {
                 return;
             }
-            //Debug.Log("This log is Checking How Fire.fx Update Working"); //When FireFX still in Scene, This Update Activated
-
             if (vacuum) transform.rotation = Quaternion.FromToRotation(Vector3.up, parentPart.vessel.obt_velocity.normalized);
-            else transform.rotation = Quaternion.FromToRotation(Vector3.up, -FlightGlobals.getGeeForceAtPosition(transform.position));
+            else transform.rotation = Quaternion.FromToRotation(Vector3.up, parentPart.vessel.up);
             fuel = parentPart.Resources.Where(pr => pr.resourceName == "LiquidFuel").FirstOrDefault();
             if (disableTime < 0) //only have fire do it's stuff while burning and not during FX timeout
             {
@@ -435,42 +396,6 @@ namespace BDArmory.FX
             {
                 Deactivate(); //don't burn underwater
             }
-
-            PlayFireWarning(parentPart, disableTime);
-            UpdateVolume();
-        }
-
-        void UpdateVolume()
-        {
-            if (DamageWarning)
-            {
-                DamageWarning.volume = BDArmorySettings.BDARMORY_UI_VOLUME;
-            }
-            if (EngineDamageWarning)
-            {
-                EngineDamageWarning.volume = BDArmorySettings.BDARMORY_UI_VOLUME;
-            }
-            if (CockpitDamageWarning)
-            {
-                CockpitDamageWarning.volume = BDArmorySettings.BDARMORY_UI_VOLUME;
-            }
-
-            if (BDArmorySetup.GameIsPaused)
-            {
-                if (DamageWarning.isPlaying)
-                {
-                    DamageWarning.Stop();
-                }
-                if (EngineDamageWarning.isPlaying)
-                {
-                    EngineDamageWarning.Stop();
-                }
-                if (CockpitDamageWarning.isPlaying)
-                {
-                    CockpitDamageWarning.Stop();
-                }
-                return;
-            }
         }
 
         void Detonate()
@@ -597,115 +522,13 @@ namespace BDArmory.FX
             // parentVesselName = parentPart.vessel.vesselName;
             transform.SetParent(hitPart.transform);
             transform.position = hit + offset;
-            transform.rotation = Quaternion.FromToRotation(Vector3.up, -FlightGlobals.getGeeForceAtPosition(transform.position));
+            transform.rotation = Quaternion.FromToRotation(Vector3.up, hitPart.vessel.up);
             parentPart.OnJustAboutToDie += OnParentDestroy;
             parentPart.OnJustAboutToBeDestroyed += OnParentDestroy;
             if ((Versioning.version_major == 1 && Versioning.version_minor > 10) || Versioning.version_major > 1) // onVesselUnloaded event introduced in 1.11
                 OnVesselUnloaded_1_11(true); // Catch unloading events too.
             SourceVessel = sourcevessel;
             gameObject.SetActive(true);
-        }
-
-        public void PlayFireWarning(Part hitPart, float disableTime)
-        {
-            if (hitPart == null)
-            {
-                return;
-            }
-
-            if (hitPart.vessel == null)
-            {
-                return;
-            }
-
-            if (hitPart.vessel.isActiveVessel && disableTime < 0) // idk Why negative is active fire
-            {
-                if (hitPart.GetComponent<ModuleCommand>() != null)
-                {
-                    if (CockpitDamageWarning.clip != CockpitFireWarning)
-                    {
-                        CockpitDamageWarning.clip = CockpitFireWarning;
-                    }
-                    if (!CockpitDamageWarning.enabled)
-                    {
-                        CockpitDamageWarning.enabled = true;
-                    }
-                    if (!CockpitDamageWarning.gameObject.activeInHierarchy)
-                    {
-                        CockpitDamageWarning.gameObject.SetActive(true);
-                    }
-                    if (!CockpitDamageWarning.isPlaying)
-                    {
-                        CockpitDamageWarning.Play();
-                    }
-                    else
-                    {
-                        return;
-                    }
-                }
-                else if (hitPart.isEngine() || hitPart.isRoboticRotor())
-                {
-                    if (EngineDamageWarning.clip != EngineFireWarning)
-                    {
-                        EngineDamageWarning.clip = EngineFireWarning;
-                    }
-                    if (!EngineDamageWarning.enabled)
-                    {
-                        EngineDamageWarning.enabled = true;
-                    }
-                    if (!EngineDamageWarning.gameObject.activeInHierarchy)
-                    {
-                        EngineDamageWarning.gameObject.SetActive(true);
-                    }
-                    if (!EngineDamageWarning.isPlaying)
-                    {
-                        EngineDamageWarning.Play();
-                    }
-                    else
-                    {
-                        return;
-                    }
-                }
-                else
-                {
-                    // Normal Fire Warning
-                    if (DamageWarning.clip != FireWarning)
-                    {
-                        DamageWarning.clip = FireWarning;
-                    }
-                    if (!DamageWarning.enabled)
-                    {
-                        DamageWarning.enabled = true;
-                    }
-                    if (!DamageWarning.gameObject.activeInHierarchy)
-                    {
-                        DamageWarning.gameObject.SetActive(true);
-                    }
-                    if (!DamageWarning.isPlaying)
-                    {
-                        DamageWarning.Play();
-                    }
-                    else
-                    {
-                        return;
-                    }
-                }
-            }
-            else
-            {
-                if (DamageWarning.isPlaying)
-                {
-                    DamageWarning.Stop();
-                }
-                if (EngineDamageWarning.isPlaying)
-                {
-                    EngineDamageWarning.Stop();
-                }
-                if (CockpitDamageWarning.isPlaying)
-                {
-                    CockpitDamageWarning.Stop();
-                }
-            }
         }
 
         public void OnParentDestroy()
